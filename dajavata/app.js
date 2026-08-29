@@ -27,8 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const searchInput = document.querySelector('.search-box input');
 
-    // 로딩 메시지
-    tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...<br><span style="font-size: 13px;">(무료 서버 특성상 첫 접속 시 최대 1분 정도 소요될 수 있습니다)</span></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...<br><span style="font-size: 13px;">(무료 서버 특성상 첫 접속 시 최대 1분 정도 소요될 수 있습니다)</span></td></tr>';
     
     // Fetch data
     fetch(API_URL)
@@ -36,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             window.allThemes = data.themes || [];
             if (window.allThemes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" class="center">데이터를 불러올 수 없습니다. API 연결을 확인해주세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="center">데이터를 불러올 수 없습니다. API 연결을 확인해주세요.</td></tr>';
                 return;
             }
             // 최초 접속 시 전체 테마 렌더링
@@ -116,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (filteredList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="15" class="center" style="padding: 40px;">데이터가 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px;">데이터가 없습니다.</td></tr>';
             return;
         }
 
@@ -141,8 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th class="right">3년 상승률</th>
                     <th class="right">3년 하락률</th>
                     <th class="center">3년 소외지수</th>
-                    <th class="right">기대수익률</th>
-                    <th class="center">테마차트(90일)</th>
                     <th class="center">업데이트</th>
                 </tr>
             `;
@@ -164,16 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="right"><span class="${theme.high3yPos ? 'pos' : 'neg'} price-main">${theme.high3y}</span></td>
                     <td class="right"><span class="${theme.low3yPos ? 'pos' : 'neg'} price-main">${theme.low3y}</span></td>
                     <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">${theme.neglect3y}</span></td>
-                    <td class="right" style="background-color: rgba(255,255,255,0.03);">
-                        <span class="price-main" style="font-weight: 800; color: var(--text-main);">${theme.expReturn}</span>
-                    </td>
-                    <td class="center">
-                        <div class="mini-chart">
-                            <svg viewBox="0 0 100 30" class="sparkline" style="width: 80px; height: 24px;">
-                                <path d="M0,25 Q10,20 20,22 T40,15 T60,20 T80,5 T100,10" fill="none" stroke="var(--text-muted)" stroke-width="2"/>
-                            </svg>
-                        </div>
-                    </td>
                     <td class="center" style="color: var(--text-muted); font-size: 12px;">${theme.update}</td>
                 `;
                 tbody.appendChild(tr);
@@ -198,7 +185,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th class="center">52주 소외지수</th>
                     <th class="right">3년 최고최저</th>
                     <th class="center">3년 소외지수</th>
-                    <th class="right">기대수익률</th>
                     <th class="right">PBR</th>
                     <th class="right">PER</th>
                     <th class="right">EPS</th>
@@ -221,8 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const high3y = stock.high3y ? stock.high3y.toFixed(1) : '0.0';
                 const low3y = stock.low3y ? stock.low3y.toFixed(1) : '0.0';
                 const neglect3y = stock.neglect3y ? stock.neglect3y.toFixed(0) : '0';
-                
-                const expRet = stock.expReturn ? stock.expReturn.toFixed(0) : '0';
                 
                 const pbr = stock.PBR ? stock.PBR.toFixed(2) : '-';
                 const per = stock.PER ? stock.PER.toFixed(2) : '-';
@@ -248,9 +232,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">${neglect52}</span></td>
                     <td class="right"><span class="price-main"><span class="pos">+${high3y}%</span> / <span class="neg">${low3y}%</span></span></td>
                     <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">${neglect3y}</span></td>
-                    <td class="right" style="background-color: rgba(255,255,255,0.03);">
-                        <span class="price-main" style="font-weight: 800; color: var(--text-main);">${expRet}%</span>
-                    </td>
                     <td class="right"><span class="price-main">${pbr}</span></td>
                     <td class="right"><span class="price-main">${per}</span></td>
                     <td class="right"><span class="price-main">${eps}</span></td>
@@ -293,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             footerTr.innerHTML = `
-                <td colspan="12" class="center" style="padding: 20px 10px;">
+                <td colspan="15" class="center" style="padding: 20px 10px;">
                     <div style="display: flex; justify-content: center; align-items: center;">
                         ${backButtonHtml}
                         ${paginationHtml}
