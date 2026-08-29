@@ -432,16 +432,23 @@ def get_themes():
         themes = calculate_theme_metrics()
         return {"themes": themes}
 
-@app.get("/api/themes/{theme_name}")
+@app.get("/api/themes/{theme_name:path}")
 def get_theme_details(theme_name: str):
-    details_file = 'data/theme_details.json'
-    if os.path.exists(details_file):
-        with open(details_file, 'r', encoding='utf-8') as f:
-            details = json.load(f)
-        if theme_name in details:
-            return {"stocks": details[theme_name]}
+    # theme_name이 path로 들어올 때, url decode는 starlette이 자동으로 해줌.
+    # 만약 encodeURIComponent로 보낸 경우, '/'가 포함된 테마명도 안전하게 받을 수 있음.
+    
+    file_path = 'data/theme_details.json'
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # Exact match
+        if theme_name in data:
+            return {"theme": theme_name, "stocks": data[theme_name]}
             
-    raise HTTPException(status_code=404, detail="Theme details not found")
+        raise HTTPException(status_code=404, detail=f"Theme '{theme_name}' not found")
+    
+    raise HTTPException(status_code=404, detail="Theme details data not found")
 
 @app.get("/api/stocks")
 def get_stocks():
