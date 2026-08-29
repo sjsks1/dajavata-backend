@@ -8,3 +8,5 @@ finance-datareader
 requests
 beautifulsoup4
 notion-client
+matplotlib
+python-dotenv
