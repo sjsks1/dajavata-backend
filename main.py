@@ -52,6 +52,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def get_page_body_text(page_id: str) -> str:
+    """페이지 본문(blocks)의 텍스트만 뽑아서 하나의 문자열로 합친다."""
+    try:
+        url = f"https://api.notion.com/v1/blocks/{page_id}/children?page_size=100"
+        headers = {
+            "Authorization": f"Bearer {NOTION_TOKEN}",
+            "Notion-Version": "2022-06-28",
+        }
+        r = requests.get(url, headers=headers)
+        r.raise_for_status()
+        blocks = r.json().get("results", [])
+        
+        lines = []
+        for block in blocks:
+            block_type = block.get("type")
+            block_data = block.get(block_type, {})
+            rich_text = block_data.get("rich_text", [])
+            text = "".join([t.get("plain_text", "") for t in rich_text])
+            if text:
+                lines.append(text)
+        return "\n\n".join(lines)
+    except Exception as e:
+        print(f"Error fetching page body for {page_id}: {e}")
+        return ""
+
 @app.get("/api/insights")
 def get_insights():
     if not NOTION_TOKEN or not NOTION_DATABASE_ID:
@@ -87,13 +112,7 @@ def get_insights():
                         title = title_arr[0].get("plain_text", "Untitled")
                     break
             
-            content = ""
-            for k, v in props.items():
-                if v.get("type") == "rich_text":
-                    text_arr = v.get("rich_text", [])
-                    if text_arr:
-                        content = "".join([t.get("plain_text", "") for t in text_arr])
-                    break
+            content = get_page_body_text(page.get("id"))
             
             created_at = page.get("created_time", "").split("T")[0]
             for k, v in props.items():
