@@ -9,6 +9,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Store fetched data globally for filtering
     window.allThemes = [];
 
+    // Pagination State
+    let currentDataList = [];
+    let currentMode = 'themes';
+    let currentPage = 1;
+    const itemsPerPage = 50;
+
+    const searchInput = document.querySelector('.search-box input');
+    const paginationContainer = document.getElementById('pagination-container');
+
     // 로딩 메시지
     tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...<br><span style="font-size: 13px;">(무료 서버 특성상 첫 접속 시 최대 1분 정도 소요될 수 있습니다)</span></td></tr>';
     
@@ -22,24 +31,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             // 최초 접속 시 전체 테마 렌더링
-            renderTable(window.allThemes);
+            renderTable(window.allThemes, 'themes');
         })
         .catch(error => {
             console.error('Error fetching themes:', error);
             tbody.innerHTML = '<tr><td colspan="12" class="center">데이터를 불러오는 중 오류가 발생했습니다.</td></tr>';
         });
 
-    // 테이블 렌더링 함수 (mode: 'themes' or 'stocks')
+    // 검색창 이벤트
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            currentPage = 1;
+            renderCurrentPage();
+        });
+    }
+
+    // 테이블 렌더링 초기화 함수
     function renderTable(dataList, mode = 'themes') {
+        currentDataList = dataList;
+        currentMode = mode;
+        currentPage = 1;
+        if (searchInput) searchInput.value = ''; // 탭 전환 시 검색어 초기화
+        renderCurrentPage();
+    }
+
+    // 현재 페이지 렌더링
+    function renderCurrentPage() {
         const thead = document.querySelector('#theme-table thead');
         tbody.innerHTML = ''; // 초기화
+        if (paginationContainer) paginationContainer.innerHTML = '';
 
-        if (dataList.length === 0) {
+        // 1. 검색 필터링
+        let filteredList = currentDataList;
+        if (searchInput && searchInput.value.trim()) {
+            const term = searchInput.value.toLowerCase().trim();
+            filteredList = currentDataList.filter(item => {
+                const name = (item.name || '').toLowerCase();
+                const desc = (item.desc || '').toLowerCase();
+                const code = (item.code || '').toLowerCase();
+                return name.includes(term) || desc.includes(term) || code.includes(term);
+            });
+        }
+
+        if (filteredList.length === 0) {
             tbody.innerHTML = '<tr><td colspan="15" class="center" style="padding: 40px;">데이터가 없습니다.</td></tr>';
             return;
         }
 
-        if (mode === 'themes') {
+        // 2. 페이지네이션 계산
+        const totalPages = Math.ceil(filteredList.length / itemsPerPage);
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedList = filteredList.slice(startIndex, startIndex + itemsPerPage);
+
+        // 3. 헤더 및 데이터 렌더링
+        if (currentMode === 'themes') {
             thead.innerHTML = `
                 <tr>
                     <th>테마명</th>
@@ -57,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
             `;
 
-            dataList.forEach(theme => {
+            paginatedList.forEach(theme => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td>
@@ -89,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.appendChild(tr);
             });
 
-            // 테마 이름 클릭 시 해당 테마의 종목 리스트 로드
+            // 테마 이름 클릭 이벤트 바인딩
             document.querySelectorAll('.theme-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -98,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-        } else if (mode === 'stocks') {
+        } else if (currentMode === 'stocks') {
             thead.innerHTML = `
                 <tr>
                     <th>종목명</th>
@@ -116,10 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
             `;
 
-            dataList.forEach(stock => {
+            paginatedList.forEach(stock => {
                 const tr = document.createElement('tr');
                 
-                // Format numbers
                 const price = new Intl.NumberFormat('ko-KR').format(stock.current_price || 0);
                 const day3 = stock.day3 ? stock.day3.toFixed(2) : '0.00';
                 const day3Class = stock.day3 >= 0 ? 'pos' : 'neg';
@@ -139,63 +186,114 @@ document.addEventListener('DOMContentLoaded', () => {
                 const per = stock.PER ? stock.PER.toFixed(2) : '-';
                 const eps = stock.EPS ? new Intl.NumberFormat('ko-KR').format(stock.EPS) : '-';
                 
-                // 시가총액 (조 단위 변환)
                 let marcapStr = '-';
                 if (stock.marcap) {
                     const jo = Math.floor(stock.marcap / 1000000000000);
                     const eok = Math.floor((stock.marcap % 1000000000000) / 100000000);
-                    marcapStr = jo > 0 ? `${jo}조 ${eok}억원` : `${eok}억원`;
+                    marcapStr = jo > 0 ? \`\${jo}조 \${eok}억원\` : \`\${eok}억원\`;
                 }
 
-                tr.innerHTML = `
+                tr.innerHTML = \`
                     <td>
                         <div class="theme-name-cell">
-                            <span class="stock-name" style="font-weight: 600;">${stock.name}</span>
-                            <span style="font-size: 11px; color: var(--text-muted); margin-left: 5px;">${stock.code}</span>
+                            <span class="stock-name" style="font-weight: 600;">\${stock.name}</span>
+                            <span style="font-size: 11px; color: var(--text-muted); margin-left: 5px;">\${stock.code}</span>
                         </div>
                     </td>
-                    <td class="right"><span class="price-main" style="color: white;">${price}</span></td>
-                    <td class="right"><span class="${day3Class} price-main">${day3Sign}${day3}%</span></td>
-                    <td class="right"><span class="price-main"><span class="pos">+${high52}%</span> / <span class="neg">${low52}%</span></span></td>
-                    <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">${neglect52}</span></td>
-                    <td class="right"><span class="price-main"><span class="pos">+${high3y}%</span> / <span class="neg">${low3y}%</span></span></td>
-                    <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">${neglect3y}</span></td>
+                    <td class="right"><span class="price-main" style="color: white;">\${price}</span></td>
+                    <td class="right"><span class="\${day3Class} price-main">\${day3Sign}\${day3}%</span></td>
+                    <td class="right"><span class="price-main"><span class="pos">+\${high52}%</span> / <span class="neg">\${low52}%</span></span></td>
+                    <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">\${neglect52}</span></td>
+                    <td class="right"><span class="price-main"><span class="pos">+\${high3y}%</span> / <span class="neg">\${low3y}%</span></span></td>
+                    <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">\${neglect3y}</span></td>
                     <td class="right" style="background-color: rgba(255,255,255,0.03);">
-                        <span class="price-main" style="font-weight: 800; color: var(--text-main);">${expRet}%</span>
+                        <span class="price-main" style="font-weight: 800; color: var(--text-main);">\${expRet}%</span>
                     </td>
-                    <td class="right"><span class="price-main">${pbr}</span></td>
-                    <td class="right"><span class="price-main">${per}</span></td>
-                    <td class="right"><span class="price-main">${eps}</span></td>
-                    <td class="right"><span class="price-main" style="font-size: 12px; color: var(--text-muted);">${marcapStr}</span></td>
-                `;
+                    <td class="right"><span class="price-main">\${pbr}</span></td>
+                    <td class="right"><span class="price-main">\${per}</span></td>
+                    <td class="right"><span class="price-main">\${eps}</span></td>
+                    <td class="right"><span class="price-main" style="font-size: 12px; color: var(--text-muted);">\${marcapStr}</span></td>
+                \`;
                 tbody.appendChild(tr);
             });
             
-            // Add back button row
-            const backTr = document.createElement('tr');
-            backTr.innerHTML = `
-                <td colspan="12" class="center">
-                    <button id="back-to-themes" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; font-family: inherit;">
-                        <i class="ph ph-arrow-left"></i> 테마 리스트로 돌아가기
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(backTr);
-            
-            document.getElementById('back-to-themes').addEventListener('click', () => {
-                headerTitle.textContent = "전체 테마";
-                themeBadge.textContent = "테마";
-                renderTable(window.allThemes, 'themes');
-            });
+            // Add back button row only if there is data
+            if (paginatedList.length > 0) {
+                const backTr = document.createElement('tr');
+                backTr.innerHTML = \`
+                    <td colspan="12" class="center">
+                        <button id="back-to-themes" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; font-family: inherit;">
+                            <i class="ph ph-arrow-left"></i> 테마 리스트로 돌아가기
+                        </button>
+                    </td>
+                \`;
+                tbody.appendChild(backTr);
+                
+                document.getElementById('back-to-themes').addEventListener('click', () => {
+                    headerTitle.textContent = "전체 테마";
+                    themeBadge.textContent = "테마";
+                    renderTable(window.allThemes, 'themes');
+                });
+            }
         }
+
+        // 4. 페이지네이션 버튼 렌더링
+        renderPaginationButtons(totalPages);
     }
 
+    function renderPaginationButtons(totalPages) {
+        if (!paginationContainer || totalPages <= 1) {
+            if (paginationContainer) paginationContainer.innerHTML = '';
+            return;
+        }
+
+        let html = \`<button class="page-btn" \${currentPage === 1 ? 'disabled' : ''} data-page="prev">이전</button>\`;
+        
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            html += \`<button class="page-btn \${i === currentPage ? 'active' : ''}" data-page="\${i}">\${i}</button>\`;
+        }
+        
+        html += \`<button class="page-btn" \${currentPage === totalPages ? 'disabled' : ''} data-page="next">다음</button>\`;
+        
+        paginationContainer.innerHTML = html;
+
+        // 이벤트 바인딩
+        paginationContainer.querySelectorAll('.page-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const page = e.target.getAttribute('data-page');
+                if (page === 'prev' && currentPage > 1) {
+                    currentPage--;
+                    renderCurrentPage();
+                } else if (page === 'next' && currentPage < totalPages) {
+                    currentPage++;
+                    renderCurrentPage();
+                } else if (!isNaN(page)) {
+                    currentPage = parseInt(page);
+                    renderCurrentPage();
+                }
+                
+                // 테이블 맨 위로 스크롤
+                const tableContainer = document.querySelector('.table-container');
+                if (tableContainer) tableContainer.scrollTop = 0;
+            });
+        });
+    }
+
+    // 테마 상세 로드
     function loadThemeDetails(themeName) {
         headerTitle.textContent = themeName + " 테마주";
         themeBadge.textContent = "테마상세";
         tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">해당 테마의 종목 데이터를 불러오는 중입니다...</td></tr>';
+        if (paginationContainer) paginationContainer.innerHTML = '';
         
-        fetch(`${API_URL}/${encodeURIComponent(themeName)}`)
+        fetch(\`\${API_URL}/\${encodeURIComponent(themeName)}\`)
             .then(response => {
                 if (!response.ok) throw new Error("Theme details not found");
                 return response.json();
@@ -215,61 +313,47 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
-    // 테마 메뉴 클릭 이벤트 처리
+    // 테마 메뉴 클릭 이벤트
     const themeMenus = document.querySelectorAll('#theme-menu-list li');
     themeMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
             e.preventDefault();
-            
-            // 모든 메뉴의 active 클래스 제거 후 현재 클릭한 메뉴에 추가
             document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
             menu.classList.add('active');
 
             const action = menu.getAttribute('data-action');
-            const menuText = menu.textContent.trim();
-            
-            // 제목 업데이트
-            headerTitle.textContent = menuText;
+            headerTitle.textContent = menu.textContent.trim();
             themeBadge.textContent = "테마";
 
-            // 아직 데이터가 로딩되지 않았을 때 메뉴를 클릭하면 로딩 메시지 유지
             if (window.allThemes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...<br><span style="font-size: 13px;">(무료 서버 특성상 첫 접속 시 최대 1분 정도 소요될 수 있습니다)</span></td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...</td></tr>';
                 return;
             }
 
             let filteredThemes = [...window.allThemes];
+            if (action === 'rising') filteredThemes = filteredThemes.filter(t => t.day1Pos);
+            else if (action === 'falling') filteredThemes = filteredThemes.filter(t => !t.day1Pos);
+            else if (action === 'high-return') filteredThemes.sort((a, b) => parseFloat(b.expReturn) - parseFloat(a.expReturn));
+            else if (action === 'neglected') filteredThemes.sort((a, b) => parseFloat(b.neglect52) - parseFloat(a.neglect52));
 
-            // 필터링 및 정렬 로직
-            if (action === 'rising') {
-                filteredThemes = filteredThemes.filter(t => t.day1Pos);
-            } else if (action === 'falling') {
-                filteredThemes = filteredThemes.filter(t => !t.day1Pos);
-            } else if (action === 'high-return') {
-                filteredThemes.sort((a, b) => parseFloat(b.expReturn) - parseFloat(a.expReturn));
-            } else if (action === 'neglected') {
-                filteredThemes.sort((a, b) => parseFloat(b.neglect52) - parseFloat(a.neglect52));
-            }
-
-            renderTable(filteredThemes);
+            renderTable(filteredThemes, 'themes');
         });
     });
 
-    // 조건별 종목 메뉴 클릭 이벤트 처리
+    // 조건별 종목 메뉴 클릭 이벤트
     const stockMenus = document.querySelectorAll('#stock-menu-list li');
     stockMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
             e.preventDefault();
-            
             document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
             menu.classList.add('active');
 
             const action = menu.getAttribute('data-action');
-            const menuText = menu.textContent.trim();
-            headerTitle.textContent = menuText;
+            headerTitle.textContent = menu.textContent.trim();
             themeBadge.textContent = "종목";
 
             tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">전 종목 데이터를 불러오는 중입니다...</td></tr>';
+            if (paginationContainer) paginationContainer.innerHTML = '';
 
             fetch('https://dajavata-backend.onrender.com/api/stocks/fundamentals')
                 .then(response => {
@@ -293,12 +377,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         stocks = stocks.filter(s => s.high52 !== null && s.high52 < 5).sort((a, b) => (a.high52 || 0) - (b.high52 || 0));
                     }
                     
-                    // 보여줄 종목 수를 100개로 제한하여 성능 확보
-                    renderTable(stocks.slice(0, 100), 'stocks');
+                    renderTable(stocks, 'stocks');
                 })
                 .catch(error => {
                     console.error('Error fetching stock data:', error);
-                    tbody.innerHTML = '<tr><td colspan="12" class="center">종목 데이터를 불러오는 데 실패했습니다. (백엔드 서버 업데이트 필요)</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" class="center">종목 데이터를 불러오는 데 실패했습니다.</td></tr>';
                 });
         });
     });
