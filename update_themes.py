@@ -264,6 +264,11 @@ async def main():
         
     with open('data/theme_details.json', 'w', encoding='utf-8') as f:
         json.dump(theme_details, f, ensure_ascii=False, indent=2)
+
+    # Save all unique stocks for condition filters
+    all_stocks_list = list(stock_metrics_dict.values())
+    with open('data/all_stocks.json', 'w', encoding='utf-8') as f:
+        json.dump(all_stocks_list, f, ensure_ascii=False, indent=2)
         
     print("Update complete! You can run this script daily.")
 

@@ -447,6 +447,15 @@ def get_theme_details(theme_name: str):
 def get_stocks():
     return stock_list
 
+@app.get("/api/stocks/fundamentals")
+def get_stocks_fundamentals():
+    file_path = 'data/all_stocks.json'
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return {"stocks": data}
+    raise HTTPException(status_code=404, detail="Stock data not found")
+
 @app.get("/")
 def read_root():
     return {"message": "DAJAVATA API Server is running!"}
