@@ -13,10 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentDataList = [];
     let currentMode = 'themes';
     let currentPage = 1;
+    let isThemeDetail = false;
     const itemsPerPage = 50;
 
     const searchInput = document.querySelector('.search-box input');
-    const paginationContainer = document.getElementById('pagination-container');
 
     // 로딩 메시지
     tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...<br><span style="font-size: 13px;">(무료 서버 특성상 첫 접속 시 최대 1분 정도 소요될 수 있습니다)</span></td></tr>';
@@ -47,10 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 테이블 렌더링 초기화 함수
-    function renderTable(dataList, mode = 'themes') {
+    function renderTable(dataList, mode = 'themes', fromThemeDetail = false) {
         currentDataList = dataList;
         currentMode = mode;
         currentPage = 1;
+        isThemeDetail = fromThemeDetail;
         if (searchInput) searchInput.value = ''; // 탭 전환 시 검색어 초기화
         renderCurrentPage();
     }
@@ -59,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderCurrentPage() {
         const thead = document.querySelector('#theme-table thead');
         tbody.innerHTML = ''; // 초기화
-        if (paginationContainer) paginationContainer.innerHTML = '';
 
         // 1. 검색 필터링
         let filteredList = currentDataList;
@@ -216,74 +216,80 @@ document.addEventListener('DOMContentLoaded', () => {
                 \`;
                 tbody.appendChild(tr);
             });
+        }
+
+        // 4. 하단 컨트롤 버튼 (뒤로가기 + 페이지네이션)
+        if (totalPages > 1 || isThemeDetail) {
+            const footerTr = document.createElement('tr');
             
-            // Add back button row only if there is data
-            if (paginatedList.length > 0) {
-                const backTr = document.createElement('tr');
-                backTr.innerHTML = \`
-                    <td colspan="12" class="center">
-                        <button id="back-to-themes" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; font-family: inherit;">
-                            <i class="ph ph-arrow-left"></i> 테마 리스트로 돌아가기
-                        </button>
-                    </td>
+            let backButtonHtml = '';
+            if (isThemeDetail) {
+                backButtonHtml = \`
+                    <button id="back-to-themes" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; font-family: inherit; margin-right: 20px;">
+                        <i class="ph ph-arrow-left"></i> 테마 리스트로 돌아가기
+                    </button>
                 \`;
-                tbody.appendChild(backTr);
+            }
+
+            let paginationHtml = '';
+            if (totalPages > 1) {
+                paginationHtml += \`<div class="pagination-container" style="display: inline-flex; align-items: center; gap: 5px; margin: 0; padding: 0; background: transparent; border: none; box-shadow: none;">\`;
+                paginationHtml += \`<button class="page-btn" \${currentPage === 1 ? 'disabled' : ''} data-page="prev">이전</button>\`;
                 
-                document.getElementById('back-to-themes').addEventListener('click', () => {
+                let startPage = Math.max(1, currentPage - 2);
+                let endPage = Math.min(totalPages, startPage + 4);
+                if (endPage - startPage < 4) {
+                    startPage = Math.max(1, endPage - 4);
+                }
+
+                for (let i = startPage; i <= endPage; i++) {
+                    paginationHtml += \`<button class="page-btn \${i === currentPage ? 'active' : ''}" data-page="\${i}">\${i}</button>\`;
+                }
+                
+                paginationHtml += \`<button class="page-btn" \${currentPage === totalPages ? 'disabled' : ''} data-page="next">다음</button>\`;
+                paginationHtml += \`</div>\`;
+            }
+
+            footerTr.innerHTML = \`
+                <td colspan="12" class="center" style="padding: 20px 10px;">
+                    <div style="display: flex; justify-content: center; align-items: center;">
+                        \${backButtonHtml}
+                        \${paginationHtml}
+                    </div>
+                </td>
+            \`;
+            tbody.appendChild(footerTr);
+
+            // 이벤트 바인딩
+            const backBtn = document.getElementById('back-to-themes');
+            if (backBtn) {
+                backBtn.addEventListener('click', () => {
                     headerTitle.textContent = "전체 테마";
                     themeBadge.textContent = "테마";
                     renderTable(window.allThemes, 'themes');
                 });
             }
-        }
 
-        // 4. 페이지네이션 버튼 렌더링
-        renderPaginationButtons(totalPages);
-    }
-
-    function renderPaginationButtons(totalPages) {
-        if (!paginationContainer || totalPages <= 1) {
-            if (paginationContainer) paginationContainer.innerHTML = '';
-            return;
-        }
-
-        let html = \`<button class="page-btn" \${currentPage === 1 ? 'disabled' : ''} data-page="prev">이전</button>\`;
-        
-        let startPage = Math.max(1, currentPage - 2);
-        let endPage = Math.min(totalPages, startPage + 4);
-        
-        if (endPage - startPage < 4) {
-            startPage = Math.max(1, endPage - 4);
-        }
-
-        for (let i = startPage; i <= endPage; i++) {
-            html += \`<button class="page-btn \${i === currentPage ? 'active' : ''}" data-page="\${i}">\${i}</button>\`;
-        }
-        
-        html += \`<button class="page-btn" \${currentPage === totalPages ? 'disabled' : ''} data-page="next">다음</button>\`;
-        
-        paginationContainer.innerHTML = html;
-
-        // 이벤트 바인딩
-        paginationContainer.querySelectorAll('.page-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const page = e.target.getAttribute('data-page');
-                if (page === 'prev' && currentPage > 1) {
-                    currentPage--;
-                    renderCurrentPage();
-                } else if (page === 'next' && currentPage < totalPages) {
-                    currentPage++;
-                    renderCurrentPage();
-                } else if (!isNaN(page)) {
-                    currentPage = parseInt(page);
-                    renderCurrentPage();
-                }
-                
-                // 테이블 맨 위로 스크롤
-                const tableContainer = document.querySelector('.table-container');
-                if (tableContainer) tableContainer.scrollTop = 0;
+            footerTr.querySelectorAll('.page-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const page = e.target.getAttribute('data-page');
+                    if (page === 'prev' && currentPage > 1) {
+                        currentPage--;
+                        renderCurrentPage();
+                    } else if (page === 'next' && currentPage < totalPages) {
+                        currentPage++;
+                        renderCurrentPage();
+                    } else if (!isNaN(page)) {
+                        currentPage = parseInt(page);
+                        renderCurrentPage();
+                    }
+                    
+                    // 테이블 맨 위로 스크롤
+                    const tableContainer = document.querySelector('.table-container');
+                    if (tableContainer) tableContainer.scrollTop = 0;
+                });
             });
-        });
+        }
     }
 
     // 테마 상세 로드
@@ -291,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
         headerTitle.textContent = themeName + " 테마주";
         themeBadge.textContent = "테마상세";
         tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">해당 테마의 종목 데이터를 불러오는 중입니다...</td></tr>';
-        if (paginationContainer) paginationContainer.innerHTML = '';
         
         fetch(\`\${API_URL}/\${encodeURIComponent(themeName)}\`)
             .then(response => {
@@ -299,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return response.json();
             })
             .then(data => {
-                renderTable(data.stocks, 'stocks');
+                renderTable(data.stocks, 'stocks', true);
             })
             .catch(error => {
                 console.error('Error fetching theme details:', error);
@@ -353,7 +358,6 @@ document.addEventListener('DOMContentLoaded', () => {
             themeBadge.textContent = "종목";
 
             tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">전 종목 데이터를 불러오는 중입니다...</td></tr>';
-            if (paginationContainer) paginationContainer.innerHTML = '';
 
             fetch('https://dajavata-backend.onrender.com/api/stocks/fundamentals')
                 .then(response => {
