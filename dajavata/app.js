@@ -10,13 +10,24 @@ document.addEventListener('DOMContentLoaded', () => {
     window.allThemes = [];
     window.allStocks = [];
 
-    // Fetch all stocks globally for search
-    fetch('https://dajavata-backend.onrender.com/api/stocks/fundamentals')
-        .then(response => response.json())
-        .then(data => {
-            window.allStocks = data.stocks || [];
-        })
-        .catch(error => console.error('Error fetching all stocks:', error));
+    // 전체 종목 데이터를 로드하는 Promise (재사용/재시도 가능하게 함수로 분리)
+    function loadAllStocks() {
+        return fetch('https://dajavata-backend.onrender.com/api/stocks/fundamentals')
+            .then(response => {
+                if (!response.ok) throw new Error('fundamentals fetch failed');
+                return response.json();
+            })
+            .then(data => {
+                window.allStocks = data.stocks || [];
+                return window.allStocks;
+            })
+            .catch(error => {
+                console.error('Error fetching all stocks:', error);
+                return []; // 실패해도 재시도할 수 있도록 캐싱하지 않음
+            });
+    }
+
+    let allStocksPromise = loadAllStocks();
 
     // Pagination State
     let currentDataList = [];
@@ -48,8 +59,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 검색창 이벤트
     if (searchInput) {
-        searchInput.addEventListener('input', () => {
+        searchInput.addEventListener('input', async () => {
             currentPage = 1;
+
+            // 아직 전체 종목 데이터가 없으면, 로딩 중임을 표시하고 완료될 때까지 기다렸다가 검색
+            if (window.allStocks.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" class="center" style="padding:40px;">종목 데이터를 불러오는 중입니다... 잠시만 기다려주세요.</td></tr>';
+                window.allStocks = await allStocksPromise;
+
+                // 실패했을 경우 재시도 (다음 입력을 기다리지 않고 즉시 재시도)
+                if (window.allStocks.length === 0) {
+                    allStocksPromise = loadAllStocks();
+                }
+            }
+            
             renderCurrentPage();
         });
     }
