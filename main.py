@@ -292,52 +292,103 @@ def calculate_rsi_for_theme(df, period=14):
     return rsi.iloc[-1]
 
 def calculate_theme_metrics():
-    end_date = datetime.date.today()
-    start_date = end_date - datetime.timedelta(days=90)
+    """
+    Fetches data using FinanceDataReader (No API Key Required) and calculates metrics for the frontend table.
+    """
+    results = []
     
-    metrics = []
+    # Fetch 3 years of data
+    start_date = (datetime.datetime.today() - datetime.timedelta(days=1095)).strftime("%Y-%m-%d")
     
-    for theme_name, ticker in THEME_ETF_MAP.items():
+    for s_name, ticker in THEME_ETF_MAP.items():
         try:
-            df = fdr.DataReader(ticker, start_date, end_date)
-            if df.empty or len(df) < 2:
+            # Fetch data from Naver Finance / KRX
+            df = fdr.DataReader(ticker, start=start_date)
+            if df is None or df.empty:
                 continue
                 
-            current_price = float(df['Close'].iloc[-1])
-            prev_price = float(df['Close'].iloc[-2])
-            change_percent = ((current_price - prev_price) / prev_price) * 100
-            
-            # Simple volume trend check
-            vol_5d = df['Volume'].tail(5).mean()
-            vol_20d = df['Volume'].tail(20).mean()
-            trend = "상승" if vol_5d > vol_20d else "하락"
-            if current_price < df['Close'].tail(20).mean():
-                trend = "하락"
-            if change_percent > 2.0:
-                trend = "강세"
-            elif change_percent < -2.0:
-                trend = "약세"
+            # Reset index to make 'Date' a column if it's the index
+            if df.index.name == 'Date':
+                df = df.reset_index()
                 
-            rsi_val = calculate_rsi_for_theme(df)
+            # Ensure required columns exist
+            if 'Close' not in df.columns:
+                continue
+                
+            # Get latest close
+            latest = df.iloc[-1]
+            latest_price = latest['Close']
             
-            metrics.append({
-                "name": theme_name,
-                "change": round(change_percent, 2),
-                "trend": trend,
-                "rsi": round(rsi_val, 1) if rsi_val else 50.0
+            # Calculate metrics
+            day1_price = df.iloc[-2]['Close'] if len(df) >= 2 else latest_price
+            day3_price = df.iloc[-4]['Close'] if len(df) >= 4 else day1_price
+            
+            day1_change = (latest_price - day1_price) / day1_price * 100
+            day3_change = (latest_price - day3_price) / day3_price * 100
+            
+            # 52 weeks (approx 252 trading days)
+            df_52w = df.tail(252)
+            high_52w = df_52w['Close'].max()
+            low_52w = df_52w['Close'].min()
+            
+            high_52w_pct = (latest_price - low_52w) / low_52w * 100 if low_52w > 0 else 0
+            low_52w_pct = (latest_price - high_52w) / high_52w * 100 if high_52w > 0 else 0
+            neglect_52w = int(100 - ((latest_price - low_52w) / (high_52w - low_52w) * 100)) if high_52w != low_52w else 50
+            
+            # 3 years (approx 756 trading days)
+            high_3y = df['Close'].max()
+            low_3y = df['Close'].min()
+            
+            high_3y_pct = (latest_price - low_3y) / low_3y * 100 if low_3y > 0 else 0
+            low_3y_pct = (latest_price - high_3y) / high_3y * 100 if high_3y > 0 else 0
+            neglect_3y = int(100 - ((latest_price - low_3y) / (high_3y - low_3y) * 100)) if high_3y != low_3y else 50
+            
+            # RSI
+            rsi_d = calculate_rsi_for_theme(df, period=14)
+            
+            # Resample needs datetime index
+            if 'Date' in df.columns:
+                df_time = df.set_index('Date')
+            else:
+                df_time = df
+                
+            df_w = df_time.resample('W').last()
+            rsi_w = calculate_rsi_for_theme(df_w, period=14)
+            
+            df_m = df_time.resample('ME').last()
+            rsi_m = calculate_rsi_for_theme(df_m, period=14)
+            
+            # Expected Return (Mock logic based on neglect index or RSI)
+            exp_return = max(0, neglect_52w * 1.5 - (rsi_d if rsi_d else 50) * 0.5)
+            
+            results.append({
+                "name": s_name,
+                "desc": f"{s_name} 관련 펀드(ETF: {ticker}) 성과입니다.",
+                "day1": f"{day1_change:+.2f}%",
+                "day1Pos": bool(day1_change >= 0),
+                "day3": f"{day3_change:+.2f}%",
+                "day3Pos": bool(day3_change >= 0),
+                "high52": f"{high_52w_pct:+.1f}%",
+                "high52Pos": bool(high_52w_pct >= 0),
+                "low52": f"{low_52w_pct:+.1f}%",
+                "low52Pos": bool(low_52w_pct >= 0),
+                "neglect52": str(neglect_52w),
+                "high3y": f"{high_3y_pct:+.1f}%",
+                "high3yPos": bool(high_3y_pct >= 0),
+                "low3y": f"{low_3y_pct:+.1f}%",
+                "low3yPos": bool(low_3y_pct >= 0),
+                "neglect3y": str(neglect_3y),
+                "expReturn": f"{exp_return:.0f}%",
+                "rsi_d": f"{rsi_d:.1f}" if pd.notna(rsi_d) else "-",
+                "rsi_w": f"{rsi_w:.1f}" if pd.notna(rsi_w) else "-",
+                "rsi_m": f"{rsi_m:.1f}" if pd.notna(rsi_m) else "-",
+                "update": datetime.datetime.now().strftime("%m.%d")
             })
         except Exception as e:
-            print(f"Error fetching data for {theme_name} ({ticker}): {e}")
-            metrics.append({
-                "name": theme_name,
-                "change": 0.0,
-                "trend": "데이터 없음",
-                "rsi": 50.0
-            })
+            print(f"Error processing {s_name}: {e}")
+            continue
             
-    # Sort by change % descending
-    metrics.sort(key=lambda x: x["change"], reverse=True)
-    return metrics
+    return results
 
 @app.get("/api/themes")
 def get_themes():
