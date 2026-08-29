@@ -4,10 +4,22 @@ import datetime
 import uvicorn
 import pandas as pd
 import FinanceDataReader as fdr
+import random
+import traceback
+import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from dotenv import load_dotenv
+
+# 환경 변수 로드
+load_dotenv()
+
+# 환경 변수 가져오기
+NOTION_TOKEN = os.getenv("NOTION_TOKEN")
+NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 
 app = FastAPI(title="Dajavata Server")
 
@@ -120,18 +132,18 @@ def calculate_theme_metrics():
                 "name": s_name,
                 "desc": f"{s_name} 관련 펀드(ETF: {ticker}) 성과입니다.",
                 "day1": f"{day1_change:+.2f}%",
-                "day1Pos": day1_change >= 0,
+                "day1Pos": bool(day1_change >= 0),
                 "day3": f"{day3_change:+.2f}%",
-                "day3Pos": day3_change >= 0,
+                "day3Pos": bool(day3_change >= 0),
                 "high52": f"{high_52w_pct:+.1f}%",
-                "high52Pos": high_52w_pct >= 0,
+                "high52Pos": bool(high_52w_pct >= 0),
                 "low52": f"{low_52w_pct:+.1f}%",
-                "low52Pos": low_52w_pct >= 0,
+                "low52Pos": bool(low_52w_pct >= 0),
                 "neglect52": str(neglect_52w),
                 "high3y": f"{high_3y_pct:+.1f}%",
-                "high3yPos": high_3y_pct >= 0,
+                "high3yPos": bool(high_3y_pct >= 0),
                 "low3y": f"{low_3y_pct:+.1f}%",
-                "low3yPos": low_3y_pct >= 0,
+                "low3yPos": bool(low_3y_pct >= 0),
                 "neglect3y": str(neglect_3y),
                 "expReturn": f"{exp_return:.0f}%",
                 "rsi_d": f"{rsi_d:.1f}" if pd.notna(rsi_d) else "-",
@@ -150,14 +162,78 @@ def get_themes():
     themes = calculate_theme_metrics()
     return {"themes": themes}
 
-# Mount static files from dajavata folder
-DAJAVATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dajavata")
+@app.get("/api/insights")
+def get_insights():
+    if not NOTION_TOKEN or not NOTION_DATABASE_ID:
+        raise HTTPException(status_code=500, detail="Notion integration not configured.")
+    
+    try:
+        url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
+        headers = {
+            "Authorization": f"Bearer {NOTION_TOKEN}",
+            "Notion-Version": "2022-06-28",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "sorts": [
+                {
+                    "timestamp": "created_time",
+                    "direction": "descending"
+                }
+            ]
+        }
+        r = requests.post(url, headers=headers, json=data)
+        r.raise_for_status()
+        response = r.json()
+        
+        posts = []
+        for page in response.get("results", []):
+            # Extract basic properties
+            props = page.get("properties", {})
+            
+            # Find a title property
+            title = "Untitled"
+            for k, v in props.items():
+                if v.get("type") == "title":
+                    title_arr = v.get("title", [])
+                    if title_arr:
+                        title = title_arr[0].get("plain_text", "Untitled")
+                    break
+            
+            # Find a text/rich_text property (for content/excerpt)
+            content = ""
+            for k, v in props.items():
+                if v.get("type") == "rich_text":
+                    text_arr = v.get("rich_text", [])
+                    if text_arr:
+                        content = "".join([t.get("plain_text", "") for t in text_arr])
+                    break
+            
+            # Find a date property
+            created_at = page.get("created_time", "").split("T")[0]
+            for k, v in props.items():
+                if v.get("type") == "date":
+                    date_obj = v.get("date")
+                    if date_obj and date_obj.get("start"):
+                        created_at = date_obj.get("start")
+                    break
+
+            posts.append({
+                "id": page.get("id"),
+                "title": title,
+                "content": content,
+                "date": created_at
+            })
+            
+        return {"posts": posts}
+    except Exception as e:
+        print(f"Notion API Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
-def serve_index():
-    return FileResponse(os.path.join(DAJAVATA_DIR, "index.html"))
-
-app.mount("/", StaticFiles(directory=DAJAVATA_DIR), name="static")
+def health_check():
+    return {"status": "ok"}
 
 if __name__ == "__main__":
-    uvicorn.run("dajavata_server:app", host="0.0.0.0", port=8001, reload=True)
+    port = int(os.environ.get("PORT", 8001))
+    uvicorn.run("dajavata_server:app", host="0.0.0.0", port=port)
