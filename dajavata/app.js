@@ -573,8 +573,18 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">노션에서 데이터를 불러오는 중입니다...</td></tr>';
 
             const insights = await loadInsights();
+
+            // 헤더 먼저 업데이트
+            const thead = document.querySelector('#theme-table thead');
+            thead.innerHTML = `
+                <tr>
+                    <th style="width: 15%">작성일</th>
+                    <th style="width: 85%">기업 개요 및 차트 분석</th>
+                </tr>
+            `;
+
             if (insights.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px;">등록된 글이 없거나 불러오지 못했습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px;">등록된 글이 없거나 불러오지 못했습니다. 노션에 글을 작성해주세요.</td></tr>';
                 return;
             }
             renderTable(insights, 'insights');
