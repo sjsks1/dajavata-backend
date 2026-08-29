@@ -7,6 +7,16 @@ import os
 import pandas as pd
 import FinanceDataReader as fdr
 import numpy as np
+import math
+
+def clean_nan(obj):
+    if isinstance(obj, dict):
+        return {k: clean_nan(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_nan(v) for v in obj]
+    elif isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return obj
 
 # Create data directory if not exists
 os.makedirs("data", exist_ok=True)
@@ -256,17 +266,6 @@ async def main():
         
         # Save details
         theme_details[theme['name']] = theme_stock_data
-
-import math
-
-def clean_nan(obj):
-    if isinstance(obj, dict):
-        return {k: clean_nan(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [clean_nan(v) for v in obj]
-    elif isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
-        return None
-    return obj
 
     # 7. Save to JSON
     print("Saving to JSON files...")
