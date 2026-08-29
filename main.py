@@ -392,6 +392,17 @@ def calculate_theme_metrics():
             
     return results
 
+import math
+
+def sanitize(obj):
+    if isinstance(obj, dict):
+        return {k: sanitize(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize(v) for v in obj]
+    elif isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return obj
+
 @app.get("/api/themes")
 def get_themes():
     cache_file = 'data/theme_cache.json'
@@ -426,11 +437,10 @@ def get_themes():
                 "update": "오늘",
                 "score": t.get("score", 100)
             })
-        return {"themes": formatted_themes}
+        return {"themes": sanitize(formatted_themes)}
     else:
-        # Fallback to ETF calculation
         themes = calculate_theme_metrics()
-        return {"themes": themes}
+        return {"themes": sanitize(themes)}
 
 @app.get("/api/themes/{theme_name:path}")
 def get_theme_details(theme_name: str):
@@ -444,7 +454,7 @@ def get_theme_details(theme_name: str):
         
         # Exact match
         if theme_name in data:
-            return {"theme": theme_name, "stocks": data[theme_name]}
+            return {"theme": theme_name, "stocks": sanitize(data[theme_name])}
             
         raise HTTPException(status_code=404, detail=f"Theme '{theme_name}' not found")
     
@@ -460,7 +470,7 @@ def get_stocks_fundamentals():
     if os.path.exists(file_path):
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        return {"stocks": data}
+        return {"stocks": sanitize(data)}
     raise HTTPException(status_code=404, detail="Stock data not found")
 
 @app.get("/")

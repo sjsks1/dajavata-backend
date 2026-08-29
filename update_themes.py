@@ -257,18 +257,29 @@ async def main():
         # Save details
         theme_details[theme['name']] = theme_stock_data
 
+import math
+
+def clean_nan(obj):
+    if isinstance(obj, dict):
+        return {k: clean_nan(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [clean_nan(v) for v in obj]
+    elif isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return obj
+
     # 7. Save to JSON
     print("Saving to JSON files...")
     with open('data/theme_cache.json', 'w', encoding='utf-8') as f:
-        json.dump(final_themes, f, ensure_ascii=False, indent=2)
+        json.dump(clean_nan(final_themes), f, ensure_ascii=False, indent=2)
         
     with open('data/theme_details.json', 'w', encoding='utf-8') as f:
-        json.dump(theme_details, f, ensure_ascii=False, indent=2)
+        json.dump(clean_nan(theme_details), f, ensure_ascii=False, indent=2)
 
     # Save all unique stocks for condition filters
     all_stocks_list = list(stock_metrics_dict.values())
     with open('data/all_stocks.json', 'w', encoding='utf-8') as f:
-        json.dump(all_stocks_list, f, ensure_ascii=False, indent=2)
+        json.dump(clean_nan(all_stocks_list), f, ensure_ascii=False, indent=2)
         
     print("Update complete! You can run this script daily.")
 
