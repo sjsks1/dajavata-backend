@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stock.marcap) {
                     const jo = Math.floor(stock.marcap / 1000000000000);
                     const eok = Math.floor((stock.marcap % 1000000000000) / 100000000);
-                    marcapStr = jo > 0 ? \`\${jo}조 \${eok}억원\` : \`\${eok}억원\`;
+                    marcapStr = jo > 0 ? `${jo}조 ${eok}억원` : `${eok}억원`;
                 }
 
                 tr.innerHTML = `
@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
         themeBadge.textContent = "테마상세";
         tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">해당 테마의 종목 데이터를 불러오는 중입니다...</td></tr>';
         
-        fetch(\`\${API_URL}/\${encodeURIComponent(themeName)}\`)
+        fetch(`${API_URL}/${encodeURIComponent(themeName)}`)
             .then(response => {
                 if (!response.ok) throw new Error("Theme details not found");
                 return response.json();
