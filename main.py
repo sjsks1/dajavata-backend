@@ -13,6 +13,12 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import FinanceDataReader as fdr
 import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
+
+NOTION_TOKEN = os.getenv("NOTION_TOKEN")
+NOTION_DATABASE_ID = os.getenv("NOTION_DATABASE_ID")
 
 app = FastAPI()
 
@@ -45,6 +51,69 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/api/insights")
+def get_insights():
+    if not NOTION_TOKEN or not NOTION_DATABASE_ID:
+        raise HTTPException(status_code=500, detail="Notion integration not configured.")
+    
+    try:
+        url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
+        headers = {
+            "Authorization": f"Bearer {NOTION_TOKEN}",
+            "Notion-Version": "2022-06-28",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "sorts": [
+                {
+                    "timestamp": "created_time",
+                    "direction": "descending"
+                }
+            ]
+        }
+        r = requests.post(url, headers=headers, json=data)
+        r.raise_for_status()
+        response = r.json()
+        
+        posts = []
+        for page in response.get("results", []):
+            props = page.get("properties", {})
+            title = "Untitled"
+            for k, v in props.items():
+                if v.get("type") == "title":
+                    title_arr = v.get("title", [])
+                    if title_arr:
+                        title = title_arr[0].get("plain_text", "Untitled")
+                    break
+            
+            content = ""
+            for k, v in props.items():
+                if v.get("type") == "rich_text":
+                    text_arr = v.get("rich_text", [])
+                    if text_arr:
+                        content = "".join([t.get("plain_text", "") for t in text_arr])
+                    break
+            
+            created_at = page.get("created_time", "").split("T")[0]
+            for k, v in props.items():
+                if v.get("type") == "date":
+                    date_obj = v.get("date")
+                    if date_obj and date_obj.get("start"):
+                        created_at = date_obj.get("start")
+                    break
+
+            posts.append({
+                "id": page.get("id"),
+                "title": title,
+                "content": content,
+                "date": created_at
+            })
+            
+        return {"posts": posts}
+    except Exception as e:
+        print(f"Notion API Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 def setup_korean_font():
     font_names = ['Malgun Gothic', '맑은 고딕', 'NanumGothic', '나눔고딕', 'AppleGothic', 'DejaVu Sans']

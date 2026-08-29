@@ -1,12 +1,10 @@
-fastapi
-uvicorn
-pydantic
-plotly
+fastapi==0.104.1
+uvicorn==0.24.0.post1
 pandas
 numpy
-finance-datareader
 requests
 beautifulsoup4
-notion-client
 matplotlib
+finance-datareader
 python-dotenv
+notion-client
