@@ -1,0 +1,353 @@
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+import requests
+import xml.etree.ElementTree as ET
+import pandas as pd
+import numpy as np
+import io
+import matplotlib
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import FinanceDataReader as fdr
+import datetime
+
+app = FastAPI()
+
+# Cache for stock list
+stock_list = []
+
+@app.on_event("startup")
+def load_stocks():
+    global stock_list
+    print("Loading KRX stock list...")
+    try:
+        kospi = fdr.StockListing('KOSPI')
+        kosdaq = fdr.StockListing('KOSDAQ')
+        df = pd.concat([kospi, kosdaq])
+        # Keep only standard stocks (filter out spacc, etc if needed, but for now take all)
+        for _, row in df.iterrows():
+            stock_list.append({
+                "code": str(row['Code']),
+                "name": str(row['Name']),
+                "market": str(row['Market'])
+            })
+        print(f"Loaded {len(stock_list)} stocks.")
+    except Exception as e:
+        print("Failed to load stocks:", e)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+def setup_korean_font():
+    font_names = ['Malgun Gothic', '맑은 고딕', 'NanumGothic', '나눔고딕', 'AppleGothic', 'DejaVu Sans']
+    system_fonts = [f.name for f in fm.fontManager.ttflist]
+    selected_font = None
+    for name in font_names:
+        if name in system_fonts:
+            selected_font = name
+            break
+    if selected_font:
+        plt.rc('font', family=selected_font)
+    else:
+        plt.rc('font', family='sans-serif')
+    plt.rc('axes', unicode_minus=False)
+    return selected_font
+
+def fetch_stock_data(symbol: str, count: int = 300):
+    url = f"https://fchart.stock.naver.com/sise.nhn?symbol={symbol}&timeframe=day&count={count}&requestType=0"
+    res = requests.get(url, timeout=5)
+    res.raise_for_status()
+
+    root = ET.fromstring(res.text)
+    items = root.findall('.//item')
+
+    if not items:
+        return None
+
+    data = []
+    for item in items:
+        val = item.attrib['data'].split('|')
+        data.append({
+            'Date': pd.to_datetime(val[0]),
+            'Open': float(val[1]),
+            'High': float(val[2]),
+            'Low': float(val[3]),
+            'Close': float(val[4]),
+            'Volume': float(val[5])
+        })
+
+    df = pd.DataFrame(data)
+    df.sort_values('Date', inplace=True)
+    df.reset_index(drop=True, inplace=True)
+    return df
+
+def compute_hts_rsi(series, period=14):
+    delta = series.diff()
+    u = delta.clip(lower=0)
+    d = (-delta).clip(lower=0)
+    avg_u = u.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
+    avg_d = d.ewm(alpha=1/period, min_periods=period, adjust=False).mean()
+    rs = avg_u / avg_d
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
+
+@app.get("/api/chart/smc")
+def get_smc_data(symbol: str):
+    df = fetch_stock_data(symbol, count=300)
+    if df is None:
+        raise HTTPException(status_code=404, detail="Stock not found")
+
+    df['MA20'] = df['Close'].rolling(window=20).mean()
+    df['MA60'] = df['Close'].rolling(window=60).mean()
+    df['MA120'] = df['Close'].rolling(window=120).mean()
+
+    # Bollinger Bands (20, 2)
+    std20 = df['Close'].rolling(window=20).std()
+    df['BB_Upper'] = df['MA20'] + (std20 * 2)
+    df['BB_Lower'] = df['MA20'] - (std20 * 2)
+
+    df['RSI'] = compute_hts_rsi(df['Close'], period=14)
+    df['RSI_MA9'] = df['RSI'].rolling(window=9).mean()
+
+    df['Vol_MA20'] = df['Volume'].rolling(window=20).mean()
+
+    # Find Buy/Sell signals
+    rsi_crossup = (df['RSI'] > df['RSI_MA9']) & (df['RSI'].shift(1) <= df['RSI_MA9'].shift(1))
+    df['Buy_Signal'] = (df['RSI'] < 60) & rsi_crossup
+
+    rsi_crossdown = (df['RSI'] < df['RSI_MA9']) & (df['RSI'].shift(1) >= df['RSI_MA9'].shift(1))
+    df['Sell_Signal'] = (df['RSI'] > 60) & rsi_crossdown
+
+    # Replace NaNs with None for JSON serialization
+    df = df.replace({np.nan: None})
+    
+    # We will format this to a structure ECharts can consume easily
+    dates = df['Date'].dt.strftime('%Y-%m-%d').tolist()
+    # ECharts candlestick data format: [open, close, lowest, highest]
+    ohlc = df[['Open', 'Close', 'Low', 'High']].values.tolist()
+    volumes = df['Volume'].tolist()
+    ma20 = df['MA20'].tolist()
+    ma60 = df['MA60'].tolist()
+    bb_up = df['BB_Upper'].tolist()
+    bb_low = df['BB_Lower'].tolist()
+    rsi = df['RSI'].tolist()
+    rsi_ma = df['RSI_MA9'].tolist()
+    
+    # Buy/Sell markers
+    buy_signals = []
+    sell_signals = []
+    for idx, row in df.iterrows():
+        if row['Buy_Signal']:
+            buy_signals.append({'coord': [dates[idx], row['Low']], 'value': 'Buy', 'rsi': row['RSI']})
+        if row['Sell_Signal']:
+            sell_signals.append({'coord': [dates[idx], row['High']], 'value': 'Sell', 'rsi': row['RSI']})
+            
+    return {
+        "dates": dates,
+        "ohlc": ohlc,
+        "volumes": volumes,
+        "ma20": ma20,
+        "ma60": ma60,
+        "bb_up": bb_up,
+        "bb_low": bb_low,
+        "rsi": rsi,
+        "rsi_ma": rsi_ma,
+        "buy_signals": buy_signals,
+        "sell_signals": sell_signals,
+        "symbol": symbol
+    }
+
+def get_zigzags(df, pct_change=0.15):
+    zigzags = []
+    last_high = df['High'].iloc[0]
+    last_low = df['Low'].iloc[0]
+    last_high_idx = 0
+    last_low_idx = 0
+    mode = 1 
+    
+    for i in range(1, len(df)):
+        if mode == 1:
+            if df['High'].iloc[i] > last_high:
+                last_high = df['High'].iloc[i]
+                last_high_idx = i
+            elif df['Close'].iloc[i] < last_high * (1 - pct_change):
+                zigzags.append({'index': last_high_idx, 'type': 'high', 'val': last_high})
+                mode = -1
+                last_low = df['Low'].iloc[i]
+                last_low_idx = i
+        else:
+            if df['Low'].iloc[i] < last_low:
+                last_low = df['Low'].iloc[i]
+                last_low_idx = i
+            elif df['Close'].iloc[i] > last_low * (1 + pct_change):
+                zigzags.append({'index': last_low_idx, 'type': 'low', 'val': last_low})
+                mode = 1
+                last_high = df['High'].iloc[i]
+                last_high_idx = i
+                
+    if mode == 1:
+        zigzags.append({'index': last_high_idx, 'type': 'high', 'val': last_high})
+    else:
+        zigzags.append({'index': last_low_idx, 'type': 'low', 'val': last_low})
+        
+    return zigzags
+
+@app.get("/api/chart/auto")
+def get_auto_chart(symbol: str):
+    df = fetch_stock_data(symbol, count=400)
+    if df is None:
+        raise HTTPException(status_code=404, detail="Stock not found")
+
+    setup_korean_font()
+    matplotlib.use('Agg')
+    
+    fig = plt.figure(figsize=(14, 8), facecolor='#0B0F19')
+    ax1 = fig.add_subplot(111)
+    
+    ax1.set_facecolor('#111827')
+    ax1.grid(True, color='#1F2937', linestyle='--', linewidth=0.7, alpha=0.7)
+    ax1.tick_params(colors='#9CA3AF', labelsize=10)
+    for spine in ax1.spines.values():
+        spine.set_color('#374151')
+
+    ax1.plot(df['Date'], df['Close'], color='#38BDF8', linewidth=1.8, label='종가 (Close)')
+    
+    zigzags = get_zigzags(df, pct_change=0.15)
+    zz_dates = [df['Date'].iloc[z['index']] for z in zigzags]
+    zz_vals = [z['val'] for z in zigzags]
+    
+    ax1.plot(zz_dates, zz_vals, color='#F59E0B', linestyle='-', linewidth=2.0, marker='o', markersize=6, label='Elliott Waves (ZigZag)')
+    
+    wave_labels = ['1', '2', '3', '4', '5', 'A', 'B', 'C']
+    
+    if len(zigzags) >= 8:
+        recent_zz = zigzags[-8:]
+        for i, z in enumerate(recent_zz):
+            date = df['Date'].iloc[z['index']]
+            val = z['val']
+            offset = 1.04 if z['type'] == 'high' else 0.94
+            color = '#10B981' if i < 5 else '#EF4444'
+            ax1.text(date, val * offset, wave_labels[i], color=color, 
+                     fontsize=15, fontweight='bold', ha='center', va='center',
+                     bbox=dict(boxstyle='circle,pad=0.3', facecolor='#1F2937', edgecolor=color, alpha=0.8))
+    else:
+        for i, z in enumerate(zigzags):
+            date = df['Date'].iloc[z['index']]
+            val = z['val']
+            offset = 1.04 if z['type'] == 'high' else 0.94
+            ax1.text(date, val * offset, str(i), color='#10B981', fontsize=12, fontweight='bold', ha='center', va='center',
+                     bbox=dict(boxstyle='circle,pad=0.3', facecolor='#1F2937', edgecolor='#10B981', alpha=0.8))
+
+    ax1.set_title(f"{symbol} 일봉 차트 자동 작도 분석", fontsize=18, fontweight='bold', color='#F9FAFB', pad=20, loc='left')
+    ax1.set_ylabel("주가 (KRW)", fontsize=11, color='#D1D5DB', labelpad=10)
+    ax1.legend(loc='upper left', facecolor='#1F2937', edgecolor='#374151', labelcolor='#E5E7EB', fontsize=11)
+    ax1.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, p: f"{int(x):,}"))
+
+    latest = df.iloc[-1]
+    info_text = f"현재가: {latest['Close']:,.0f} KRW | 기준일자: {latest['Date'].strftime('%Y-%m-%d')}"
+    ax1.text(0.98, 0.95, info_text, transform=ax1.transAxes, fontsize=11,
+             color='#E5E7EB', horizontalalignment='right', verticalalignment='top',
+             bbox=dict(boxstyle='round,pad=0.6', facecolor='#1F2937', edgecolor='#374151', alpha=0.9))
+
+    fig.autofmt_xdate(bottom=0.08, rotation=15, ha='right')
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=200, bbox_inches='tight', facecolor=fig.get_facecolor())
+    buf.seek(0)
+    plt.close(fig)
+
+    return StreamingResponse(buf, media_type="image/png")
+
+# --- Theme calculation logic ---
+THEME_ETF_MAP = {
+    "2차전지": "305540",      # TIGER 2차전지테마
+    "반도체 장비": "091160",   # KODEX 반도체
+    "의료AI": "447770",       # KODEX K-로봇액티브
+    "로봇": "447770",        # KODEX K-로봇액티브
+    "우주항공": "439250",     # ARIRANG 우주항공&UAM iSelect
+    "바이오/제약": "143860",   # TIGER 헬스케어
+    "IT": "139260",         # TIGER IT
+    "자동차": "091180",       # KODEX 자동차
+    "건설": "117700",       # TIGER 건설건자재
+    "엔터테인먼트": "157500",  # TIGER 미디어컨텐츠
+}
+
+def calculate_rsi_for_theme(df, period=14):
+    if df is None or len(df) < 2:
+        return None
+    period = min(period, len(df) - 1)
+    delta = df['Close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period, min_periods=1).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period, min_periods=1).mean()
+    rs = gain / loss
+    rsi = 100 - (100 / (1 + rs))
+    rsi = rsi.fillna(50)
+    return rsi.iloc[-1]
+
+def calculate_theme_metrics():
+    end_date = datetime.date.today()
+    start_date = end_date - datetime.timedelta(days=90)
+    
+    metrics = []
+    
+    for theme_name, ticker in THEME_ETF_MAP.items():
+        try:
+            df = fdr.DataReader(ticker, start_date, end_date)
+            if df.empty or len(df) < 2:
+                continue
+                
+            current_price = float(df['Close'].iloc[-1])
+            prev_price = float(df['Close'].iloc[-2])
+            change_percent = ((current_price - prev_price) / prev_price) * 100
+            
+            # Simple volume trend check
+            vol_5d = df['Volume'].tail(5).mean()
+            vol_20d = df['Volume'].tail(20).mean()
+            trend = "상승" if vol_5d > vol_20d else "하락"
+            if current_price < df['Close'].tail(20).mean():
+                trend = "하락"
+            if change_percent > 2.0:
+                trend = "강세"
+            elif change_percent < -2.0:
+                trend = "약세"
+                
+            rsi_val = calculate_rsi_for_theme(df)
+            
+            metrics.append({
+                "name": theme_name,
+                "change": round(change_percent, 2),
+                "trend": trend,
+                "rsi": round(rsi_val, 1) if rsi_val else 50.0
+            })
+        except Exception as e:
+            print(f"Error fetching data for {theme_name} ({ticker}): {e}")
+            metrics.append({
+                "name": theme_name,
+                "change": 0.0,
+                "trend": "데이터 없음",
+                "rsi": 50.0
+            })
+            
+    # Sort by change % descending
+    metrics.sort(key=lambda x: x["change"], reverse=True)
+    return metrics
+
+@app.get("/api/themes")
+def get_themes():
+    themes = calculate_theme_metrics()
+    return {"themes": themes}
+
+@app.get("/api/stocks")
+def get_stocks():
+    return stock_list
+
+@app.get("/")
+def read_root():
+    return {"message": "DAJAVATA API Server is running!"}
