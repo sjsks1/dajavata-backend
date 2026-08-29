@@ -8,6 +8,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Store fetched data globally for filtering
     window.allThemes = [];
+    window.allStocks = [];
+
+    // Fetch all stocks globally for search
+    fetch('https://dajavata-backend.onrender.com/api/stocks/fundamentals')
+        .then(response => response.json())
+        .then(data => {
+            window.allStocks = data.stocks || [];
+        })
+        .catch(error => console.error('Error fetching all stocks:', error));
 
     // Pagination State
     let currentDataList = [];
@@ -63,14 +72,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 1. 검색 필터링
         let filteredList = currentDataList;
+        let displayMode = currentMode;
+
         if (searchInput && searchInput.value.trim()) {
             const term = searchInput.value.toLowerCase().trim();
-            filteredList = currentDataList.filter(item => {
+            
+            let themeResults = window.allThemes.filter(item => {
                 const name = (item.name || '').toLowerCase();
                 const desc = (item.desc || '').toLowerCase();
-                const code = (item.code || '').toLowerCase();
-                return name.includes(term) || desc.includes(term) || code.includes(term);
+                return name.includes(term) || desc.includes(term);
             });
+            
+            let stockResults = (window.allStocks && window.allStocks.length > 0) 
+                ? window.allStocks.filter(item => {
+                    const name = (item.name || '').toLowerCase();
+                    const code = (item.code || '').toLowerCase();
+                    return name.includes(term) || code.includes(term);
+                }) 
+                : currentDataList.filter(item => {
+                    const name = (item.name || '').toLowerCase();
+                    const code = (item.code || '').toLowerCase();
+                    return name.includes(term) || code.includes(term);
+                });
+                
+            if (themeResults.length > 0 && stockResults.length === 0) {
+                filteredList = themeResults;
+                displayMode = 'themes';
+            } else if (stockResults.length > 0 && themeResults.length === 0) {
+                filteredList = stockResults;
+                displayMode = 'stocks';
+            } else if (stockResults.length > 0 && themeResults.length > 0) {
+                if (currentMode === 'themes') {
+                    filteredList = themeResults;
+                    displayMode = 'themes';
+                } else {
+                    filteredList = stockResults;
+                    displayMode = 'stocks';
+                }
+            } else {
+                filteredList = [];
+                displayMode = currentMode;
+            }
         }
 
         if (filteredList.length === 0) {
@@ -87,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const paginatedList = filteredList.slice(startIndex, startIndex + itemsPerPage);
 
         // 3. 헤더 및 데이터 렌더링
-        if (currentMode === 'themes') {
+        if (displayMode === 'themes') {
             thead.innerHTML = `
                 <tr>
                     <th>테마명</th>
@@ -146,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-        } else if (currentMode === 'stocks') {
+        } else if (displayMode === 'stocks') {
             thead.innerHTML = `
                 <tr>
                     <th>종목명</th>
