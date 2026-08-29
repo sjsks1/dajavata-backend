@@ -34,11 +34,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // API URL
-    const API_URL = 'https://dajavata-backend.onrender.com/api/themes'; 
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8001' : 'https://dajavata-backend.onrender.com';
+    const API_URL = `${API_BASE}/api/themes`;
+    const INSIGHTS_API_URL = `${API_BASE}/api/insights`;
     
     // Store fetched data globally for filtering
     window.allThemes = [];
     window.allStocks = [];
+    window.allInsights = [];
 
     // 전체 종목 데이터를 로드하는 Promise (재사용/재시도 가능하게 함수로 분리)
     function loadAllStocks() {
@@ -54,6 +57,22 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(error => {
                 console.error('Error fetching all stocks:', error);
                 return []; // 실패해도 재시도할 수 있도록 캐싱하지 않음
+            });
+    }
+
+    function loadInsights() {
+        return fetch(INSIGHTS_API_URL)
+            .then(response => {
+                if (!response.ok) throw new Error('insights fetch failed');
+                return response.json();
+            })
+            .then(data => {
+                window.allInsights = data.posts || [];
+                return window.allInsights;
+            })
+            .catch(error => {
+                console.error('Error fetching insights:', error);
+                return [];
             });
     }
 
@@ -292,6 +311,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 tbody.appendChild(tr);
             });
+        } else if (displayMode === 'insights') {
+            thead.innerHTML = `
+                <tr>
+                    <th style="width: 15%">작성일</th>
+                    <th style="width: 85%">시장 인사이트 칼럼</th>
+                </tr>
+            `;
+
+            paginatedList.forEach(post => {
+                const tr = document.createElement('tr');
+                const textPreview = post.content && post.content.length > 200 ? post.content.substring(0, 200) + '...' : (post.content || '');
+                // Basic markdown rendering for display
+                const formattedContent = textPreview.replace(/\n/g, '<br>');
+                
+                tr.innerHTML = `
+                    <td style="vertical-align: top; padding-top: 20px; color: var(--text-muted);">${post.date}</td>
+                    <td style="padding: 20px 10px;">
+                        <h3 style="margin-top: 0; margin-bottom: 10px; color: var(--text-main); font-size: 1.2rem;">${post.title}</h3>
+                        <div style="line-height: 1.6; color: var(--text-muted); font-size: 0.95rem;">${formattedContent}</div>
+                        <button class="read-more-btn" data-id="${post.id}" style="margin-top: 15px; background: transparent; border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 15px; border-radius: 4px; cursor: pointer;">자세히 읽기</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Bind read more buttons
+            document.querySelectorAll('.read-more-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    const post = window.allInsights.find(p => p.id === id);
+                    if (post) {
+                        renderSingleInsight(post);
+                    }
+                });
+            });
         }
 
         // 4. 하단 컨트롤 버튼 (뒤로가기 + 페이지네이션)
@@ -366,6 +420,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         }
+    }
+
+    function renderSingleInsight(post) {
+        headerTitle.textContent = post.title;
+        themeBadge.textContent = "칼럼 전문";
+        const thead = document.querySelector('#theme-table thead');
+        thead.innerHTML = '';
+        
+        tbody.innerHTML = '';
+        const tr = document.createElement('tr');
+        const formattedContent = (post.content || '').replace(/\n/g, '<br><br>');
+        
+        tr.innerHTML = `
+            <td colspan="10" style="padding: 30px;">
+                <div style="max-width: 800px; margin: 0 auto; line-height: 1.8; color: var(--text-main); font-size: 1.05rem;">
+                    <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">작성일: ${post.date}</div>
+                    ${formattedContent}
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+
+        // Add back button
+        const footerTr = document.createElement('tr');
+        footerTr.innerHTML = `
+            <td colspan="10" class="center" style="padding: 20px;">
+                <button id="back-to-insights" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer;">
+                    <i class="ph ph-arrow-left"></i> 목록으로 돌아가기
+                </button>
+            </td>
+        `;
+        tbody.appendChild(footerTr);
+
+        document.getElementById('back-to-insights').addEventListener('click', () => {
+            headerTitle.textContent = "시장 인사이트 (칼럼)";
+            themeBadge.textContent = "인사이트";
+            renderTable(window.allInsights, 'insights');
+        });
     }
 
     // 테마 상세 로드
@@ -463,6 +555,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('Error fetching stock data:', error);
                     tbody.innerHTML = '<tr><td colspan="12" class="center">종목 데이터를 불러오는 데 실패했습니다.</td></tr>';
                 });
+        });
+    });
+
+    // 인사이트 메뉴 클릭 이벤트
+    const insightMenus = document.querySelectorAll('#insight-menu-list li');
+    insightMenus.forEach(menu => {
+        menu.addEventListener('click', async (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
+            menu.classList.add('active');
+
+            const action = menu.getAttribute('data-action');
+            headerTitle.textContent = menu.textContent.trim();
+            themeBadge.textContent = "인사이트";
+
+            tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">노션에서 데이터를 불러오는 중입니다...</td></tr>';
+
+            const insights = await loadInsights();
+            if (insights.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px;">등록된 글이 없거나 불러오지 못했습니다.</td></tr>';
+                return;
+            }
+            renderTable(insights, 'insights');
         });
     });
 });
