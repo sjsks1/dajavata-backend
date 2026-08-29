@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import requests
 import xml.etree.ElementTree as ET
+import json
+import os
 import pandas as pd
 import numpy as np
 import io
@@ -392,8 +394,54 @@ def calculate_theme_metrics():
 
 @app.get("/api/themes")
 def get_themes():
-    themes = calculate_theme_metrics()
-    return {"themes": themes}
+    cache_file = 'data/theme_cache.json'
+    if os.path.exists(cache_file):
+        with open(cache_file, 'r', encoding='utf-8') as f:
+            raw_themes = json.load(f)
+            
+        formatted_themes = []
+        for t in raw_themes:
+            formatted_themes.append({
+                "name": t["name"],
+                "theme_id": t["theme_id"],
+                "desc": f"{t['name']} 테마 구성종목 평균 데이터입니다.",
+                "day1": f"{t['day1Pos']:+.2f}%" if pd.notna(t['day1Pos']) else "-",
+                "day1Pos": bool(t['day1Pos'] >= 0) if pd.notna(t['day1Pos']) else True,
+                "day3": f"{t['day3Pos']:+.2f}%" if pd.notna(t['day3Pos']) else "-",
+                "day3Pos": bool(t['day3Pos'] >= 0) if pd.notna(t['day3Pos']) else True,
+                "high52": f"{t['high52']:+.1f}%" if pd.notna(t['high52']) else "-",
+                "high52Pos": bool(t['high52'] >= 0) if pd.notna(t['high52']) else True,
+                "low52": f"{t['low52']:+.1f}%" if pd.notna(t['low52']) else "-",
+                "low52Pos": bool(t['low52'] >= 0) if pd.notna(t['low52']) else True,
+                "neglect52": f"{t['neglect52']:.0f}" if pd.notna(t['neglect52']) else "-",
+                "high3y": f"{t['high3y']:+.1f}%" if pd.notna(t['high3y']) else "-",
+                "high3yPos": bool(t['high3y'] >= 0) if pd.notna(t['high3y']) else True,
+                "low3y": f"{t['low3y']:+.1f}%" if pd.notna(t['low3y']) else "-",
+                "low3yPos": bool(t['low3y'] >= 0) if pd.notna(t['low3y']) else True,
+                "neglect3y": f"{t['neglect3y']:.0f}" if pd.notna(t['neglect3y']) else "-",
+                "expReturn": f"{t['expReturn']:.0f}%" if pd.notna(t['expReturn']) else "-",
+                "rsi_d": "-",
+                "rsi_w": "-",
+                "rsi_m": "-",
+                "update": "오늘",
+                "score": t.get("score", 100)
+            })
+        return {"themes": formatted_themes}
+    else:
+        # Fallback to ETF calculation
+        themes = calculate_theme_metrics()
+        return {"themes": themes}
+
+@app.get("/api/themes/{theme_name}")
+def get_theme_details(theme_name: str):
+    details_file = 'data/theme_details.json'
+    if os.path.exists(details_file):
+        with open(details_file, 'r', encoding='utf-8') as f:
+            details = json.load(f)
+        if theme_name in details:
+            return {"stocks": details[theme_name]}
+            
+    raise HTTPException(status_code=404, detail="Theme details not found")
 
 @app.get("/api/stocks")
 def get_stocks():
