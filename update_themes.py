@@ -171,10 +171,8 @@ async def main():
             
     print(f"Found {len(all_themes)} themes.")
     
-    # Limit for testing? No, let's do top 15 themes for now so it doesn't take forever during testing.
-    # We will expand it later if the user runs it manually.
-    # To prevent timeout in this run, I will limit it to 20 themes.
-    themes_to_process = all_themes[:20] 
+    # Use all themes
+    themes_to_process = all_themes
     
     # 3. Fetch stocks for each theme
     print("Fetching stocks for each theme...")
