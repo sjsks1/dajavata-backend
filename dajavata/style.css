@@ -416,29 +416,101 @@ tbody tr:hover td {
     cursor: not-allowed;
 }
 
-/* ===== 모바일 반응형 ===== */
+/* 모바일 상단바 - PC에서는 숨김 */
+.mobile-topbar {
+    display: none;
+}
+
+.sidebar-overlay {
+    display: none;
+}
+
+/* ===== 모바일 반응형 (햄버거 메뉴 방식) ===== */
 @media (max-width: 768px) {
     html, body {
         height: auto;
-        overflow: auto; /* 기존 overflow: hidden 때문에 모바일에서 스크롤이 막혀있었음 */
+        overflow-x: hidden;
+        overflow-y: auto;
     }
 
+    /* 상단바: 햄버거 버튼 + 로고 */
+    .mobile-topbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        background-color: var(--bg-sidebar);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 16px;
+    }
+
+    .menu-toggle-btn {
+        background: none;
+        border: none;
+        color: var(--text-main);
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        padding: 4px;
+    }
+
+    .mobile-logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 900;
+        letter-spacing: 1px;
+        font-size: 16px;
+    }
+    .mobile-logo i { color: var(--pos); font-size: 20px; }
+
     .app-container {
-        flex-direction: column; /* 사이드바 + 본문을 좌우 대신 위아래로 배치 */
+        flex-direction: column;
         height: auto;
         min-height: 100vh;
         width: 100%;
     }
 
+    /* 사이드바: 평소엔 화면 왼쪽 밖에 숨겨둠 */
     .sidebar {
-        width: 100%;
-        flex-shrink: 0;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-        padding: 16px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 80%;
+        max-width: 300px;
+        z-index: 300;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
+        border-bottom: none;
     }
 
-    /* 모바일에서는 메뉴 목록이 너무 길어지니 필요하면 접기 처리 가능 (일단은 스크롤로 처리) */
+    /* JS가 이 클래스를 붙이면 슬라이드로 나타남 */
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    /* 사이드바 열렸을 때 뒤 배경 어둡게 */
+    .sidebar-overlay {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 250;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+
+    .sidebar-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
+    }
 
     .main-content {
         width: 100%;
@@ -450,13 +522,10 @@ tbody tr:hover td {
     }
 
     .header-title h1 {
-        font-size: 20px; /* 좁은 화면에서 제목 글자 크기 축소 */
+        font-size: 20px;
     }
 
     .table-container {
         padding: 16px;
     }
-
-    /* 테이블은 원래 min-width:1100px + overflow-x:auto로 되어있어서 
-       가로 스크롤로 자연스럽게 처리됨 (이 부분은 그대로 둬도 됨) */
 }

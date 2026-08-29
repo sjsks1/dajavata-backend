@@ -3,6 +3,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerTitle = document.querySelector('.header-title h1');
     const themeBadge = document.querySelector('.theme-badge');
     
+    // 모바일 햄버거 메뉴 토글
+    const menuToggleBtn = document.getElementById('menu-toggle-btn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        sidebarOverlay.classList.add('visible');
+    }
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        sidebarOverlay.classList.remove('visible');
+    }
+
+    if (menuToggleBtn) {
+        menuToggleBtn.addEventListener('click', () => {
+            sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+        });
+    }
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeSidebar);
+    }
+
+    // 모바일에서 메뉴 항목을 클릭하면 사이드바 자동으로 닫기
+    document.querySelectorAll('.menu-section li').forEach(li => {
+        li.addEventListener('click', () => {
+            if (window.innerWidth <= 768) closeSidebar();
+        });
+    });
+
     // API URL
     const API_URL = 'https://dajavata-backend.onrender.com/api/themes'; 
     

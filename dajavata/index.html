@@ -11,12 +11,26 @@
     <!-- Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Styles -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
+    <!-- 모바일 전용 상단바 (PC에서는 CSS로 숨김) -->
+    <div class="mobile-topbar">
+        <button id="menu-toggle-btn" class="menu-toggle-btn" aria-label="메뉴 열기">
+            <i class="ph ph-list"></i>
+        </button>
+        <div class="mobile-logo">
+            <i class="ph-fill ph-trend-up"></i>
+            <span>DAJAVATA</span>
+        </div>
+    </div>
+
+    <!-- 사이드바 열렸을 때 뒤 배경 어둡게 처리 (탭하면 닫힘) -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
     <div class="app-container">
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="/" style="text-decoration: none; color: inherit;">
                     <div class="logo">
@@ -91,6 +105,6 @@
         </main>
     </div>
     
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=5"></script>
 </body>
 </html>
