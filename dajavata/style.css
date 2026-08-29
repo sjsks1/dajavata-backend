@@ -415,3 +415,48 @@ tbody tr:hover td {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* ===== 모바일 반응형 ===== */
+@media (max-width: 768px) {
+    html, body {
+        height: auto;
+        overflow: auto; /* 기존 overflow: hidden 때문에 모바일에서 스크롤이 막혀있었음 */
+    }
+
+    .app-container {
+        flex-direction: column; /* 사이드바 + 본문을 좌우 대신 위아래로 배치 */
+        height: auto;
+        min-height: 100vh;
+        width: 100%;
+    }
+
+    .sidebar {
+        width: 100%;
+        flex-shrink: 0;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 16px;
+    }
+
+    /* 모바일에서는 메뉴 목록이 너무 길어지니 필요하면 접기 처리 가능 (일단은 스크롤로 처리) */
+
+    .main-content {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .content-header {
+        padding: 20px;
+    }
+
+    .header-title h1 {
+        font-size: 20px; /* 좁은 화면에서 제목 글자 크기 축소 */
+    }
+
+    .table-container {
+        padding: 16px;
+    }
+
+    /* 테이블은 원래 min-width:1100px + overflow-x:auto로 되어있어서 
+       가로 스크롤로 자연스럽게 처리됨 (이 부분은 그대로 둬도 됨) */
+}
