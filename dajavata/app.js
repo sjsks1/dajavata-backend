@@ -190,30 +190,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stock.marcap) {
                     const jo = Math.floor(stock.marcap / 1000000000000);
                     const eok = Math.floor((stock.marcap % 1000000000000) / 100000000);
-                    marcapStr = jo > 0 ? \`\${jo}조 \${eok}억원\` : \`\${eok}억원\`;
+                    marcapStr = jo > 0 ? `${jo}조 ${eok}억원` : `${eok}억원`;
                 }
 
-                tr.innerHTML = \`
+                tr.innerHTML = `
                     <td>
                         <div class="theme-name-cell">
-                            <span class="stock-name" style="font-weight: 600;">\${stock.name}</span>
-                            <span style="font-size: 11px; color: var(--text-muted); margin-left: 5px;">\${stock.code}</span>
+                            <span class="stock-name" style="font-weight: 600;">${stock.name}</span>
+                            <span style="font-size: 11px; color: var(--text-muted); margin-left: 5px;">${stock.code}</span>
                         </div>
                     </td>
-                    <td class="right"><span class="price-main" style="color: white;">\${price}</span></td>
-                    <td class="right"><span class="\${day3Class} price-main">\${day3Sign}\${day3}%</span></td>
-                    <td class="right"><span class="price-main"><span class="pos">+\${high52}%</span> / <span class="neg">\${low52}%</span></span></td>
-                    <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">\${neglect52}</span></td>
-                    <td class="right"><span class="price-main"><span class="pos">+\${high3y}%</span> / <span class="neg">\${low3y}%</span></span></td>
-                    <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">\${neglect3y}</span></td>
+                    <td class="right"><span class="price-main" style="color: white;">${price}</span></td>
+                    <td class="right"><span class="${day3Class} price-main">${day3Sign}${day3}%</span></td>
+                    <td class="right"><span class="price-main"><span class="pos">+${high52}%</span> / <span class="neg">${low52}%</span></span></td>
+                    <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">${neglect52}</span></td>
+                    <td class="right"><span class="price-main"><span class="pos">+${high3y}%</span> / <span class="neg">${low3y}%</span></span></td>
+                    <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">${neglect3y}</span></td>
                     <td class="right" style="background-color: rgba(255,255,255,0.03);">
-                        <span class="price-main" style="font-weight: 800; color: var(--text-main);">\${expRet}%</span>
+                        <span class="price-main" style="font-weight: 800; color: var(--text-main);">${expRet}%</span>
                     </td>
-                    <td class="right"><span class="price-main">\${pbr}</span></td>
-                    <td class="right"><span class="price-main">\${per}</span></td>
-                    <td class="right"><span class="price-main">\${eps}</span></td>
-                    <td class="right"><span class="price-main" style="font-size: 12px; color: var(--text-muted);">\${marcapStr}</span></td>
-                \`;
+                    <td class="right"><span class="price-main">${pbr}</span></td>
+                    <td class="right"><span class="price-main">${per}</span></td>
+                    <td class="right"><span class="price-main">${eps}</span></td>
+                    <td class="right"><span class="price-main" style="font-size: 12px; color: var(--text-muted);">${marcapStr}</span></td>
+                `;
                 tbody.appendChild(tr);
             });
         }
@@ -224,17 +224,17 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let backButtonHtml = '';
             if (isThemeDetail) {
-                backButtonHtml = \`
+                backButtonHtml = `
                     <button id="back-to-themes" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; font-family: inherit; margin-right: 20px;">
                         <i class="ph ph-arrow-left"></i> 테마 리스트로 돌아가기
                     </button>
-                \`;
+                `;
             }
 
             let paginationHtml = '';
             if (totalPages > 1) {
-                paginationHtml += \`<div class="pagination-container" style="display: inline-flex; align-items: center; gap: 5px; margin: 0; padding: 0; background: transparent; border: none; box-shadow: none;">\`;
-                paginationHtml += \`<button class="page-btn" \${currentPage === 1 ? 'disabled' : ''} data-page="prev">이전</button>\`;
+                paginationHtml += `<div class="pagination-container" style="display: inline-flex; align-items: center; gap: 5px; margin: 0; padding: 0; background: transparent; border: none; box-shadow: none;">`;
+                paginationHtml += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} data-page="prev">이전</button>`;
                 
                 let startPage = Math.max(1, currentPage - 2);
                 let endPage = Math.min(totalPages, startPage + 4);
@@ -243,21 +243,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 for (let i = startPage; i <= endPage; i++) {
-                    paginationHtml += \`<button class="page-btn \${i === currentPage ? 'active' : ''}" data-page="\${i}">\${i}</button>\`;
+                    paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
                 }
                 
-                paginationHtml += \`<button class="page-btn" \${currentPage === totalPages ? 'disabled' : ''} data-page="next">다음</button>\`;
-                paginationHtml += \`</div>\`;
+                paginationHtml += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} data-page="next">다음</button>`;
+                paginationHtml += `</div>`;
             }
 
-            footerTr.innerHTML = \`
+            footerTr.innerHTML = `
                 <td colspan="12" class="center" style="padding: 20px 10px;">
                     <div style="display: flex; justify-content: center; align-items: center;">
-                        \${backButtonHtml}
-                        \${paginationHtml}
+                        ${backButtonHtml}
+                        ${paginationHtml}
                     </div>
                 </td>
-            \`;
+            `;
             tbody.appendChild(footerTr);
 
             // 이벤트 바인딩
@@ -298,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         themeBadge.textContent = "테마상세";
         tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">해당 테마의 종목 데이터를 불러오는 중입니다...</td></tr>';
         
-        fetch(\`\${API_URL}/\${encodeURIComponent(themeName)}\`)
+        fetch(`${API_URL}/${encodeURIComponent(themeName)}`)
             .then(response => {
                 if (!response.ok) throw new Error("Theme details not found");
                 return response.json();
