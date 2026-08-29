@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+plotly
+pandas
+numpy
+finance-datareader
+requests
+beautifulsoup4
