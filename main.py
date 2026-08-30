@@ -52,30 +52,90 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def get_page_body_text(page_id: str) -> str:
-    """페이지 본문(blocks)의 텍스트만 뽑아서 하나의 문자열로 합친다."""
-    try:
-        url = f"https://api.notion.com/v1/blocks/{page_id}/children?page_size=100"
-        headers = {
-            "Authorization": f"Bearer {NOTION_TOKEN}",
-            "Notion-Version": "2022-06-28",
-        }
+def fetch_block_children(block_id: str) -> list:
+    """블록의 하위 블록(children)을 전부 가져온다 (페이지네이션 포함)."""
+    headers = {
+        "Authorization": f"Bearer {NOTION_TOKEN}",
+        "Notion-Version": "2022-06-28",
+    }
+    results = []
+    cursor = None
+    while True:
+        url = f"https://api.notion.com/v1/blocks/{block_id}/children?page_size=100"
+        if cursor:
+            url += f"&start_cursor={cursor}"
         r = requests.get(url, headers=headers)
         r.raise_for_status()
-        blocks = r.json().get("results", [])
+        data = r.json()
+        results.extend(data.get("results", []))
+        if not data.get("has_more"):
+            break
+        cursor = data.get("next_cursor")
+    return results
+
+def rich_text_to_str(rich_text: list) -> str:
+    return "".join([t.get("plain_text", "") for t in rich_text])
+
+def render_block(block) -> dict:
+    """블록 하나를 프론트에서 그리기 쉬운 딕셔너리로 변환."""
+    block_type = block.get("type")
+    block_data = block.get(block_type, {})
+    
+    if block_type == "image":
+        image_obj = block_data.get("file") or block_data.get("external") or {}
+        url = image_obj.get("url", "")
+        caption = rich_text_to_str(block_data.get("caption", []))
+        if not url:
+            return None
+        return {"type": "image", "url": url, "caption": caption}
         
-        lines = []
-        for block in blocks:
-            block_type = block.get("type")
-            block_data = block.get(block_type, {})
-            rich_text = block_data.get("rich_text", [])
-            text = "".join([t.get("plain_text", "") for t in rich_text])
-            if text:
-                lines.append(text)
-        return "\n\n".join(lines)
+    if block_type == "table":
+        rows = fetch_block_children(block.get("id"))
+        table_rows = []
+        for row in rows:
+            cells = row.get("table_row", {}).get("cells", [])
+            table_rows.append([rich_text_to_str(cell) for cell in cells])
+        if not table_rows:
+            return None
+        has_header = block_data.get("has_column_header", False)
+        return {"type": "table", "rows": table_rows, "has_header": has_header}
+        
+    if block_type in ("heading_1", "heading_2", "heading_3"):
+        text = rich_text_to_str(block_data.get("rich_text", []))
+        if not text:
+            return None
+        return {"type": "heading", "level": int(block_type[-1]), "text": text}
+        
+    if block_type == "bulleted_list_item":
+        text = rich_text_to_str(block_data.get("rich_text", []))
+        if not text:
+            return None
+        return {"type": "bulleted_list_item", "text": text}
+        
+    if block_type == "numbered_list_item":
+        text = rich_text_to_str(block_data.get("rich_text", []))
+        if not text:
+            return None
+        return {"type": "numbered_list_item", "text": text}
+        
+    if block_type == "divider":
+        return {"type": "divider"}
+        
+    # paragraph 등 나머지는 일반 텍스트로 처리
+    text = rich_text_to_str(block_data.get("rich_text", []))
+    if not text:
+        return None
+    return {"type": "paragraph", "text": text}
+
+def get_page_blocks(page_id: str) -> list:
+    """페이지 본문을 블록(문단/제목/표/이미지) 리스트로 가져온다."""
+    try:
+        blocks = fetch_block_children(page_id)
+        rendered = [render_block(b) for b in blocks]
+        return [b for b in rendered if b]
     except Exception as e:
-        print(f"Error fetching page body for {page_id}: {e}")
-        return ""
+        print(f"Error fetching page blocks for {page_id}: {e}")
+        return []
 
 @app.get("/api/insights")
 def get_insights():
@@ -112,7 +172,7 @@ def get_insights():
                         title = title_arr[0].get("plain_text", "Untitled")
                     break
             
-            content = get_page_body_text(page.get("id"))
+            blocks = get_page_blocks(page.get("id"))
             
             created_at = page.get("created_time", "").split("T")[0]
             for k, v in props.items():
@@ -125,7 +185,7 @@ def get_insights():
             posts.append({
                 "id": page.get("id"),
                 "title": title,
-                "content": content,
+                "blocks": blocks,
                 "date": created_at
             })
             
