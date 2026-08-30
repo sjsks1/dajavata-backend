@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const headerTitle = document.querySelector('.header-title h1');
     const themeBadge = document.querySelector('.theme-badge');
     
-    // 모바일 햄버거 메뉴 토글
+    // 紐⑤컮???꾨쾭嫄?硫붾돱 ?좉?
     const menuToggleBtn = document.getElementById('menu-toggle-btn');
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebarOverlay.addEventListener('click', closeSidebar);
     }
 
-    // 모바일에서 메뉴 항목을 클릭하면 사이드바 자동으로 닫기
+    // 紐⑤컮?쇱뿉??硫붾돱 ??ぉ???대┃?섎㈃ ?ъ씠?쒕컮 ?먮룞?쇰줈 ?リ린
     document.querySelectorAll('.menu-section li').forEach(li => {
         li.addEventListener('click', () => {
             if (window.innerWidth <= 768) closeSidebar();
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.allStocks = [];
     window.allInsights = [];
 
-    // 전체 종목 데이터를 로드하는 Promise (재사용/재시도 가능하게 함수로 분리)
+    // ?꾩껜 醫낅ぉ ?곗씠?곕? 濡쒕뱶?섎뒗 Promise (?ъ궗???ъ떆??媛?ν븯寃??⑥닔濡?遺꾨━)
     function loadAllStocks() {
         return fetch('https://dajavata-backend.onrender.com/api/stocks/fundamentals')
             .then(response => {
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(error => {
                 console.error('Error fetching all stocks:', error);
-                return []; // 실패해도 재시도할 수 있도록 캐싱하지 않음
+                return []; // ?ㅽ뙣?대룄 ?ъ떆?꾪븷 ???덈룄濡?罹먯떛?섏? ?딆쓬
             });
     }
 
@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const searchInput = document.querySelector('.search-box input');
 
-    tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...<br><span style="font-size: 13px;">(무료 서버 특성상 첫 접속 시 최대 1분 정도 소요될 수 있습니다)</span></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">?곗씠?곕? 遺덈윭?ㅻ뒗 以묒엯?덈떎...<br><span style="font-size: 13px;">(臾대즺 ?쒕쾭 ?뱀꽦??泥??묒냽 ??理쒕? 1遺??뺣룄 ?뚯슂?????덉뒿?덈떎)</span></td></tr>';
     
     // Fetch data
     fetch(API_URL)
@@ -95,28 +95,28 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             window.allThemes = data.themes || [];
             if (window.allThemes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="center">데이터를 불러올 수 없습니다. API 연결을 확인해주세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="center">?곗씠?곕? 遺덈윭?????놁뒿?덈떎. API ?곌껐???뺤씤?댁＜?몄슂.</td></tr>';
                 return;
             }
-            // 최초 접속 시 전체 테마 렌더링
+            // 理쒖큹 ?묒냽 ???꾩껜 ?뚮쭏 ?뚮뜑留?
             renderTable(window.allThemes, 'themes');
         })
         .catch(error => {
             console.error('Error fetching themes:', error);
-            tbody.innerHTML = '<tr><td colspan="12" class="center">데이터를 불러오는 중 오류가 발생했습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="center">?곗씠?곕? 遺덈윭?ㅻ뒗 以??ㅻ쪟媛 諛쒖깮?덉뒿?덈떎.</td></tr>';
         });
 
-    // 검색창 이벤트
+    // 寃?됱갹 ?대깽??
     if (searchInput) {
         searchInput.addEventListener('input', async () => {
             currentPage = 1;
 
-            // 아직 전체 종목 데이터가 없으면, 로딩 중임을 표시하고 완료될 때까지 기다렸다가 검색
+            // ?꾩쭅 ?꾩껜 醫낅ぉ ?곗씠?곌? ?놁쑝硫? 濡쒕뵫 以묒엫???쒖떆?섍퀬 ?꾨즺???뚭퉴吏 湲곕떎?몃떎媛 寃??
             if (window.allStocks.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="15" class="center" style="padding:40px;">종목 데이터를 불러오는 중입니다... 잠시만 기다려주세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15" class="center" style="padding:40px;">醫낅ぉ ?곗씠?곕? 遺덈윭?ㅻ뒗 以묒엯?덈떎... ?좎떆留?湲곕떎?ㅼ＜?몄슂.</td></tr>';
                 window.allStocks = await allStocksPromise;
 
-                // 실패했을 경우 재시도 (다음 입력을 기다리지 않고 즉시 재시도)
+                // ?ㅽ뙣?덉쓣 寃쎌슦 ?ъ떆??(?ㅼ쓬 ?낅젰??湲곕떎由ъ? ?딄퀬 利됱떆 ?ъ떆??
                 if (window.allStocks.length === 0) {
                     allStocksPromise = loadAllStocks();
                 }
@@ -126,13 +126,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 테이블 렌더링 초기화 함수
+    // ?뚯씠釉??뚮뜑留?珥덇린???⑥닔
     function renderTable(dataList, mode = 'themes', fromThemeDetail = false) {
         currentDataList = dataList;
         currentMode = mode;
         currentPage = 1;
         isThemeDetail = fromThemeDetail;
-        if (searchInput) searchInput.value = ''; // 탭 전환 시 검색어 초기화
+        if (searchInput) searchInput.value = ''; // ???꾪솚 ??寃?됱뼱 珥덇린??
         renderCurrentPage();
     }
 
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function blocksToHtml(blocks) {
         if (!blocks || blocks.length === 0) {
-            return '<p style="color: var(--text-muted);">본문 내용이 없습니다.</p>';
+            return '<p style="color: var(--text-muted);">蹂몃Ц ?댁슜???놁뒿?덈떎.</p>';
         }
         
         let html = '';
@@ -189,13 +189,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const tag = isHeader ? 'th' : 'td';
                     html += '<tr>';
                     row.forEach(cell => {
-                        html += `<${tag} style="border:1px solid var(--border-color); padding:10px; color:var(--text-main);">${escapeHtml(cell)}</${tag}>`;
+                        html += `<${tag} style="border:1px solid var(--border); padding:10px; color:var(--text-main);">${escapeHtml(cell)}</${tag}>`;
                     });
                     html += '</tr>';
                 });
                 html += '</table>';
             } else if (block.type === 'divider') {
-                html += '<hr style="border:none; border-top:1px solid var(--border-color); margin:24px 0;">';
+                html += '<hr style="border:none; border-top:1px solid var(--border); margin:24px 0;">';
             }
         });
         
@@ -211,12 +211,12 @@ document.addEventListener('DOMContentLoaded', () => {
             .join(' ');
     }
 
-    // 현재 페이지 렌더링
+    // ?꾩옱 ?섏씠吏 ?뚮뜑留?
     function renderCurrentPage() {
         const thead = document.querySelector('#theme-table thead');
-        tbody.innerHTML = ''; // 초기화
+        tbody.innerHTML = ''; // 珥덇린??
 
-        // 1. 검색 필터링
+        // 1. 寃???꾪꽣留?
         let filteredList = currentDataList;
         let displayMode = currentMode;
 
@@ -262,11 +262,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (filteredList.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px;">데이터가 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px;">?곗씠?곌? ?놁뒿?덈떎.</td></tr>';
             return;
         }
 
-        // 2. 페이지네이션 계산
+        // 2. ?섏씠吏?ㅼ씠??怨꾩궛
         const totalPages = Math.ceil(filteredList.length / itemsPerPage);
         if (currentPage > totalPages) currentPage = totalPages;
         if (currentPage < 1) currentPage = 1;
@@ -274,20 +274,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const startIndex = (currentPage - 1) * itemsPerPage;
         const paginatedList = filteredList.slice(startIndex, startIndex + itemsPerPage);
 
-        // 3. 헤더 및 데이터 렌더링
+        // 3. ?ㅻ뜑 諛??곗씠???뚮뜑留?
         if (displayMode === 'themes') {
             thead.innerHTML = `
                 <tr>
-                    <th>테마명</th>
-                    <th class="right">전일비</th>
-                    <th class="right">3일합산</th>
-                    <th class="right">52주 상승률</th>
-                    <th class="right">52주 하락률</th>
-                    <th class="center">52주 소외지수</th>
-                    <th class="right">3년 상승률</th>
-                    <th class="right">3년 하락률</th>
-                    <th class="center">3년 소외지수</th>
-                    <th class="center">업데이트</th>
+                    <th>?뚮쭏紐?/th>
+                    <th class="right">?꾩씪鍮?/th>
+                    <th class="right">3?쇳빀??/th>
+                    <th class="right">52二??곸듅瑜?/th>
+                    <th class="right">52二??섎씫瑜?/th>
+                    <th class="center">52二??뚯쇅吏??/th>
+                    <th class="right">3???곸듅瑜?/th>
+                    <th class="right">3???섎씫瑜?/th>
+                    <th class="center">3???뚯쇅吏??/th>
+                    <th class="center">?낅뜲?댄듃</th>
                 </tr>
             `;
 
@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.appendChild(tr);
             });
 
-            // 테마 이름 클릭 이벤트 바인딩
+            // ?뚮쭏 ?대쫫 ?대┃ ?대깽??諛붿씤??
             document.querySelectorAll('.theme-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
@@ -325,17 +325,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (displayMode === 'stocks') {
             thead.innerHTML = `
                 <tr>
-                    <th>종목명</th>
-                    <th class="right">현재가격</th>
-                    <th class="right">3일합산</th>
-                    <th class="right">52주 최고최저</th>
-                    <th class="center">52주 소외지수</th>
-                    <th class="right">3년 최고최저</th>
-                    <th class="center">3년 소외지수</th>
+                    <th>醫낅ぉ紐?/th>
+                    <th class="right">?꾩옱媛寃?/th>
+                    <th class="right">3?쇳빀??/th>
+                    <th class="right">52二?理쒓퀬理쒖?</th>
+                    <th class="center">52二??뚯쇅吏??/th>
+                    <th class="right">3??理쒓퀬理쒖?</th>
+                    <th class="center">3???뚯쇅吏??/th>
                     <th class="right">PBR</th>
                     <th class="right">PER</th>
                     <th class="right">EPS</th>
-                    <th class="right">시가총액</th>
+                    <th class="right">?쒓?珥앹븸</th>
                 </tr>
             `;
 
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (stock.marcap) {
                     const jo = Math.floor(stock.marcap / 1000000000000);
                     const eok = Math.floor((stock.marcap % 1000000000000) / 100000000);
-                    marcapStr = jo > 0 ? `${jo}조 ${eok}억원` : `${eok}억원`;
+                    marcapStr = jo > 0 ? `${jo}議?${eok}?듭썝` : `${eok}?듭썝`;
                 }
 
                 tr.innerHTML = `
@@ -389,8 +389,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (displayMode === 'insights') {
             thead.innerHTML = `
                 <tr>
-                    <th style="width: 15%">작성일</th>
-                    <th style="width: 85%">시장 인사이트 칼럼</th>
+                    <th style="width: 15%">?묒꽦??/th>
+                    <th style="width: 85%">?쒖옣 ?몄궗?댄듃 移쇰읆</th>
                 </tr>
             `;
 
@@ -406,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="padding: 20px 10px;">
                         <h3 style="margin-top: 0; margin-bottom: 10px; color: var(--text-main); font-size: 1.2rem;">${post.title}</h3>
                         <div style="line-height: 1.6; color: var(--text-muted); font-size: 0.95rem;">${formattedContent}</div>
-                        <button class="read-more-btn" data-id="${post.id}" style="margin-top: 15px; background: transparent; border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 15px; border-radius: 4px; cursor: pointer;">자세히 읽기</button>
+                        <button class="read-more-btn" data-id="${post.id}" style="margin-top: 15px; background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 5px 15px; border-radius: 4px; cursor: pointer;">?먯꽭???쎄린</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -424,15 +424,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // 4. 하단 컨트롤 버튼 (뒤로가기 + 페이지네이션)
+        // 4. ?섎떒 而⑦듃濡?踰꾪듉 (?ㅻ줈媛湲?+ ?섏씠吏?ㅼ씠??
         if (totalPages > 1 || isThemeDetail) {
             const footerTr = document.createElement('tr');
             
             let backButtonHtml = '';
             if (isThemeDetail) {
                 backButtonHtml = `
-                    <button id="back-to-themes" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; font-family: inherit; margin-right: 20px;">
-                        <i class="ph ph-arrow-left"></i> 테마 리스트로 돌아가기
+                    <button id="back-to-themes" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; font-family: inherit; margin-right: 20px;">
+                        <i class="ph ph-arrow-left"></i> ?뚮쭏 由ъ뒪?몃줈 ?뚯븘媛湲?
                     </button>
                 `;
             }
@@ -440,7 +440,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let paginationHtml = '';
             if (totalPages > 1) {
                 paginationHtml += `<div class="pagination-container" style="display: inline-flex; align-items: center; gap: 5px; margin: 0; padding: 0; background: transparent; border: none; box-shadow: none;">`;
-                paginationHtml += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} data-page="prev">이전</button>`;
+                paginationHtml += `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} data-page="prev">?댁쟾</button>`;
                 
                 let startPage = Math.max(1, currentPage - 2);
                 let endPage = Math.min(totalPages, startPage + 4);
@@ -452,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     paginationHtml += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
                 }
                 
-                paginationHtml += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} data-page="next">다음</button>`;
+                paginationHtml += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} data-page="next">?ㅼ쓬</button>`;
                 paginationHtml += `</div>`;
             }
 
@@ -466,12 +466,12 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             tbody.appendChild(footerTr);
 
-            // 이벤트 바인딩
+            // ?대깽??諛붿씤??
             const backBtn = document.getElementById('back-to-themes');
             if (backBtn) {
                 backBtn.addEventListener('click', () => {
-                    headerTitle.textContent = "전체 테마";
-                    themeBadge.textContent = "테마";
+                    headerTitle.textContent = "?꾩껜 ?뚮쭏";
+                    themeBadge.textContent = "?뚮쭏";
                     renderTable(window.allThemes, 'themes');
                 });
             }
@@ -490,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         renderCurrentPage();
                     }
                     
-                    // 테이블 맨 위로 스크롤
+                    // ?뚯씠釉?留??꾨줈 ?ㅽ겕濡?
                     const tableContainer = document.querySelector('.table-container');
                     if (tableContainer) tableContainer.scrollTop = 0;
                 });
@@ -500,7 +500,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderSingleInsight(post) {
         headerTitle.textContent = post.title;
-        themeBadge.textContent = "칼럼 전문";
+        themeBadge.textContent = "移쇰읆 ?꾨Ц";
         const thead = document.querySelector('#theme-table thead');
         thead.innerHTML = '';
         
@@ -511,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tr.innerHTML = `
             <td colspan="10" style="padding: 30px;">
                 <div style="max-width: 800px; margin: 0 auto; line-height: 1.8; color: var(--text-main); font-size: 1.05rem;">
-                    <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">작성일: ${post.date}</div>
+                    <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">?묒꽦?? ${post.date}</div>
                     ${formattedContent}
                 </div>
             </td>
@@ -522,25 +522,25 @@ document.addEventListener('DOMContentLoaded', () => {
         const footerTr = document.createElement('tr');
         footerTr.innerHTML = `
             <td colspan="10" class="center" style="padding: 20px;">
-                <button id="back-to-insights" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer;">
-                    <i class="ph ph-arrow-left"></i> 목록으로 돌아가기
+                <button id="back-to-insights" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border); border-radius: 5px; cursor: pointer;">
+                    <i class="ph ph-arrow-left"></i> 紐⑸줉?쇰줈 ?뚯븘媛湲?
                 </button>
             </td>
         `;
         tbody.appendChild(footerTr);
 
         document.getElementById('back-to-insights').addEventListener('click', () => {
-            headerTitle.textContent = "시장 인사이트 (칼럼)";
-            themeBadge.textContent = "인사이트";
+            headerTitle.textContent = "?쒖옣 ?몄궗?댄듃 (移쇰읆)";
+            themeBadge.textContent = "?몄궗?댄듃";
             renderTable(window.allInsights, 'insights');
         });
     }
 
-    // 테마 상세 로드
+    // ?뚮쭏 ?곸꽭 濡쒕뱶
     function loadThemeDetails(themeName) {
-        headerTitle.textContent = themeName + " 테마주";
-        themeBadge.textContent = "테마상세";
-        tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">해당 테마의 종목 데이터를 불러오는 중입니다...</td></tr>';
+        headerTitle.textContent = themeName + " ?뚮쭏二?;
+        themeBadge.textContent = "?뚮쭏?곸꽭";
+        tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">?대떦 ?뚮쭏??醫낅ぉ ?곗씠?곕? 遺덈윭?ㅻ뒗 以묒엯?덈떎...</td></tr>';
         
         fetch(`${API_URL}/${encodeURIComponent(themeName)}`)
             .then(response => {
@@ -552,17 +552,17 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(error => {
                 console.error('Error fetching theme details:', error);
-                tbody.innerHTML = '<tr><td colspan="12" class="center">상세 데이터를 불러오는 데 실패했습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="center">?곸꽭 ?곗씠?곕? 遺덈윭?ㅻ뒗 ???ㅽ뙣?덉뒿?덈떎.</td></tr>';
                 
                 setTimeout(() => {
-                    headerTitle.textContent = "전체 테마";
-                    themeBadge.textContent = "테마";
+                    headerTitle.textContent = "?꾩껜 ?뚮쭏";
+                    themeBadge.textContent = "?뚮쭏";
                     renderTable(window.allThemes, 'themes');
                 }, 2000);
             });
     }
 
-    // 테마 메뉴 클릭 이벤트
+    // ?뚮쭏 硫붾돱 ?대┃ ?대깽??
     const themeMenus = document.querySelectorAll('#theme-menu-list li');
     themeMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
@@ -572,10 +572,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const action = menu.getAttribute('data-action');
             headerTitle.textContent = menu.textContent.trim();
-            themeBadge.textContent = "테마";
+            themeBadge.textContent = "?뚮쭏";
 
             if (window.allThemes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">?곗씠?곕? 遺덈윭?ㅻ뒗 以묒엯?덈떎...</td></tr>';
                 return;
             }
 
@@ -589,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 조건별 종목 메뉴 클릭 이벤트
+    // 議곌굔蹂?醫낅ぉ 硫붾돱 ?대┃ ?대깽??
     const stockMenus = document.querySelectorAll('#stock-menu-list li');
     stockMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
@@ -599,9 +599,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const action = menu.getAttribute('data-action');
             headerTitle.textContent = menu.textContent.trim();
-            themeBadge.textContent = "종목";
+            themeBadge.textContent = "醫낅ぉ";
 
-            tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">전 종목 데이터를 불러오는 중입니다...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">??醫낅ぉ ?곗씠?곕? 遺덈윭?ㅻ뒗 以묒엯?덈떎...</td></tr>';
 
             fetch('https://dajavata-backend.onrender.com/api/stocks/fundamentals')
                 .then(response => {
@@ -629,12 +629,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 })
                 .catch(error => {
                     console.error('Error fetching stock data:', error);
-                    tbody.innerHTML = '<tr><td colspan="12" class="center">종목 데이터를 불러오는 데 실패했습니다.</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="12" class="center">醫낅ぉ ?곗씠?곕? 遺덈윭?ㅻ뒗 ???ㅽ뙣?덉뒿?덈떎.</td></tr>';
                 });
         });
     });
 
-    // 인사이트 메뉴 클릭 이벤트
+    // ?몄궗?댄듃 硫붾돱 ?대┃ ?대깽??
     const insightMenus = document.querySelectorAll('#insight-menu-list li');
     insightMenus.forEach(menu => {
         menu.addEventListener('click', async (e) => {
@@ -644,23 +644,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const action = menu.getAttribute('data-action');
             headerTitle.textContent = menu.textContent.trim();
-            themeBadge.textContent = "인사이트";
+            themeBadge.textContent = "?몄궗?댄듃";
 
-            tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">노션에서 데이터를 불러오는 중입니다...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">?몄뀡?먯꽌 ?곗씠?곕? 遺덈윭?ㅻ뒗 以묒엯?덈떎...</td></tr>';
 
             const insights = await loadInsights();
 
-            // 헤더 먼저 업데이트
+            // ?ㅻ뜑 癒쇱? ?낅뜲?댄듃
             const thead = document.querySelector('#theme-table thead');
             thead.innerHTML = `
                 <tr>
-                    <th style="width: 15%">작성일</th>
-                    <th style="width: 85%">기업 개요 및 차트 분석</th>
+                    <th style="width: 15%">?묒꽦??/th>
+                    <th style="width: 85%">湲곗뾽 媛쒖슂 諛?李⑦듃 遺꾩꽍</th>
                 </tr>
             `;
 
             if (insights.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px;">등록된 글이 없거나 불러오지 못했습니다. 노션에 글을 작성해주세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px;">?깅줉??湲???녾굅??遺덈윭?ㅼ? 紐삵뻽?듬땲?? ?몄뀡??湲???묒꽦?댁＜?몄슂.</td></tr>';
                 return;
             }
             renderTable(insights, 'insights');
