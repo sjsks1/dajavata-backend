@@ -136,6 +136,81 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCurrentPage();
     }
 
+    // Helper functions for Notion Blocks
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    function blocksToHtml(blocks) {
+        if (!blocks || blocks.length === 0) {
+            return '<p style="color: var(--text-muted);">본문 내용이 없습니다.</p>';
+        }
+        
+        let html = '';
+        let listBuffer = null; // 'ul' | 'ol' | null
+        
+        function closeList() {
+            if (listBuffer) {
+                html += listBuffer === 'ul' ? '</ul>' : '</ol>';
+                listBuffer = null;
+            }
+        }
+        
+        blocks.forEach(block => {
+            if (block.type === 'bulleted_list_item') {
+                if (listBuffer !== 'ul') { closeList(); html += '<ul style="margin:8px 0 16px 20px; padding:0;">'; listBuffer = 'ul'; }
+                html += `<li style="margin-bottom:6px; color:var(--text-main);">${escapeHtml(block.text)}</li>`;
+                return;
+            }
+            if (block.type === 'numbered_list_item') {
+                if (listBuffer !== 'ol') { closeList(); html += '<ol style="margin:8px 0 16px 20px; padding:0;">'; listBuffer = 'ol'; }
+                html += `<li style="margin-bottom:6px; color:var(--text-main);">${escapeHtml(block.text)}</li>`;
+                return;
+            }
+            
+            closeList();
+            
+            if (block.type === 'heading') {
+                const sizes = { 1: '24px', 2: '20px', 3: '17px' };
+                html += `<h${block.level} style="font-size:${sizes[block.level] || '17px'}; margin:24px 0 12px; color:white;">${escapeHtml(block.text)}</h${block.level}>`;
+            } else if (block.type === 'paragraph') {
+                html += `<p style="margin-bottom:14px; line-height:1.7; color: var(--text-main);">${escapeHtml(block.text).replace(/\n/g, '<br>')}</p>`;
+            } else if (block.type === 'image') {
+                html += `<figure style="margin:16px 0;">
+                            <img src="${escapeHtml(block.url)}" style="max-width:100%; border-radius:8px;">
+                            ${block.caption ? `<figcaption style="font-size:12px; color:var(--text-muted); margin-top:8px; text-align:center;">${escapeHtml(block.caption)}</figcaption>` : ''}
+                         </figure>`;
+            } else if (block.type === 'table') {
+                html += '<table style="width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; text-align:left;">';
+                block.rows.forEach((row, i) => {
+                    const isHeader = block.has_header && i === 0;
+                    const tag = isHeader ? 'th' : 'td';
+                    html += '<tr>';
+                    row.forEach(cell => {
+                        html += `<${tag} style="border:1px solid var(--border-color); padding:10px; color:var(--text-main);">${escapeHtml(cell)}</${tag}>`;
+                    });
+                    html += '</tr>';
+                });
+                html += '</table>';
+            } else if (block.type === 'divider') {
+                html += '<hr style="border:none; border-top:1px solid var(--border-color); margin:24px 0;">';
+            }
+        });
+        
+        closeList();
+        return html;
+    }
+
+    function getBlocksText(blocks) {
+        if (!blocks) return '';
+        return blocks
+            .filter(b => b.type === 'paragraph' || b.type === 'heading')
+            .map(b => b.text)
+            .join(' ');
+    }
+
     // 현재 페이지 렌더링
     function renderCurrentPage() {
         const thead = document.querySelector('#theme-table thead');
@@ -321,9 +396,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             paginatedList.forEach(post => {
                 const tr = document.createElement('tr');
-                const textPreview = post.content && post.content.length > 200 ? post.content.substring(0, 200) + '...' : (post.content || '');
-                // Basic markdown rendering for display
-                const formattedContent = textPreview.replace(/\n/g, '<br>');
+                
+                let rawText = getBlocksText(post.blocks);
+                const textPreview = rawText.length > 200 ? rawText.substring(0, 200) + '...' : rawText;
+                const formattedContent = escapeHtml(textPreview).replace(/\n/g, '<br>');
                 
                 tr.innerHTML = `
                     <td style="vertical-align: top; padding-top: 20px; color: var(--text-muted);">${post.date}</td>
@@ -430,7 +506,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         tbody.innerHTML = '';
         const tr = document.createElement('tr');
-        const formattedContent = (post.content || '').replace(/\n/g, '<br><br>');
+        const formattedContent = blocksToHtml(post.blocks);
         
         tr.innerHTML = `
             <td colspan="10" style="padding: 30px;">
