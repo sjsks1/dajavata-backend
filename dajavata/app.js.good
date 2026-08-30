@@ -189,13 +189,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     const tag = isHeader ? 'th' : 'td';
                     html += '<tr>';
                     row.forEach(cell => {
-                        html += `<${tag} style="border:1px solid var(--border); padding:10px; color:var(--text-main);">${escapeHtml(cell)}</${tag}>`;
+                        html += `<${tag} style="border:1px solid var(--border-color); padding:10px; color:var(--text-main);">${escapeHtml(cell)}</${tag}>`;
                     });
                     html += '</tr>';
                 });
                 html += '</table>';
             } else if (block.type === 'divider') {
-                html += '<hr style="border:none; border-top:1px solid var(--border); margin:24px 0;">';
+                html += '<hr style="border:none; border-top:1px solid var(--border-color); margin:24px 0;">';
             }
         });
         
@@ -406,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="padding: 20px 10px;">
                         <h3 style="margin-top: 0; margin-bottom: 10px; color: var(--text-main); font-size: 1.2rem;">${post.title}</h3>
                         <div style="line-height: 1.6; color: var(--text-muted); font-size: 0.95rem;">${formattedContent}</div>
-                        <button class="read-more-btn" data-id="${post.id}" style="margin-top: 15px; background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 5px 15px; border-radius: 4px; cursor: pointer;">자세히 읽기</button>
+                        <button class="read-more-btn" data-id="${post.id}" style="margin-top: 15px; background: transparent; border: 1px solid var(--border-color); color: var(--text-main); padding: 5px 15px; border-radius: 4px; cursor: pointer;">자세히 읽기</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -431,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let backButtonHtml = '';
             if (isThemeDetail) {
                 backButtonHtml = `
-                    <button id="back-to-themes" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; font-family: inherit; margin-right: 20px;">
+                    <button id="back-to-themes" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer; font-family: inherit; margin-right: 20px;">
                         <i class="ph ph-arrow-left"></i> 테마 리스트로 돌아가기
                     </button>
                 `;
@@ -522,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const footerTr = document.createElement('tr');
         footerTr.innerHTML = `
             <td colspan="10" class="center" style="padding: 20px;">
-                <button id="back-to-insights" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border); border-radius: 5px; cursor: pointer;">
+                <button id="back-to-insights" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer;">
                     <i class="ph ph-arrow-left"></i> 목록으로 돌아가기
                 </button>
             </td>
