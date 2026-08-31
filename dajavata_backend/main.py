@@ -62,7 +62,8 @@ async def periodic_update():
 
 @app.on_event("startup")
 async def startup_event():
-    load_stocks_sync()
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(None, load_stocks_sync)
     asyncio.create_task(periodic_update())
 
 app.add_middleware(
