@@ -63,11 +63,8 @@ async def periodic_update():
 
 @app.on_event("startup")
 async def startup_event():
-    global background_task_ref
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, load_stocks_sync)
-    background_task_ref = asyncio.create_task(periodic_update())
-    print(f"!!! background_task_ref 생성됨: {background_task_ref} !!!", flush=True)
 
 app.add_middleware(
     CORSMiddleware,
