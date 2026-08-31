@@ -13,7 +13,10 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import FinanceDataReader as fdr
 import datetime
+import asyncio
 from dotenv import load_dotenv
+
+from update_themes import main as update_themes_main
 
 load_dotenv()
 
@@ -25,8 +28,7 @@ app = FastAPI()
 # Cache for stock list
 stock_list = []
 
-@app.on_event("startup")
-def load_stocks():
+def load_stocks_sync():
     global stock_list
     print("Loading KRX stock list...")
     try:
@@ -43,6 +45,25 @@ def load_stocks():
         print(f"Loaded {len(stock_list)} stocks.")
     except Exception as e:
         print("Failed to load stocks:", e)
+
+async def periodic_update():
+    # Wait a short time to let the server fully start
+    await asyncio.sleep(10)
+    while True:
+        try:
+            print("Starting periodic background update (themes & stocks)...")
+            await update_themes_main()
+            print("Periodic background update finished.")
+        except Exception as e:
+            print(f"Error during periodic background update: {e}")
+        
+        # Sleep for 1 hour (3600 seconds)
+        await asyncio.sleep(3600)
+
+@app.on_event("startup")
+async def startup_event():
+    load_stocks_sync()
+    asyncio.create_task(periodic_update())
 
 app.add_middleware(
     CORSMiddleware,
