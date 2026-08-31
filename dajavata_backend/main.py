@@ -49,7 +49,7 @@ def load_stocks_sync():
         print("Failed to load stocks:", e)
 
 async def periodic_update():
-    # Wait a short time to let the server fully start
+    print("!!! periodic_update 시작됨 !!!", flush=True)
     await asyncio.sleep(10)
     while True:
         try:
@@ -59,7 +59,6 @@ async def periodic_update():
         except Exception as e:
             print(f"Error during periodic background update: {e}")
         
-        # Sleep for 1 hour (3600 seconds)
         await asyncio.sleep(3600)
 
 @app.on_event("startup")
@@ -68,6 +67,7 @@ async def startup_event():
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, load_stocks_sync)
     background_task_ref = asyncio.create_task(periodic_update())
+    print(f"!!! background_task_ref 생성됨: {background_task_ref} !!!", flush=True)
 
 app.add_middleware(
     CORSMiddleware,
