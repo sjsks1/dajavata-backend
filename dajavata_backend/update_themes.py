@@ -32,7 +32,7 @@ async def fetch_themes_page(session, page):
     headers = {'User-Agent': 'Mozilla/5.0'}
     
     async with session.get(url, headers=headers, timeout=10) as res:
-        html = await res.text(encoding='euc-kr')
+        html = await res.text()
         soup = BeautifulSoup(html, 'html.parser')
         
         themes = []
@@ -65,7 +65,7 @@ async def fetch_theme_stocks(session, theme_no, semaphore):
     
     async with semaphore:
         async with session.get(url, headers=headers, timeout=10) as res:
-            html = await res.text(encoding='euc-kr')
+            html = await res.text()
             soup = BeautifulSoup(html, 'html.parser')
             
             stocks = []
@@ -158,7 +158,7 @@ def calculate_stock_metrics(code, df_krx):
             'marcap': float(marcap)
         }
     except Exception as e:
-        # print(f"Error calculating metrics for {code}: {e}")
+        print(f"Error calculating metrics for {code}: {e}")
         return None
 
 async def main():
@@ -224,6 +224,8 @@ async def main():
         if metrics:
             metrics.update(integration_dict.get(code, {})) # merge PBR/PER
             stock_metrics_dict[code] = metrics
+
+    print(f"Successfully calculated metrics for {len(stock_metrics_dict)}/{len(unique_codes)} stocks.")
 
     # 6. Aggregate metrics for themes
     print("Aggregating theme metrics...")

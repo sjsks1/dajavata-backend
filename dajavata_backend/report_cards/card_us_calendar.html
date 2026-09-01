@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body {
+    background-color: #16181a;
+    color: #ffffff;
+    font-family: 'Malgun Gothic', '맑은 고딕', sans-serif;
+    margin: 0;
+    padding: 30px;
+    width: 600px;
+  }
+  .card-container {
+    background-color: #1e2124;
+    border-radius: 16px;
+    padding: 25px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+    border: 1px solid #2f3336;
+  }
+  .header-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #4da6ff;
+    margin-bottom: 20px;
+    border-left: 4px solid #4da6ff;
+    padding-left: 10px;
+  }
+  .list-item {
+    background-color: #272a2e;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 3px solid #ffb366;
+  }
+  .item-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .item-time {
+    font-size: 13px;
+    color: #a0aab2;
+    font-weight: bold;
+  }
+  .item-event {
+    font-size: 15px;
+    font-weight: bold;
+    color: #ffffff;
+  }
+  .item-impact {
+    font-size: 13px;
+    color: #cccccc;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+  <div class="card-container">
+    <div class="header-title">미국 증시 주요 일정</div>
+    <div id="calendar-list">
+      {CALENDAR_LIST}
+    </div>
+  </div>
+</body>
+</html>
