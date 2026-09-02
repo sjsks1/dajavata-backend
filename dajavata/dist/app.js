@@ -85,6 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let isThemeDetail = false;
     const itemsPerPage = 50;
 
+    let previousState = {
+        dataList: [],
+        mode: 'themes',
+        headerTitle: '전체 테마',
+        themeBadge: '테마',
+        page: 1
+    };
+
     const searchInput = document.querySelector('.search-box input');
 
     tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...<br><span style="font-size: 13px;">(무료 서버 특성상 첫 접속 시 최대 1분 정도 소요될 수 있습니다)</span></td></tr>';
@@ -317,6 +325,15 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.theme-link').forEach(link => {
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
+                    
+                    previousState = {
+                        dataList: currentDataList,
+                        mode: currentMode,
+                        headerTitle: headerTitle.textContent,
+                        themeBadge: themeBadge.textContent,
+                        page: currentPage
+                    };
+
                     const themeName = e.target.getAttribute('data-theme-name');
                     loadThemeDetails(themeName);
                 });
@@ -430,9 +447,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             let backButtonHtml = '';
             if (isThemeDetail) {
+                const backText = previousState.headerTitle ? `${previousState.headerTitle}로 돌아가기` : '테마 리스트로 돌아가기';
                 backButtonHtml = `
                     <button id="back-to-themes" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; font-family: inherit; margin-right: 20px;">
-                        <i class="ph ph-arrow-left"></i> 테마 리스트로 돌아가기
+                        <i class="ph ph-arrow-left"></i> ${backText}
                     </button>
                 `;
             }
@@ -470,9 +488,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const backBtn = document.getElementById('back-to-themes');
             if (backBtn) {
                 backBtn.addEventListener('click', () => {
-                    headerTitle.textContent = "전체 테마";
-                    themeBadge.textContent = "테마";
-                    renderTable(window.allThemes, 'themes');
+                    headerTitle.textContent = previousState.headerTitle || "전체 테마";
+                    themeBadge.textContent = previousState.themeBadge || "테마";
+                    renderTable(previousState.dataList || window.allThemes, previousState.mode || 'themes', false);
+                    currentPage = previousState.page || 1;
+                    renderCurrentPage();
                 });
             }
 
@@ -555,9 +575,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.innerHTML = '<tr><td colspan="12" class="center">상세 데이터를 불러오는 데 실패했습니다.</td></tr>';
                 
                 setTimeout(() => {
-                    headerTitle.textContent = "전체 테마";
-                    themeBadge.textContent = "테마";
-                    renderTable(window.allThemes, 'themes');
+                    headerTitle.textContent = previousState.headerTitle || "전체 테마";
+                    themeBadge.textContent = previousState.themeBadge || "테마";
+                    renderTable(previousState.dataList || window.allThemes, previousState.mode || 'themes', false);
+                    currentPage = previousState.page || 1;
+                    renderCurrentPage();
                 }, 2000);
             });
     }
