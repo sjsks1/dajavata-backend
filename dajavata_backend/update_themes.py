@@ -117,7 +117,11 @@ def calculate_stock_metrics(code, df_krx):
         day3 = ((current_price / df['Close'].iloc[-4]) - 1) * 100 if len(df) >= 4 else 0
         
         # 52주
-        df_52w = df.last('52W') if len(df) > 250 else df
+        if len(df) > 250:
+            cutoff = df.index.max() - pd.Timedelta(weeks=52)
+            df_52w = df[df.index >= cutoff]
+        else:
+            df_52w = df
         high52 = df_52w['High'].max()
         low52 = df_52w['Low'].min()
         high52_change = ((high52 / current_price) - 1) * 100
