@@ -113,6 +113,9 @@ def calculate_stock_metrics(code, df_krx):
             
         current_price = df['Close'].iloc[-1]
         
+        # 1일 등락률
+        day1 = ((current_price / df['Close'].iloc[-2]) - 1) * 100 if len(df) >= 2 else 0
+        
         # 3일 합산
         day3 = ((current_price / df['Close'].iloc[-4]) - 1) * 100 if len(df) >= 4 else 0
         
@@ -151,6 +154,7 @@ def calculate_stock_metrics(code, df_krx):
             'code': code,
             'name': name,
             'current_price': float(current_price),
+            'day1': float(day1),
             'day3': float(day3),
             'high52': float(high52_change),
             'low52': float(low52_change),

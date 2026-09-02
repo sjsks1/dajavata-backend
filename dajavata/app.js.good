@@ -327,6 +327,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tr>
                     <th>종목명</th>
                     <th class="right">현재가격</th>
+                    <th class="right">등락률</th>
                     <th class="right">3일합산</th>
                     <th class="right">52주 최고최저</th>
                     <th class="center">52주 소외지수</th>
@@ -343,6 +344,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tr = document.createElement('tr');
                 
                 const price = new Intl.NumberFormat('ko-KR').format(stock.current_price || 0);
+                const day1 = stock.day1 ? stock.day1.toFixed(2) : '0.00';
+                const day1Class = stock.day1 >= 0 ? 'pos' : 'neg';
+                const day1Sign = stock.day1 > 0 ? '+' : '';
+                
                 const day3 = stock.day3 ? stock.day3.toFixed(2) : '0.00';
                 const day3Class = stock.day3 >= 0 ? 'pos' : 'neg';
                 const day3Sign = stock.day3 > 0 ? '+' : '';
@@ -374,6 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </td>
                     <td class="right"><span class="price-main" style="color: white;">${price}</span></td>
+                    <td class="right"><span class="${day1Class} price-main">${day1Sign}${day1}%</span></td>
                     <td class="right"><span class="${day3Class} price-main">${day3Sign}${day3}%</span></td>
                     <td class="right"><span class="price-main"><span class="pos">+${high52}%</span> / <span class="neg">${low52}%</span></span></td>
                     <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">${neglect52}</span></td>
