@@ -174,19 +174,8 @@ async def main():
     
     # 1. Fetch KRX Listing for Market Cap and Names
     print("Fetching KRX listing...")
-
-    def fetch_krx_listing_with_retry(max_retries=3, delay_sec=15):
-        for attempt in range(1, max_retries + 1):
-            try:
-                return fdr.StockListing('KRX')
-            except Exception as e:
-                print(f"KRX listing 가져오기 실패 (시도 {attempt}/{max_retries}): {e}")
-                if attempt < max_retries:
-                    time.sleep(delay_sec)
-                else:
-                    raise
-
-    df_krx = fetch_krx_listing_with_retry()
+    from fdr_fallback import StockListing
+    df_krx = StockListing('KRX')
     
     # 2. Fetch all themes
     print("Fetching themes list...")
