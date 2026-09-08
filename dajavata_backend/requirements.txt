@@ -5,7 +5,7 @@ numpy
 requests
 beautifulsoup4
 matplotlib
-finance-datareader==0.9.96
+finance-datareader
 python-dotenv
 notion-client
 aiohttp
