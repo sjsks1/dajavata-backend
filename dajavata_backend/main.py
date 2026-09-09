@@ -34,9 +34,8 @@ def load_stocks_sync():
     global stock_list
     print("Loading KRX stock list...")
     try:
-        kospi = fdr.StockListing('KOSPI')
-        kosdaq = fdr.StockListing('KOSDAQ')
-        df = pd.concat([kospi, kosdaq])
+        from fdr_fallback import StockListing
+        df = StockListing('KRX')
         # Keep only standard stocks (filter out spacc, etc if needed, but for now take all)
         for _, row in df.iterrows():
             stock_list.append({
