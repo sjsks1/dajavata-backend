@@ -204,7 +204,7 @@ async def main():
         for theme, stocks in zip(themes_to_process, theme_stocks_results):
             theme['stock_codes'] = stocks
             
-    unique_codes = set()
+    unique_codes = set(df_krx['Code'].tolist())
     for t in themes_to_process:
         unique_codes.update(t['stock_codes'])
         
