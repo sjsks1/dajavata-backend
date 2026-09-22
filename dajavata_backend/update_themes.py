@@ -27,61 +27,43 @@ def safe_float(v):
     except:
         return np.nan
 
-async def fetch_themes_page(session, page):
-    url = f"https://finance.naver.com/sise/theme.naver?&page={page}"
+async def fetch_themes_cursor(session, cursor=None):
+    url = "https://stock.naver.com/api/stockSecurity/rankings/v2/domestic/themes?sortType=changeRate&size=100&period=daily"
+    if cursor:
+        url += f"&cursor={cursor}"
     headers = {'User-Agent': 'Mozilla/5.0'}
     
-    async with session.get(url, headers=headers, timeout=10) as res:
-        html = await res.text()
-        soup = BeautifulSoup(html, 'html.parser')
-        
-        themes = []
-        table = soup.find('table', {'class': 'type_1 theme'})
-        if not table:
-            return themes
-            
-        for tr in table.find_all('tr'):
-            td_col1 = tr.find('td', {'class': 'col_type1'})
-            if td_col1 and td_col1.find('a'):
-                a_tag = td_col1.find('a')
-                name = a_tag.text.strip()
-                href = a_tag['href']
-                theme_no = href.split('no=')[-1]
-                
-                tds = tr.find_all('td')
-                day_change_str = tds[1].text.strip() if len(tds) > 1 else "0"
-                day_change = safe_float(day_change_str)
-                
+    try:
+        async with session.get(url, headers=headers, timeout=10) as res:
+            data = await res.json()
+            themes = []
+            for item in data.get('content', []):
                 themes.append({
-                    'id': theme_no,
-                    'name': name,
-                    'day1Pos': day_change
+                    'id': str(item['code']),
+                    'name': item['name'],
+                    'day1Pos': float(item.get('changeRate', 0))
                 })
-        return themes
+            next_cursor = data.get('cursor')
+            return themes, next_cursor
+    except Exception as e:
+        print(f"Error fetching themes: {e}")
+        return [], None
 
 async def fetch_theme_stocks(session, theme_no, semaphore):
-    url = f"https://finance.naver.com/sise/sise_group_detail.naver?type=theme&no={theme_no}"
+    url = f"https://stock.naver.com/api/domestic/market/theme/{theme_no}/stocklist?marketType=ALL&orderType=priceTop&startIdx=0&pageSize=100"
     headers = {'User-Agent': 'Mozilla/5.0'}
     
     async with semaphore:
-        async with session.get(url, headers=headers, timeout=10) as res:
-            html = await res.text()
-            soup = BeautifulSoup(html, 'html.parser')
-            
-            stocks = []
-            table = soup.find('table', {'class': 'type_5'})
-            if not table:
+        try:
+            async with session.get(url, headers=headers, timeout=10) as res:
+                data = await res.json()
+                stocks = []
+                for item in data.get('stocks', []):
+                    stocks.append(str(item['itemCode']))
                 return stocks
-                
-            for tr in table.find_all('tr'):
-                td_name = tr.find('td', {'class': 'name'})
-                if td_name and td_name.find('a'):
-                    name = td_name.find('a').text.strip()
-                    href = td_name.find('a')['href']
-                    code = href.split('code=')[-1]
-                    
-                    stocks.append(code)
-            return stocks
+        except Exception as e:
+            print(f"Failed to fetch theme stocks for {theme_no}: {e}")
+            return []
 
 async def fetch_stock_integration(session, code, semaphore):
     url = f"https://m.stock.naver.com/api/stock/{code}/integration"
@@ -181,11 +163,14 @@ async def main():
     print("Fetching themes list...")
     async with aiohttp.ClientSession() as session:
         all_themes = []
-        for page in range(1, 8):
-            themes = await fetch_themes_page(session, page)
+        cursor = None
+        for i in range(5): # Safely limit to 5 pages
+            themes, cursor = await fetch_themes_cursor(session, cursor)
             if not themes:
                 break
             all_themes.extend(themes)
+            if not cursor:
+                break
             await asyncio.sleep(0.5)
             
     print(f"Found {len(all_themes)} themes.")
