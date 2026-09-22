@@ -37,7 +37,7 @@ async def fetch_themes_cursor(session, cursor=None):
         async with session.get(url, headers=headers, timeout=10) as res:
             data = await res.json()
             themes = []
-            for item in data.get('content', []):
+            for item in data.get('items', []):
                 themes.append({
                     'id': str(item['code']),
                     'name': item['name'],
@@ -58,9 +58,9 @@ async def fetch_theme_stocks(session, theme_no, semaphore):
             async with session.get(url, headers=headers, timeout=10) as res:
                 data = await res.json()
                 stocks = []
-                for item in data.get('stocks', []):
-                    stocks.append(str(item['itemCode']))
-                return stocks
+                for item in data:
+                    stocks.append(str(item.get('itemcode', '')))
+                return [s for s in stocks if s]
         except Exception as e:
             print(f"Failed to fetch theme stocks for {theme_no}: {e}")
             return []
@@ -264,9 +264,12 @@ async def main():
         theme_details[theme['name']] = theme_stock_data
 
     # 7. Save to JSON
-    print("Saving to JSON files...")
-    with open('data/theme_cache.json', 'w', encoding='utf-8') as f:
-        json.dump(clean_nan(final_themes), f, ensure_ascii=False, indent=2)
+    if not final_themes:
+        print("⚠️ 테마 데이터가 비어있어 저장을 건너뜁니다 (기존 데이터 유지).")
+    else:
+        print("Saving to JSON files...")
+        with open('data/theme_cache.json', 'w', encoding='utf-8') as f:
+            json.dump(clean_nan(final_themes), f, ensure_ascii=False, indent=2)
         
     with open('data/theme_details.json', 'w', encoding='utf-8') as f:
         json.dump(clean_nan(theme_details), f, ensure_ascii=False, indent=2)
