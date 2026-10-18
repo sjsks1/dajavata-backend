@@ -1,0 +1,888 @@
+/* ==========================================================================
+   DAJAVATA TRADER ROOM (트레이더 룸) - STYLESHEET
+   다자바타 고유의 모던 다크 테마 & 프리미엄 트레이딩 워크스페이스
+   ========================================================================== */
+
+/* Workspace Container */
+.trader-workspace-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: var(--bg-dark, #0a0b10);
+    color: var(--text-main, #f1f2f5);
+    padding: 28px 36px 48px;
+}
+
+/* Custom Scrollbar */
+.trader-workspace-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.trader-workspace-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+.trader-workspace-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+}
+.trader-workspace-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Top Header */
+.tw-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.tw-header-left .tw-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--pos, #f94d5d);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tw-header-left h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+    color: #fff;
+}
+
+.tw-header-left p.tw-desc {
+    color: var(--text-muted, #8b92a5);
+    font-size: 13px;
+}
+
+.tw-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.tw-date-badge {
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--text-muted, #8b92a5);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Common Buttons */
+.tw-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    text-decoration: none;
+}
+
+.tw-btn-primary {
+    background: var(--pos, #f94d5d);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(249, 77, 93, 0.3);
+}
+.tw-btn-primary:hover {
+    background: #ff5e6e;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(249, 77, 93, 0.45);
+}
+
+.tw-btn-accent {
+    background: var(--accent, #3f68e0);
+    color: #fff;
+}
+.tw-btn-accent:hover {
+    background: var(--accent-hover, #4e78f3);
+    transform: translateY(-1px);
+}
+
+.tw-btn-secondary {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-main, #f1f2f5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.tw-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.tw-btn-danger {
+    background: rgba(249, 77, 93, 0.15);
+    color: var(--pos, #f94d5d);
+    border: 1px solid rgba(249, 77, 93, 0.3);
+}
+.tw-btn-danger:hover {
+    background: rgba(249, 77, 93, 0.25);
+}
+
+.tw-btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+}
+
+/* Navigation Tabs */
+.tw-tab-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 2px;
+}
+
+.tw-tab-item {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted, #8b92a5);
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.tw-tab-item:hover {
+    color: var(--text-main, #f1f2f5);
+    background: rgba(255, 255, 255, 0.03);
+}
+.tw-tab-item.active {
+    color: var(--pos, #f94d5d);
+    border-bottom-color: var(--pos, #f94d5d);
+    background: rgba(249, 77, 93, 0.05);
+}
+
+/* Next Step Guide Card */
+.tw-next-step-card {
+    background: linear-gradient(135deg, rgba(249, 77, 93, 0.12) 0%, rgba(63, 104, 224, 0.08) 100%);
+    border: 1px solid rgba(249, 77, 93, 0.25);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tw-next-step-info h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--pos, #f94d5d);
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+.tw-next-step-info p {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+}
+
+/* Quick Action Grid (4 Cards) */
+.tw-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.tw-quick-card {
+    background: var(--bg-card, #15161e);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 105px;
+}
+
+.tw-quick-card:hover {
+    background: var(--bg-card-hover, #1e202a);
+    border-color: rgba(255, 255, 255, 0.16);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.tw-quick-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tw-quick-card-top i.icon {
+    font-size: 20px;
+    color: var(--pos, #f94d5d);
+}
+
+.tw-quick-card-top i.arrow {
+    font-size: 14px;
+    color: var(--text-muted, #8b92a5);
+    transition: transform 0.2s ease;
+}
+.tw-quick-card:hover i.arrow {
+    transform: translate(2px, -2px);
+    color: #fff;
+}
+
+.tw-quick-card-body h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin-top: 10px;
+    margin-bottom: 4px;
+}
+
+.tw-quick-card-body p {
+    font-size: 12px;
+    color: var(--text-muted, #8b92a5);
+    line-height: 1.4;
+}
+
+.tw-quick-card-badge {
+    position: absolute;
+    top: 14px;
+    right: 36px;
+    background: rgba(249, 77, 93, 0.2);
+    color: var(--pos, #f94d5d);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+}
+
+/* Weekly KPI Bar (4 Metrics) */
+.tw-kpi-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 28px;
+    background: var(--bg-card, #15161e);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 16px 20px;
+}
+
+.tw-kpi-item {
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    padding-right: 16px;
+}
+.tw-kpi-item:last-child {
+    border-right: none;
+    padding-right: 0;
+}
+
+.tw-kpi-item .label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted, #8b92a5);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.tw-kpi-item .val {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.tw-kpi-item .val.pos { color: var(--pos, #f94d5d); }
+.tw-kpi-item .val.neg { color: var(--neg, #2e8af6); }
+
+.tw-kpi-item .sub {
+    font-size: 11px;
+    color: var(--text-muted, #8b92a5);
+    margin-top: 4px;
+}
+
+/* 2-Column Dashboard Layout */
+.tw-dashboard-split {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+}
+
+/* Cards & Sections */
+.tw-section-card {
+    background: var(--bg-card, #15161e);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 22px;
+    margin-bottom: 24px;
+}
+
+.tw-section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.tw-section-title h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tw-section-title a, .tw-section-title button {
+    font-size: 12px;
+    color: var(--text-muted, #8b92a5);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.tw-section-title a:hover, .tw-section-title button:hover {
+    color: #fff;
+}
+
+/* Empty State Box */
+.tw-empty-box {
+    padding: 36px 20px;
+    text-align: center;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: var(--text-muted, #8b92a5);
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.015);
+}
+.tw-empty-box i {
+    font-size: 28px;
+    margin-bottom: 8px;
+    display: block;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* Focus Checklist (Right Widget) */
+.tw-focus-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+.tw-focus-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+.tw-focus-item.done {
+    opacity: 0.5;
+}
+.tw-focus-item.done span {
+    text-decoration: line-through;
+}
+
+.tw-focus-item-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    flex: 1;
+}
+
+.tw-focus-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.tw-icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted, #8b92a5);
+    cursor: pointer;
+    padding: 3px 5px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+.tw-icon-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tw-focus-add-box {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+.tw-focus-add-box input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    color: #fff;
+    font-family: inherit;
+}
+.tw-focus-add-box input:focus {
+    outline: none;
+    border-color: var(--pos, #f94d5d);
+}
+
+/* Session Note Widget */
+.tw-note-textarea {
+    width: 100%;
+    min-height: 110px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 13px;
+    color: #fff;
+    font-family: inherit;
+    resize: vertical;
+    line-height: 1.5;
+}
+.tw-note-textarea:focus {
+    outline: none;
+    border-color: var(--pos, #f94d5d);
+}
+
+/* Risk Calculator View (국내 주식 맞춤형) */
+.tw-calc-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 24px;
+}
+
+.tw-form-group {
+    margin-bottom: 18px;
+}
+.tw-form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted, #8b92a5);
+    margin-bottom: 7px;
+}
+.tw-form-group label span.req {
+    color: var(--pos, #f94d5d);
+}
+
+.tw-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.tw-input-wrapper input, .tw-input-wrapper select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #fff;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+.tw-input-wrapper input:focus, .tw-input-wrapper select:focus {
+    outline: none;
+    border-color: var(--pos, #f94d5d);
+    background: rgba(255, 255, 255, 0.07);
+}
+.tw-input-unit {
+    position: absolute;
+    right: 14px;
+    color: var(--text-muted, #8b92a5);
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+}
+
+.tw-input-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.tw-input-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+}
+
+/* Toggle Buttons */
+.tw-toggle-group {
+    display: flex;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    margin-bottom: 16px;
+}
+.tw-toggle-btn {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted, #8b92a5);
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.tw-toggle-btn.active {
+    background: var(--pos, #f94d5d);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(249, 77, 93, 0.3);
+}
+
+/* Calculator Output Panel (Your Position) */
+.tw-calc-result-card {
+    background: linear-gradient(180deg, rgba(21, 22, 30, 0.95) 0%, rgba(15, 16, 22, 0.95) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    position: sticky;
+    top: 20px;
+}
+
+.tw-calc-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--pos, #f94d5d);
+    background: rgba(249, 77, 93, 0.12);
+    padding: 4px 10px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+}
+
+.tw-calc-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 13px;
+}
+.tw-calc-result-row .k {
+    color: var(--text-muted, #8b92a5);
+}
+.tw-calc-result-row .v {
+    font-weight: 700;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.tw-calc-result-row.highlight {
+    background: rgba(249, 77, 93, 0.08);
+    margin: 8px -12px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(249, 77, 93, 0.2);
+}
+.tw-calc-result-row.highlight .v {
+    font-size: 18px;
+    color: var(--pos, #f94d5d);
+}
+
+/* Alerts inside Calculator */
+.tw-alert-box {
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    line-height: 1.45;
+    margin-top: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+.tw-alert-warning {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+}
+.tw-alert-danger {
+    background: rgba(249, 77, 93, 0.12);
+    border: 1px solid rgba(249, 77, 93, 0.3);
+    color: #fca5a5;
+}
+.tw-alert-success {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #6ee7b7;
+}
+
+/* Trading Plan Table */
+.tw-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+.tw-table th {
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-muted, #8b92a5);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tw-table td {
+    padding: 14px;
+    font-size: 13px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-main, #f1f2f5);
+}
+.tw-table tr:hover td {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+/* Badges */
+.tw-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.tw-badge-long {
+    background: rgba(249, 77, 93, 0.15);
+    color: var(--pos, #f94d5d);
+}
+.tw-badge-short {
+    background: rgba(46, 138, 246, 0.15);
+    color: var(--neg, #2e8af6);
+}
+.tw-badge-status-draft {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted, #8b92a5);
+}
+.tw-badge-status-active {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+}
+.tw-badge-status-done {
+    background: rgba(63, 104, 224, 0.15);
+    color: #60a5fa;
+}
+.tw-badge-status-cancel {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+
+/* Modal Popup */
+.tw-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.tw-modal {
+    background: var(--bg-card, #15161e);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    width: 100%;
+    max-width: 620px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 28px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+.tw-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tw-modal-header h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+}
+.tw-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Calendar Grid */
+.tw-calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.tw-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+}
+.tw-cal-day-name {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted, #8b92a5);
+    padding: 8px 0;
+}
+.tw-cal-cell {
+    min-height: 84px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 11px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+.tw-cal-cell:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+.tw-cal-cell.today {
+    border-color: var(--pos, #f94d5d);
+    background: rgba(249, 77, 93, 0.05);
+}
+.tw-cal-cell.other-month {
+    opacity: 0.25;
+}
+.tw-cal-date-num {
+    font-weight: 700;
+    color: var(--text-muted, #8b92a5);
+}
+.tw-cal-trades-badge {
+    margin-top: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 4px;
+    text-align: center;
+}
+.tw-cal-trades-badge.win {
+    background: rgba(249, 77, 93, 0.2);
+    color: var(--pos, #f94d5d);
+}
+.tw-cal-trades-badge.loss {
+    background: rgba(46, 138, 246, 0.2);
+    color: var(--neg, #2e8af6);
+}
+
+/* Analytics Metric Row (6 Cards) */
+.tw-analytics-grid-6 {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.tw-analytics-card {
+    background: var(--bg-card, #15161e);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    padding: 16px 14px;
+}
+.tw-analytics-card .title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted, #8b92a5);
+    margin-bottom: 6px;
+}
+.tw-analytics-card .number {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .tw-quick-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .tw-kpi-bar {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+    .tw-dashboard-split {
+        grid-template-columns: 1fr;
+    }
+    .tw-calc-grid {
+        grid-template-columns: 1fr;
+    }
+    .tw-analytics-grid-6 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .trader-workspace-container {
+        padding: 16px;
+    }
+    .tw-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .tw-quick-grid {
+        grid-template-columns: 1fr;
+    }
+    .tw-kpi-bar {
+        grid-template-columns: 1fr;
+    }
+    .tw-analytics-grid-6 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .tw-input-grid-2, .tw-input-grid-3 {
+        grid-template-columns: 1fr;
+    }
+}

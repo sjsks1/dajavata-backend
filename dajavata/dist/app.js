@@ -590,11 +590,21 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
+    function showDefaultView() {
+        const defaultView = document.getElementById('default-view-container');
+        const workspace = document.getElementById('trader-workspace-container');
+        if (defaultView && workspace) {
+            defaultView.style.display = 'flex';
+            workspace.style.display = 'none';
+        }
+    }
+
     // 테마 메뉴 클릭 이벤트
     const themeMenus = document.querySelectorAll('#theme-menu-list li');
     themeMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
             e.preventDefault();
+            showDefaultView();
             document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
             menu.classList.add('active');
 
@@ -622,6 +632,7 @@ document.addEventListener('DOMContentLoaded', () => {
     stockMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
             e.preventDefault();
+            showDefaultView();
             document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
             menu.classList.add('active');
 
@@ -667,6 +678,7 @@ document.addEventListener('DOMContentLoaded', () => {
     insightMenus.forEach(menu => {
         menu.addEventListener('click', async (e) => {
             e.preventDefault();
+            showDefaultView();
             document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
             menu.classList.add('active');
 
@@ -692,6 +704,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             renderTable(insights, 'insights');
+        });
+    });
+
+    // 트레이더 룸 메뉴 클릭 이벤트
+    const traderMenus = document.querySelectorAll('#trader-menu-list li');
+    traderMenus.forEach(menu => {
+        menu.addEventListener('click', (e) => {
+            e.preventDefault();
+            const action = menu.getAttribute('data-action');
+            if (window.TraderRoom) {
+                window.TraderRoom.navigate(action);
+            }
         });
     });
 });

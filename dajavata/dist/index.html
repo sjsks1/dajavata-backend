@@ -12,6 +12,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Styles -->
     <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="trader_room.css?v=1">
 </head>
 <body>
     <!-- 모바일 전용 상단바 (PC에서는 CSS로 숨김) -->
@@ -74,43 +75,63 @@
                         <li data-action="stock-high52"><a href="#"><i class="ph ph-crown"></i> 신고점 돌파 종목 (52주)</a></li>
                     </ul>
                 </div>
+
+                <!-- 신규 추가: 트레이더 룸 (기존 기능 아래에 안전하게 추가) -->
+                <div class="menu-section">
+                    <h3>트레이더 룸 (WORK)</h3>
+                    <ul id="trader-menu-list">
+                        <li data-action="trader-today"><a href="#"><i class="ph ph-gauge"></i> 오늘의 매매</a></li>
+                        <li data-action="trader-plan"><a href="#"><i class="ph ph-notepad"></i> 매매 시나리오</a></li>
+                        <li data-action="trader-calc"><a href="#"><i class="ph ph-calculator"></i> 리스크 & 비중 계산기</a></li>
+                        <li data-action="trader-journal"><a href="#"><i class="ph ph-book-open"></i> 매매일지 & 복기</a></li>
+                        <li data-action="trader-analytics"><a href="#"><i class="ph ph-chart-line-up"></i> 성과 분석실</a></li>
+                        <li data-action="trader-vault"><a href="#"><i class="ph ph-hard-drive"></i> 데이터 보관함</a></li>
+                    </ul>
+                </div>
             </nav>
             
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
-            <header class="content-header">
-                <div class="header-title">
-                    <span class="theme-badge">전체</span>
-                    <h1>테마 리스트</h1>
-                </div>
-            </header>
+            <!-- 기존 테마/종목 뷰 (ID 부여하여 분리 관리) -->
+            <div id="default-view-container" style="display: flex; flex-direction: column; height: 100%; width: 100%; min-width: 0;">
+                <header class="content-header">
+                    <div class="header-title">
+                        <span class="theme-badge">전체</span>
+                        <h1>테마 리스트</h1>
+                    </div>
+                </header>
 
-            <section class="table-container">
-                <table id="theme-table">
-                    <thead>
-                        <tr>
-                            <th>테마명</th>
-                            <th class="right">전일비</th>
-                            <th class="right">3일합산</th>
-                            <th class="right">52주 상승률</th>
-                            <th class="right">52주 하락률</th>
-                            <th class="center">52주 소외지수</th>
-                            <th class="right">3년 상승률</th>
-                            <th class="right">3년 하락률</th>
-                            <th class="center">3년 소외지수</th>
-                            <th class="center">업데이트</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body">
-                        <!-- Data rows will be injected by app.js -->
-                    </tbody>
-                </table>
-            </section>
+                <section class="table-container">
+                    <table id="theme-table">
+                        <thead>
+                            <tr>
+                                <th>테마명</th>
+                                <th class="right">전일비</th>
+                                <th class="right">3일합산</th>
+                                <th class="right">52주 상승률</th>
+                                <th class="right">52주 하락률</th>
+                                <th class="center">52주 소외지수</th>
+                                <th class="right">3년 상승률</th>
+                                <th class="right">3년 하락률</th>
+                                <th class="center">3년 소외지수</th>
+                                <th class="center">업데이트</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Data rows will be injected by app.js -->
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+
+            <!-- 신규: 트레이딩 룸 전용 뷰 컨테이너 (초기에는 숨김) -->
+            <div id="trader-workspace-container" class="trader-workspace-container" style="display: none;"></div>
         </main>
     </div>
     
-    <script src="app.js?v=5"></script>
+    <script src="trader_room.js?v=1"></script>
+    <script src="app.js?v=6"></script>
 </body>
 </html>
