@@ -507,7 +507,7 @@
     display: flex;
     align-items: center;
 }
-.tw-input-wrapper input, .tw-input-wrapper select {
+.tw-input-wrapper input {
     width: 100%;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -518,10 +518,54 @@
     font-family: inherit;
     transition: all 0.2s ease;
 }
-.tw-input-wrapper input:focus, .tw-input-wrapper select:focus {
+.tw-input-wrapper input:focus {
     outline: none;
     border-color: var(--pos, #f94d5d);
     background: rgba(255, 255, 255, 0.07);
+}
+
+/* Dark theme select & options */
+.tw-input-wrapper select {
+    width: 100%;
+    background-color: #15161e;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #ffffff;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    color-scheme: dark;
+    cursor: pointer;
+}
+.tw-input-wrapper select:focus {
+    outline: none;
+    border-color: var(--pos, #f94d5d);
+    background-color: #1a1b26;
+}
+
+/* Dropdown Options (커서 올리기 전에도 항상 또렷한 어두운 배경에 흰 글씨) */
+.tw-input-wrapper select option {
+    background-color: #181924;
+    color: #f1f2f5;
+    padding: 10px 12px;
+    font-size: 13px;
+}
+.tw-input-wrapper select optgroup {
+    background-color: #111218;
+    color: #8b92a5;
+    font-weight: 700;
+    padding: 6px 10px 2px;
+    font-size: 12px;
+}
+.tw-input-wrapper select option:checked {
+    background-color: var(--pos, #f94d5d) !important;
+    color: #ffffff !important;
+    font-weight: 700;
+}
+.tw-input-wrapper select option:hover {
+    background-color: #2b2e42 !important;
+    color: #ffffff !important;
 }
 .tw-input-unit {
     position: absolute;
