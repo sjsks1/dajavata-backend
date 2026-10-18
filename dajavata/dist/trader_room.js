@@ -201,89 +201,496 @@
     };
 
     // -------------------------------------------------------------
-    // KOREAN STOCK RISK CALCULATOR LOGIC
+    // GLOBAL MULTI-ASSET SPECIFICATIONS & PRESETS
+    // -------------------------------------------------------------
+    const FUTURES_SPECS = {
+        // 미국 지수선물 (CME / CBOT INDEX)
+        NQ: {
+            symbol: "NQ",
+            name: "E-mini Nasdaq-100",
+            category: "미국 지수선물 (INDEX)",
+            pointValue: 20,
+            tickSize: 0.25,
+            tickValue: 5.0,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 20450,
+            desc: "CME E-mini 나스닥 100 지수 ($20/pt, 0.25tick=$5)"
+        },
+        MNQ: {
+            symbol: "MNQ",
+            name: "Micro E-mini Nasdaq-100",
+            category: "미국 지수선물 (INDEX)",
+            pointValue: 2,
+            tickSize: 0.25,
+            tickValue: 0.5,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 20450,
+            desc: "CME Micro E-mini 나스닥 100 ($2/pt, 0.25tick=$0.5)"
+        },
+        ES: {
+            symbol: "ES",
+            name: "E-mini S&P 500",
+            category: "미국 지수선물 (INDEX)",
+            pointValue: 50,
+            tickSize: 0.25,
+            tickValue: 12.5,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 5850,
+            desc: "CME E-mini S&P 500 ($50/pt, 0.25tick=$12.5)"
+        },
+        MES: {
+            symbol: "MES",
+            name: "Micro E-mini S&P 500",
+            category: "미국 지수선물 (INDEX)",
+            pointValue: 5,
+            tickSize: 0.25,
+            tickValue: 1.25,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 5850,
+            desc: "CME Micro E-mini S&P 500 ($5/pt, 0.25tick=$1.25)"
+        },
+        YM: {
+            symbol: "YM",
+            name: "E-mini Dow Jones ($5)",
+            category: "미국 지수선물 (INDEX)",
+            pointValue: 5,
+            tickSize: 1.0,
+            tickValue: 5.0,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 43200,
+            desc: "CBOT E-mini 다우존스 ($5/pt, 1.0tick=$5)"
+        },
+        MYM: {
+            symbol: "MYM",
+            name: "Micro E-mini Dow Jones",
+            category: "미국 지수선물 (INDEX)",
+            pointValue: 0.5,
+            tickSize: 1.0,
+            tickValue: 0.5,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 43200,
+            desc: "CBOT Micro E-mini 다우존스 ($0.5/pt, 1.0tick=$0.5)"
+        },
+        RTY: {
+            symbol: "RTY",
+            name: "E-mini Russell 2000",
+            category: "미국 지수선물 (INDEX)",
+            pointValue: 50,
+            tickSize: 0.1,
+            tickValue: 5.0,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 2260,
+            desc: "CME E-mini 러셀 2000 ($50/pt, 0.1tick=$5)"
+        },
+        M2K: {
+            symbol: "M2K",
+            name: "Micro E-mini Russell 2000",
+            category: "미국 지수선물 (INDEX)",
+            pointValue: 5,
+            tickSize: 0.1,
+            tickValue: 0.5,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 2260,
+            desc: "CME Micro E-mini 러셀 ($5/pt, 0.1tick=$0.5)"
+        },
+
+        // 귀금속 및 원자재/에너지 (METALS & COMMODITY)
+        GC: {
+            symbol: "GC",
+            name: "Gold (금 선물)",
+            category: "귀금속 & 에너지 (METALS & ENERGY)",
+            pointValue: 100,
+            tickSize: 0.1,
+            tickValue: 10.0,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 2720,
+            desc: "COMEX 골드 선물 ($100/pt, 0.1tick=$10)"
+        },
+        MGC: {
+            symbol: "MGC",
+            name: "Micro Gold (마이크로 골드)",
+            category: "귀금속 & 에너지 (METALS & ENERGY)",
+            pointValue: 10,
+            tickSize: 0.1,
+            tickValue: 1.0,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 2720,
+            desc: "COMEX 마이크로 골드 ($10/pt, 0.1tick=$1)"
+        },
+        SI: {
+            symbol: "SI",
+            name: "Silver (은 선물)",
+            category: "귀금속 & 에너지 (METALS & ENERGY)",
+            pointValue: 5000,
+            tickSize: 0.005,
+            tickValue: 25.0,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 33.5,
+            desc: "COMEX 실버 선물 ($5,000/pt, 0.005tick=$25)"
+        },
+        SIL: {
+            symbol: "SIL",
+            name: "Micro Silver (마이크로 실버)",
+            category: "귀금속 & 에너지 (METALS & ENERGY)",
+            pointValue: 1000,
+            tickSize: 0.005,
+            tickValue: 5.0,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 33.5,
+            desc: "COMEX 마이크로 실버 ($1,000/pt, 0.005tick=$5)"
+        },
+        CL: {
+            symbol: "CL",
+            name: "Crude Oil (WTI 원유)",
+            category: "귀금속 & 에너지 (METALS & ENERGY)",
+            pointValue: 1000,
+            tickSize: 0.01,
+            tickValue: 10.0,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 70.5,
+            desc: "NYMEX WTI 크루드 오일 ($1,000/pt, 0.01tick=$10)"
+        },
+        MCL: {
+            symbol: "MCL",
+            name: "Micro WTI Crude Oil",
+            category: "귀금속 & 에너지 (METALS & ENERGY)",
+            pointValue: 100,
+            tickSize: 0.01,
+            tickValue: 1.0,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 70.5,
+            desc: "NYMEX 마이크로 WTI 원유 ($100/pt, 0.01tick=$1)"
+        },
+        NG: {
+            symbol: "NG",
+            name: "Natural Gas (천연가스)",
+            category: "귀금속 & 에너지 (METALS & ENERGY)",
+            pointValue: 10000,
+            tickSize: 0.001,
+            tickValue: 10.0,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 2.85,
+            desc: "NYMEX 천연가스 ($10,000/pt, 0.001tick=$10)"
+        },
+
+        // 통화 선물 (FX CURRENCY)
+        "6E": {
+            symbol: "6E",
+            name: "Euro FX Futures",
+            category: "통화 선물 (FX CURRENCY)",
+            pointValue: 125000,
+            tickSize: 0.00005,
+            tickValue: 6.25,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 1.0850,
+            desc: "CME 유로/달러 통화선물 (1pt = $125,000, 1tick = $6.25)"
+        },
+        M6E: {
+            symbol: "M6E",
+            name: "Micro Euro FX Futures",
+            category: "통화 선물 (FX CURRENCY)",
+            pointValue: 12500,
+            tickSize: 0.0001,
+            tickValue: 1.25,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 1.0850,
+            desc: "CME 마이크로 유로/달러 (1pt = $12,500, 1tick = $1.25)"
+        },
+        "6B": {
+            symbol: "6B",
+            name: "British Pound Futures",
+            category: "통화 선물 (FX CURRENCY)",
+            pointValue: 62500,
+            tickSize: 0.0001,
+            tickValue: 6.25,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 1.3050,
+            desc: "CME 영국 파운드/달러 (1pt = $62,500, 1tick = $6.25)"
+        },
+        M6B: {
+            symbol: "M6B",
+            name: "Micro British Pound",
+            category: "통화 선물 (FX CURRENCY)",
+            pointValue: 6250,
+            tickSize: 0.0002,
+            tickValue: 1.25,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 1.3050,
+            desc: "CME 마이크로 영국 파운드 (1pt = $6,250, 1tick = $1.25)"
+        },
+        "6J": {
+            symbol: "6J",
+            name: "Japanese Yen Futures",
+            category: "통화 선물 (FX CURRENCY)",
+            pointValue: 12500000,
+            tickSize: 0.0000005,
+            tickValue: 6.25,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 0.006700,
+            desc: "CME 일본 엔화/달러 (1pt = $12.5M, 1tick = $6.25)"
+        },
+
+        // 금리 & 채권 (TREASURY)
+        ZN: {
+            symbol: "ZN",
+            name: "10-Year T-Note (10년물 국채)",
+            category: "금리 & 국채 (TREASURY)",
+            pointValue: 1000,
+            tickSize: 0.015625,
+            tickValue: 15.625,
+            currency: "USD",
+            minContract: 1,
+            samplePrice: 110.5,
+            desc: "CBOT 미국 10년물 국채선물 ($1,000/pt)"
+        }
+    };
+
+    const CRYPTO_SPECS = {
+        BTCUSDT: { symbol: "BTCUSDT", name: "Bitcoin (BTC/USDT)", step: 0.001, minQty: 0.001, tickSize: 0.1, samplePrice: 68500 },
+        ETHUSDT: { symbol: "ETHUSDT", name: "Ethereum (ETH/USDT)", step: 0.01, minQty: 0.01, tickSize: 0.01, samplePrice: 2650 },
+        SOLUSDT: { symbol: "SOLUSDT", name: "Solana (SOL/USDT)", step: 0.1, minQty: 0.1, tickSize: 0.01, samplePrice: 155 },
+        XRPUSDT: { symbol: "XRPUSDT", name: "Ripple (XRP/USDT)", step: 1, minQty: 1, tickSize: 0.0001, samplePrice: 0.54 },
+        DOGEUSDT: { symbol: "DOGEUSDT", name: "Dogecoin (DOGE/USDT)", step: 10, minQty: 10, tickSize: 0.00001, samplePrice: 0.14 }
+    };
+
+    // -------------------------------------------------------------
+    // GLOBAL MULTI-ASSET RISK CALCULATOR ENGINE
     // -------------------------------------------------------------
     const Calculator = {
         calculate(params) {
+            const assetType = params.assetType || 'krx'; // 'krx', 'us', 'futures', 'crypto', 'custom'
             const capital = parseFloat(params.capital) || 0;
             const isPercent = params.riskMode === 'percent';
             const riskValue = parseFloat(params.riskValue) || 0;
             const entryPrice = parseFloat(params.entryPrice) || 0;
             const stopLoss = parseFloat(params.stopLoss) || 0;
             const targetPrice = parseFloat(params.targetPrice) || 0;
+            const customMultiplier = parseFloat(params.customMultiplier) || 1;
+            const customTickSize = parseFloat(params.customTickSize) || 0.01;
             const includeFees = !!params.includeFees;
+            const userDirection = params.direction || 'auto'; // 'auto', 'Long', 'Short'
 
             if (capital <= 0 || entryPrice <= 0 || stopLoss <= 0) {
                 return null;
             }
 
-            // 1회 허용 손실금(1R)
-            const allowedRisk = isPercent ? (capital * (riskValue / 100)) : riskValue;
-            
-            // 1주당 손절폭
-            const lossPerShare = entryPrice - stopLoss;
-            if (lossPerShare <= 0) {
+            // 포지션 방향 감지 (손절가가 진입가보다 낮으면 Long, 높으면 Short)
+            let direction = 'Long';
+            if (userDirection === 'Long' || userDirection === 'Short') {
+                direction = userDirection;
+            } else {
+                direction = stopLoss < entryPrice ? 'Long' : 'Short';
+            }
+
+            // 방향 정합성 검증
+            if (direction === 'Long' && stopLoss >= entryPrice) {
                 return {
-                    error: "손절가는 매수가보다 낮아야 합니다 (Long 기준)."
+                    error: "롱(매수) 포지션은 원칙 손절가가 진입가보다 낮아야 합니다."
                 };
             }
-            const lossPercent = (lossPerShare / entryPrice) * 100;
+            if (direction === 'Short' && stopLoss <= entryPrice) {
+                return {
+                    error: "숏(매도) 포지션은 원칙 손절가가 진입가보다 높아야 합니다."
+                };
+            }
 
-            // 적정 매수 수량 (국내주식 1주 단위 정수 내림)
-            let shares = Math.floor(allowedRisk / lossPerShare);
-            if (shares < 1) shares = 0;
+            // 1회 허용 손실금(1R)
+            const allowedRisk = isPercent ? (capital * (riskValue / 100)) : riskValue;
+            if (allowedRisk <= 0) return null;
 
-            // 총 매수 필요 금액
-            const totalCost = shares * entryPrice;
-            const portfolioPercent = capital > 0 ? (totalCost / capital) * 100 : 0;
+            // 가격 변동폭
+            const priceDiff = Math.abs(entryPrice - stopLoss);
+            if (priceDiff <= 0) {
+                return { error: "손절가는 진입 예정가와 동일할 수 없습니다." };
+            }
+            const lossPercent = (priceDiff / entryPrice) * 100;
 
-            // 목표가 관련 손익비(RR)
-            let gainPerShare = 0;
+            let multiplier = 1;
+            let tickSize = 1;
+            let tickValue = 1;
+            let unitName = "주";
+
+            if (assetType === 'krx') {
+                multiplier = 1;
+                tickSize = 1;
+                tickValue = 1;
+                unitName = "주";
+            } else if (assetType === 'us') {
+                multiplier = 1;
+                tickSize = 0.01;
+                tickValue = 0.01;
+                unitName = "주";
+            } else if (assetType === 'futures') {
+                const spec = FUTURES_SPECS[params.futuresSymbol] || FUTURES_SPECS['NQ'];
+                multiplier = spec.pointValue;
+                tickSize = spec.tickSize;
+                tickValue = spec.tickValue || (spec.pointValue * spec.tickSize);
+                unitName = "계약";
+            } else if (assetType === 'crypto') {
+                const cSpec = CRYPTO_SPECS[params.cryptoSymbol] || CRYPTO_SPECS['BTCUSDT'];
+                multiplier = 1;
+                tickSize = cSpec.tickSize || 0.1;
+                tickValue = tickSize;
+                unitName = (params.cryptoSymbol || 'BTC').replace('USDT', '');
+            } else if (assetType === 'custom') {
+                multiplier = customMultiplier > 0 ? customMultiplier : 1;
+                tickSize = customTickSize > 0 ? customTickSize : 0.01;
+                tickValue = multiplier * tickSize;
+                unitName = params.customUnit || "단위";
+            }
+
+            // 단위당(1주/1계약/1코인당) 손실액
+            const lossPerUnit = priceDiff * multiplier;
+            if (lossPerUnit <= 0) return null;
+
+            // 적정 매수/매도 수량
+            let qty = 0;
+            let isFractional = false;
+            if (assetType === 'krx' || assetType === 'futures' || assetType === 'custom') {
+                qty = Math.floor(allowedRisk / lossPerUnit);
+                if (qty < 1) qty = 0;
+            } else if (assetType === 'us') {
+                if (params.allowFractional) {
+                    qty = parseFloat((allowedRisk / lossPerUnit).toFixed(3));
+                    isFractional = true;
+                } else {
+                    qty = Math.floor(allowedRisk / lossPerUnit);
+                }
+            } else if (assetType === 'crypto') {
+                qty = parseFloat((allowedRisk / lossPerUnit).toFixed(4));
+                isFractional = true;
+            }
+
+            // 총 포지션 가치 (Notional Value)
+            const notionalValue = qty * entryPrice * multiplier;
+            const portfolioPercent = capital > 0 ? (notionalValue / capital) * 100 : 0;
+
+            // 틱 계산
+            const stopTicks = tickSize > 0 ? Math.round(priceDiff / tickSize) : 0;
+
+            // 목표가 관련 손익비(RR Ratio)
+            let gainPerUnit = 0;
             let gainPercent = 0;
             let targetProfit = 0;
             let rrRatio = 0;
+            let targetTicks = 0;
 
-            if (targetPrice > entryPrice) {
-                gainPerShare = targetPrice - entryPrice;
-                gainPercent = (gainPerShare / entryPrice) * 100;
-                targetProfit = shares * gainPerShare;
-                rrRatio = gainPerShare / lossPerShare;
+            if (targetPrice > 0) {
+                let targetDiff = 0;
+                if (direction === 'Long') {
+                    if (targetPrice > entryPrice) {
+                        targetDiff = targetPrice - entryPrice;
+                    }
+                } else {
+                    if (targetPrice < entryPrice) {
+                        targetDiff = entryPrice - targetPrice;
+                    }
+                }
+
+                if (targetDiff > 0) {
+                    gainPerUnit = targetDiff * multiplier;
+                    gainPercent = (targetDiff / entryPrice) * 100;
+                    targetProfit = qty * gainPerUnit;
+                    rrRatio = targetDiff / priceDiff;
+                    targetTicks = tickSize > 0 ? Math.round(targetDiff / tickSize) : 0;
+                }
             }
 
-            // 세금/수수료 (거래세 0.18% + 수수료 약 0.015% = 약 0.2% 매도/매수 시)
+            // 수수료 및 거래세 계산
             let feeCost = 0;
             let netProfit = targetProfit;
-            let netLoss = shares * lossPerShare;
-            if (includeFees && shares > 0) {
-                // 매수금액 * 0.00015 + 매도금액 * (0.0018 + 0.00015)
-                const buyFee = totalCost * 0.00015;
-                const targetSellFee = (shares * targetPrice) * 0.00195;
-                const stopSellFee = (shares * stopLoss) * 0.00195;
-                feeCost = buyFee + targetSellFee;
-                netProfit = Math.max(0, targetProfit - (buyFee + targetSellFee));
-                netLoss = (shares * lossPerShare) + (buyFee + stopSellFee);
+            let netLoss = qty * lossPerUnit;
+
+            if (includeFees && qty > 0) {
+                if (assetType === 'krx') {
+                    // 매수 0.015% + 매도 0.195% (거래세 0.18% + 수수료 0.015%)
+                    const buyFee = notionalValue * 0.00015;
+                    const targetSellFee = (qty * (targetPrice || entryPrice)) * 0.00195;
+                    const stopSellFee = (qty * stopLoss) * 0.00195;
+                    feeCost = buyFee + targetSellFee;
+                    netProfit = Math.max(0, targetProfit - (buyFee + targetSellFee));
+                    netLoss = (qty * lossPerUnit) + (buyFee + stopSellFee);
+                } else if (assetType === 'futures') {
+                    // 선물 계약당 왕복 수수료 (약 $4.5)
+                    feeCost = qty * 4.5;
+                    netProfit = Math.max(0, targetProfit - feeCost);
+                    netLoss = (qty * lossPerUnit) + feeCost;
+                } else if (assetType === 'us') {
+                    feeCost = Math.max(1, notionalValue * 0.0005);
+                    netProfit = Math.max(0, targetProfit - feeCost);
+                    netLoss = (qty * lossPerUnit) + feeCost;
+                } else if (assetType === 'crypto') {
+                    // 코인 선물 거래 수수료 (왕복 0.08%)
+                    feeCost = notionalValue * 0.0008;
+                    netProfit = Math.max(0, targetProfit - feeCost);
+                    netLoss = (qty * lossPerUnit) + feeCost;
+                }
             }
 
             // 안전 경고 체크
             const warnings = [];
-            if (totalCost > capital) {
-                warnings.push("⚠️ 계좌 총 예수금을 초과하는 비중입니다! 손절폭을 좁히거나 리스크 비율(%)을 낮추세요.");
+            if (qty === 0) {
+                if (assetType === 'futures') {
+                    warnings.push(`⚠️ 최소 1계약 손절액($${Math.round(lossPerUnit).toLocaleString()})이 1회 허용 리스크($${Math.round(allowedRisk).toLocaleString()})를 초과합니다.`);
+                    const curSym = params.futuresSymbol || 'NQ';
+                    if (!curSym.startsWith('M')) {
+                        warnings.push(`💡 조치 권장: 1/10 크기인 마이크로(Micro) 상품(예: MNQ, MES, MGC, MCL)으로 변경하시면 안전하게 진입하실 수 있습니다.`);
+                    } else {
+                        warnings.push(`💡 조치 권장: 손절 가격폭을 좁히거나, 계좌 허용 리스크(%)를 현실적으로 조정하세요.`);
+                    }
+                } else {
+                    warnings.push("⚠️ 1주당 손절폭이 1회 허용 리스크를 초과하여 최소 1주도 진입할 수 없습니다. 손절가를 좁히거나 허용 리스크를 조정하세요.");
+                }
             }
-            if (targetPrice > 0 && rrRatio < 1.5) {
-                warnings.push("⚠️ 손익비가 1:1.5 미만입니다. 최소 1:2 이상의 유리한 자리를 기다리는 것을 권장합니다.");
+
+            if (notionalValue > capital && (assetType === 'krx' || assetType === 'us')) {
+                warnings.push("⚠️ 계좌 총 예수금을 초과하는 포지션 규모입니다! (미수/신용 위험 주의)");
             }
-            if (lossPercent > 10) {
-                warnings.push("ℹ️ 1회 손절폭이 -10% 이상으로 큽니다. 변동성 대비 포지션 진입 시점을 다시 점검해보세요.");
+            if (targetPrice > 0 && rrRatio > 0 && rrRatio < 1.5) {
+                warnings.push("⚠️ 목표 손익비가 1:1.5 미만입니다. 최소 1:2 이상의 유리한 자리를 기다리는 것을 권장합니다.");
+            }
+            if (lossPercent > 10 && (assetType === 'krx' || assetType === 'us')) {
+                warnings.push("ℹ️ 1회 손절폭이 -10% 이상으로 큽니다. 진입 타점 및 변동성 대응을 점검해보세요.");
             }
 
             return {
+                assetType,
+                direction,
                 allowedRisk,
-                lossPerShare,
+                lossPerUnit,
+                priceDiff,
                 lossPercent,
-                shares,
-                totalCost,
+                multiplier,
+                tickSize,
+                tickValue,
+                stopTicks,
+                targetTicks,
+                qty,
+                unitName,
+                isFractional,
+                notionalValue,
                 portfolioPercent,
-                gainPerShare,
+                gainPerUnit,
                 gainPercent,
                 targetProfit,
                 netProfit,
@@ -301,6 +708,17 @@
     function formatKRW(val) {
         if (isNaN(val) || val === null || val === undefined) return "0원";
         return Math.round(val).toLocaleString() + "원";
+    }
+
+    function formatUSD(val, decimals = 2) {
+        if (isNaN(val) || val === null || val === undefined) return "$0";
+        return "$" + Number(val).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    function formatAssetVal(val, assetType, decimals = 2) {
+        if (assetType === 'krx') return formatKRW(val);
+        if (assetType === 'crypto') return Number(val).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + " USDT";
+        return formatUSD(val, decimals);
     }
 
     function formatNumber(val, decimals = 1) {
@@ -793,24 +1211,19 @@
             });
         },
 
-        // 2. 국내 주식 포지션 & 비중 계산기 (Risk Calculator View)
+        // 2. 글로벌 멀티자산 포지션 & 리스크 계산기 (Multi-Asset Risk Calculator View)
         renderCalculator(container, initialParams = {}) {
             const db = Storage.load();
             const profile = db.profile || {};
 
-            const defaultCapital = initialParams.capital || profile.accountBalance || 10000000;
-            const defaultRisk = initialParams.riskValue || profile.defaultRiskPercent || 1.0;
-            const defaultEntry = initialParams.entryPrice || "";
-            const defaultStop = initialParams.stopLoss || "";
-            const defaultTarget = initialParams.targetPrice || "";
-            const defaultStock = initialParams.stockName || "원익IPS";
+            let currentAsset = initialParams.assetType || 'krx'; // 'krx', 'us', 'futures', 'crypto', 'custom'
 
             container.innerHTML = `
                 <div class="tw-header">
                     <div class="tw-header-left">
-                        <div class="tw-eyebrow"><i class="ph ph-shield"></i> RISK MANAGEMENT</div>
-                        <h1>국내 주식 포지션 & 비중 계산기</h1>
-                        <p class="tw-desc">"진입보다 먼저, 1회 거래에 감수할 최대 허용 손실(1R)을 정하세요."</p>
+                        <div class="tw-eyebrow"><i class="ph ph-shield-check"></i> DAJAVATA RISK & SIZING ENGINE</div>
+                        <h1 id="calc-main-title">포지션 & 리스크 사이징 계산기</h1>
+                        <p class="tw-desc">"진입 버튼을 누르기 전, 1회 거래에 감수할 최대 손실(1R)과 최적 계약/주수를 확정하세요."</p>
                     </div>
                     <div class="tw-header-right">
                         <button class="tw-btn tw-btn-secondary tw-btn-sm" id="btn-reset-calc">
@@ -819,91 +1232,151 @@
                     </div>
                 </div>
 
+                <!-- 자산군 선택 세그먼트 (복붙 방지 다자바타 독자 탭) -->
+                <div class="tw-market-tabs" id="calc-market-tabs">
+                    <button class="tw-market-tab-btn active" data-asset="krx">
+                        <span class="flag">🇰🇷</span>
+                        <span class="name">국내 주식</span>
+                        <span class="sub">KRX · 원화</span>
+                    </button>
+                    <button class="tw-market-tab-btn" data-asset="us">
+                        <span class="flag">🇺🇸</span>
+                        <span class="name">미국 주식</span>
+                        <span class="sub">US Equity · USD</span>
+                    </button>
+                    <button class="tw-market-tab-btn" data-asset="futures">
+                        <span class="flag">🌐</span>
+                        <span class="name">해외선물 (CME)</span>
+                        <span class="sub">Futures · 승수/틱</span>
+                    </button>
+                    <button class="tw-market-tab-btn" data-asset="crypto">
+                        <span class="flag">🪙</span>
+                        <span class="name">가상자산</span>
+                        <span class="sub">Crypto · USDT</span>
+                    </button>
+                    <button class="tw-market-tab-btn" data-asset="custom">
+                        <span class="flag">📐</span>
+                        <span class="name">사용자 정의</span>
+                        <span class="sub">Custom Multiplier</span>
+                    </button>
+                </div>
+
                 <div class="tw-calc-grid">
                     <!-- 좌측 입력 폼 -->
                     <div class="tw-calc-form-container">
                         <div class="tw-section-card">
+                            <!-- STEP 1: 시드 자산 & 허용 리스크 (1R) -->
                             <div class="tw-section-title">
-                                <h3><i class="ph ph-sliders-horizontal"></i> 계좌 및 거래 조건 입력</h3>
+                                <h3><i class="ph ph-wallet"></i> 1단계: 운용 자본금 & 1R 허용 리스크</h3>
                             </div>
 
                             <div class="tw-input-grid-2">
                                 <div class="tw-form-group">
-                                    <label>시장 구분</label>
+                                    <label id="label-calc-capital">총 계좌 운용 자산 <span class="req">*</span></label>
                                     <div class="tw-input-wrapper">
-                                        <select id="calc-market">
-                                            <option value="KOSPI">코스피 (KOSPI)</option>
-                                            <option value="KOSDAQ" selected>코스닥 (KOSDAQ)</option>
-                                        </select>
+                                        <input type="number" id="calc-capital" value="${profile.accountBalance || 10000000}" step="100000">
+                                        <span class="tw-input-unit" id="unit-calc-capital">원</span>
                                     </div>
                                 </div>
                                 <div class="tw-form-group">
-                                    <label>종목명 (또는 종목코드)</label>
-                                    <div class="tw-input-wrapper">
-                                        <input type="text" id="calc-stock-name" value="${defaultStock}" placeholder="예: 원익IPS">
+                                    <label>1R 리스크 입력 모드</label>
+                                    <div class="tw-toggle-group" style="margin-bottom:0;">
+                                        <button class="tw-toggle-btn active" data-mode="percent" id="btn-mode-pct">자산 비율 (%)</button>
+                                        <button class="tw-toggle-btn" data-mode="fixed" id="btn-mode-fixed">확정 금액</button>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="tw-form-group">
-                                <label>총 계좌 예수금 (KRW) <span class="req">*</span></label>
-                                <div class="tw-input-wrapper">
-                                    <input type="number" id="calc-capital" value="${defaultCapital}" step="100000">
-                                    <span class="tw-input-unit">원</span>
-                                </div>
-                            </div>
-
-                            <div class="tw-form-group">
-                                <label>1회 거래당 최대 허용 손실 (1R)</label>
-                                <div class="tw-toggle-group">
-                                    <button class="tw-toggle-btn active" data-mode="percent" id="btn-mode-pct">계좌 비율 (%)</button>
-                                    <button class="tw-toggle-btn" data-mode="fixed" id="btn-mode-fixed">고정 금액 (원)</button>
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:7px;">
+                                    <label style="margin-bottom:0;">1회 거래당 최대 감수 손실 (1R) <span class="req">*</span></label>
+                                    <!-- 퀵 비율 버튼 -->
+                                    <div class="tw-quick-risk-group" id="quick-risk-pills">
+                                        <button type="button" class="tw-risk-pill" data-val="0.5">0.5%</button>
+                                        <button type="button" class="tw-risk-pill active" data-val="1.0">1.0% (원칙)</button>
+                                        <button type="button" class="tw-risk-pill" data-val="1.5">1.5%</button>
+                                        <button type="button" class="tw-risk-pill" data-val="2.0">2.0%</button>
+                                    </div>
                                 </div>
                                 <div class="tw-input-wrapper">
-                                    <input type="number" id="calc-risk-val" value="${defaultRisk}" step="0.5">
+                                    <input type="number" id="calc-risk-val" value="${profile.defaultRiskPercent || 1.0}" step="0.1">
                                     <span class="tw-input-unit" id="calc-risk-unit">%</span>
                                 </div>
-                                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
-                                    * 실전 매매에서는 1회 거래당 계좌의 1% ~ 2% 이내 손실 설정을 강력히 권장합니다.
+                                <div style="font-size:11px; color:var(--text-muted); margin-top:5px;" id="calc-risk-guide">
+                                    * 실전 매매에서는 1회 거래당 총 자본의 1% ~ 2% 이내 손실 설정을 강력히 권장합니다.
                                 </div>
                             </div>
 
-                            <hr style="border:none; border-top:1px solid rgba(255,255,255,0.06); margin: 20px 0;">
+                            <hr style="border:none; border-top:1px solid rgba(255,255,255,0.06); margin: 22px 0 18px;">
+
+                            <!-- STEP 2: 대상 상품 & 계약 스펙 -->
+                            <div class="tw-section-title">
+                                <h3><i class="ph ph-cube"></i> 2단계: 거래 상품 & 계약 스펙</h3>
+                            </div>
+
+                            <!-- 동적 상품 영역 -->
+                            <div id="calc-asset-dynamic-fields">
+                                <!-- JS 동적 렌더링 -->
+                            </div>
+
+                            <hr style="border:none; border-top:1px solid rgba(255,255,255,0.06); margin: 22px 0 18px;">
+
+                            <!-- STEP 3: 진입 전략 & 무효화(손절) 타점 -->
+                            <div class="tw-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                                <h3><i class="ph ph-crosshair"></i> 3단계: 진입 호가 & 원칙 손절 타점</h3>
+                                <!-- 포지션 방향 토글러 -->
+                                <div class="tw-pos-direction-toggle" id="calc-dir-toggle">
+                                    <button type="button" class="tw-dir-btn active" data-dir="Long">
+                                        <i class="ph ph-trend-up"></i> LONG (매수)
+                                    </button>
+                                    <button type="button" class="tw-dir-btn" data-dir="Short">
+                                        <i class="ph ph-trend-down"></i> SHORT (매도)
+                                    </button>
+                                </div>
+                            </div>
 
                             <div class="tw-input-grid-3">
                                 <div class="tw-form-group">
-                                    <label>매수 예정가 (진입가) <span class="req">*</span></label>
+                                    <label>진입 예정가 <span class="req">*</span></label>
                                     <div class="tw-input-wrapper">
-                                        <input type="number" id="calc-entry-price" value="${defaultEntry}" placeholder="예: 32800" step="100">
-                                        <span class="tw-input-unit">원</span>
+                                        <input type="number" id="calc-entry-price" placeholder="예: 32800" step="any">
+                                        <span class="tw-input-unit" id="unit-entry">원</span>
+                                    </div>
+                                    <div class="tw-field-sub-note" id="note-entry">계획 진입 목표가</div>
+                                </div>
+                                <div class="tw-form-group">
+                                    <label>원칙 손절가 (무효화선) <span class="req">*</span></label>
+                                    <div class="tw-input-wrapper">
+                                        <input type="number" id="calc-stop-loss" placeholder="예: 31800" step="any">
+                                        <span class="tw-input-unit" id="unit-stop">원</span>
+                                    </div>
+                                    <div class="tw-field-sub-note" id="note-stop">
+                                        <span id="badge-stop-ticks" class="tw-tick-pill">손절폭: 0</span>
                                     </div>
                                 </div>
                                 <div class="tw-form-group">
-                                    <label>원칙 손절가 <span class="req">*</span></label>
+                                    <label>목표 익절가 (1차 TP)</label>
                                     <div class="tw-input-wrapper">
-                                        <input type="number" id="calc-stop-loss" value="${defaultStop}" placeholder="예: 31800" step="100">
-                                        <span class="tw-input-unit">원</span>
+                                        <input type="number" id="calc-target-price" placeholder="예: 35500" step="any">
+                                        <span class="tw-input-unit" id="unit-target">원</span>
                                     </div>
-                                </div>
-                                <div class="tw-form-group">
-                                    <label>목표 익절가 (1차)</label>
-                                    <div class="tw-input-wrapper">
-                                        <input type="number" id="calc-target-price" value="${defaultTarget}" placeholder="예: 35500" step="100">
-                                        <span class="tw-input-unit">원</span>
+                                    <div class="tw-field-sub-note" id="note-target">
+                                        <span id="badge-target-ticks" class="tw-tick-pill">기대폭: 0</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="tw-form-group" style="margin-bottom:0;">
+                            <!-- 세금 및 수수료 옵션 -->
+                            <div class="tw-form-group" style="margin-bottom:0;" id="fee-option-wrapper">
                                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
                                     <input type="checkbox" id="calc-include-fees" checked>
-                                    <span>국내 주식 세금(0.18%) 및 위탁수수료(0.015%) 실질 손익 반영</span>
+                                    <span id="calc-fee-label">거래 세금 및 위탁수수료 실질 반영</span>
                                 </label>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 우측 결과창 (YOUR POSITION) -->
+                    <!-- 우측 결과창 (DAJAVATA POSITION MATRIX) -->
                     <div class="tw-calc-result-container">
                         <div class="tw-calc-result-card" id="calc-result-box">
                             <!-- JS 실시간 렌더링 -->
@@ -912,24 +1385,331 @@
                 </div>
             `;
 
-            this.bindCalcEvents(container);
+            this.bindCalcEvents(container, initialParams);
         },
 
-        bindCalcEvents(container) {
+        bindCalcEvents(container, initialParams = {}) {
+            let currentAsset = initialParams.assetType || 'krx';
             let riskMode = 'percent';
+            let currentDirection = 'Long';
 
             const capitalInput = container.querySelector('#calc-capital');
+            const capitalUnit = container.querySelector('#unit-calc-capital');
             const riskValInput = container.querySelector('#calc-risk-val');
             const riskUnit = container.querySelector('#calc-risk-unit');
             const entryInput = container.querySelector('#calc-entry-price');
             const stopInput = container.querySelector('#calc-stop-loss');
             const targetInput = container.querySelector('#calc-target-price');
+            const unitEntry = container.querySelector('#unit-entry');
+            const unitStop = container.querySelector('#unit-stop');
+            const unitTarget = container.querySelector('#unit-target');
             const feeCheck = container.querySelector('#calc-include-fees');
+            const feeLabel = container.querySelector('#calc-fee-label');
             const resultBox = container.querySelector('#calc-result-box');
+            const dynamicFields = container.querySelector('#calc-asset-dynamic-fields');
+            const badgeStopTicks = container.querySelector('#badge-stop-ticks');
+            const badgeTargetTicks = container.querySelector('#badge-target-ticks');
 
             const btnPct = container.querySelector('#btn-mode-pct');
             const btnFixed = container.querySelector('#btn-mode-fixed');
 
+            // 자산별 기본값 세팅 함수
+            const renderDynamicFields = (asset) => {
+                if (asset === 'krx') {
+                    dynamicFields.innerHTML = `
+                        <div class="tw-input-grid-2">
+                            <div class="tw-form-group">
+                                <label>시장 구분</label>
+                                <div class="tw-input-wrapper">
+                                    <select id="calc-market">
+                                        <option value="KOSPI">코스피 (KOSPI)</option>
+                                        <option value="KOSDAQ" selected>코스닥 (KOSDAQ)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tw-form-group">
+                                <label>종목명 (또는 종목코드)</label>
+                                <div class="tw-input-wrapper">
+                                    <input type="text" id="calc-item-name" value="${initialParams.stockName || '원익IPS'}" placeholder="예: 삼성전자, 원익IPS">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    feeLabel.textContent = "국내 주식 세금(0.18%) 및 위탁수수료(0.015%) 실질 손익 반영";
+                    capitalUnit.textContent = "원";
+                    unitEntry.textContent = "원";
+                    unitStop.textContent = "원";
+                    unitTarget.textContent = "원";
+                    if (capitalInput.value === "10000" || capitalInput.value === "5000") {
+                        capitalInput.value = "10000000";
+                    }
+                    entryInput.placeholder = "예: 32800";
+                    stopInput.placeholder = "예: 31800";
+                    targetInput.placeholder = "예: 35500";
+                } else if (asset === 'us') {
+                    dynamicFields.innerHTML = `
+                        <div class="tw-input-grid-3">
+                            <div class="tw-form-group">
+                                <label>거래소</label>
+                                <div class="tw-input-wrapper">
+                                    <select id="calc-market">
+                                        <option value="NASDAQ" selected>나스닥 (NASDAQ)</option>
+                                        <option value="NYSE">뉴욕증권거래소 (NYSE)</option>
+                                        <option value="ETF">미국 ETF</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tw-form-group">
+                                <label>티커 / 종목명</label>
+                                <div class="tw-input-wrapper">
+                                    <input type="text" id="calc-item-name" value="NVDA" placeholder="예: NVDA, AAPL, TSLA">
+                                </div>
+                            </div>
+                            <div class="tw-form-group">
+                                <label>주수 계산 단위</label>
+                                <div class="tw-input-wrapper">
+                                    <select id="calc-us-fractional">
+                                        <option value="int" selected>1주 단위 정수 (기본)</option>
+                                        <option value="frac">소수점 주수 (소수 3자리)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    feeLabel.textContent = "미국 주식 현지 거래 수수료 및 SEC Fee 반영";
+                    capitalUnit.textContent = "$";
+                    unitEntry.textContent = "$";
+                    unitStop.textContent = "$";
+                    unitTarget.textContent = "$";
+                    if (capitalInput.value === "10000000" || !capitalInput.value) {
+                        capitalInput.value = "10000";
+                    }
+                    entryInput.placeholder = "예: 135.50";
+                    stopInput.placeholder = "예: 130.00";
+                    targetInput.placeholder = "예: 148.00";
+                } else if (asset === 'futures') {
+                    // 해외선물 카테고리별 옵션 구성
+                    dynamicFields.innerHTML = `
+                        <div class="tw-form-group">
+                            <label>CME / 글로벌 선물 종목 선택 <span class="req">*</span></label>
+                            <div class="tw-input-wrapper">
+                                <select id="calc-futures-symbol" style="font-weight:600;">
+                                    <optgroup label="🇺🇸 미국 대표 지수선물 (INDEX)">
+                                        <option value="NQ" selected>NQ · E-mini Nasdaq-100 ($20/pt, 0.25tick=$5)</option>
+                                        <option value="MNQ">MNQ · Micro E-mini Nasdaq-100 ($2/pt, 0.25tick=$0.5)</option>
+                                        <option value="ES">ES · E-mini S&P 500 ($50/pt, 0.25tick=$12.5)</option>
+                                        <option value="MES">MES · Micro E-mini S&P 500 ($5/pt, 0.25tick=$1.25)</option>
+                                        <option value="YM">YM · E-mini Dow Jones ($5/pt, 1.0tick=$5)</option>
+                                        <option value="MYM">MYM · Micro E-mini Dow Jones ($0.5/pt, 1.0tick=$0.5)</option>
+                                        <option value="RTY">RTY · E-mini Russell 2000 ($50/pt, 0.1tick=$5)</option>
+                                        <option value="M2K">M2K · Micro E-mini Russell 2000 ($5/pt, 0.1tick=$0.5)</option>
+                                    </optgroup>
+                                    <optgroup label="🥇 귀금속 및 원자재/에너지 (METALS & ENERGY)">
+                                        <option value="GC">GC · Gold (금 선물) ($100/pt, 0.1tick=$10)</option>
+                                        <option value="MGC">MGC · Micro Gold ($10/pt, 0.1tick=$1)</option>
+                                        <option value="SI">SI · Silver (은 선물) ($5,000/pt, 0.005tick=$25)</option>
+                                        <option value="SIL">SIL · Micro Silver ($1,000/pt, 0.005tick=$5)</option>
+                                        <option value="CL">CL · WTI Crude Oil (크루드 오일) ($1,000/pt, 0.01tick=$10)</option>
+                                        <option value="MCL">MCL · Micro WTI Crude Oil ($100/pt, 0.01tick=$1)</option>
+                                        <option value="NG">NG · Natural Gas (천연가스) ($10,000/pt, 0.001tick=$10)</option>
+                                    </optgroup>
+                                    <optgroup label="💱 통화 선물 (FX CURRENCY)">
+                                        <option value="6E">6E · Euro FX (유로/달러) ($125,000/pt, 0.00005tick=$6.25)</option>
+                                        <option value="M6E">M6E · Micro Euro FX ($12,500/pt, 0.0001tick=$1.25)</option>
+                                        <option value="6B">6B · British Pound (영국 파운드) ($62,500/pt, 0.0001tick=$6.25)</option>
+                                        <option value="M6B">M6B · Micro British Pound ($6,250/pt, 0.0002tick=$1.25)</option>
+                                        <option value="6J">6J · Japanese Yen (일본 엔화) ($12.5M/pt, tick=$6.25)</option>
+                                    </optgroup>
+                                    <optgroup label="🏛️ 금리 및 국채 (TREASURY)">
+                                        <option value="ZN">ZN · 10-Year T-Note (미국 10년물 국채) ($1,000/pt)</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 선택된 선물 계약 스펙 배너 (다자바타 독창적 퀀트 카드) -->
+                        <div class="tw-spec-banner" id="futures-spec-banner">
+                            <!-- 동적 스펙 바인딩 -->
+                        </div>
+                    `;
+                    feeLabel.textContent = "CME 브로커 선물 왕복 수수료 (계약당 약 $4.50) 반영";
+                    capitalUnit.textContent = "$";
+                    unitEntry.textContent = "pt";
+                    unitStop.textContent = "pt";
+                    unitTarget.textContent = "pt";
+                    if (capitalInput.value === "10000000" || !capitalInput.value) {
+                        capitalInput.value = "10000";
+                    }
+
+                    // 선물 스펙 배너 갱신
+                    updateFuturesSpecBanner();
+                } else if (asset === 'crypto') {
+                    dynamicFields.innerHTML = `
+                        <div class="tw-input-grid-2">
+                            <div class="tw-form-group">
+                                <label>가상자산 페어 (USDT 마진)</label>
+                                <div class="tw-input-wrapper">
+                                    <select id="calc-crypto-symbol" style="font-weight:600;">
+                                        <option value="BTCUSDT" selected>BTC/USDT · 비트코인</option>
+                                        <option value="ETHUSDT">ETH/USDT · 이더리움</option>
+                                        <option value="SOLUSDT">SOL/USDT · 솔라나</option>
+                                        <option value="XRPUSDT">XRP/USDT · 리플</option>
+                                        <option value="DOGEUSDT">DOGE/USDT · 도지코인</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tw-form-group">
+                                <label>레버리지 참고 설정</label>
+                                <div class="tw-input-wrapper">
+                                    <select id="calc-crypto-lev">
+                                        <option value="1">1x (현물/무레버리지)</option>
+                                        <option value="3">3x (보수적)</option>
+                                        <option value="5" selected>5x (권장 안전 마진)</option>
+                                        <option value="10">10x (주의)</option>
+                                        <option value="20">20x (고위험)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    feeLabel.textContent = "가상자산 무기한 선물 메이커/테이커 수수료(약 0.08%) 반영";
+                    capitalUnit.textContent = "USDT";
+                    unitEntry.textContent = "$";
+                    unitStop.textContent = "$";
+                    unitTarget.textContent = "$";
+                    if (capitalInput.value === "10000000" || !capitalInput.value) {
+                        capitalInput.value = "5000";
+                    }
+                    entryInput.placeholder = "예: 68500";
+                    stopInput.placeholder = "예: 67200";
+                    targetInput.placeholder = "예: 72000";
+                } else if (asset === 'custom') {
+                    dynamicFields.innerHTML = `
+                        <div class="tw-input-grid-3">
+                            <div class="tw-form-group">
+                                <label>상품명</label>
+                                <div class="tw-input-wrapper">
+                                    <input type="text" id="calc-custom-name" value="Custom Asset" placeholder="예: 원유 CFD, 코스피200선물">
+                                </div>
+                            </div>
+                            <div class="tw-form-group">
+                                <label>승수 (1포인트당 가치) <span class="req">*</span></label>
+                                <div class="tw-input-wrapper">
+                                    <input type="number" id="calc-custom-mult" value="250000" step="1">
+                                    <span class="tw-input-unit">원/pt</span>
+                                </div>
+                            </div>
+                            <div class="tw-form-group">
+                                <label>최소 호가 틱 크기 (Tick Size)</label>
+                                <div class="tw-input-wrapper">
+                                    <input type="number" id="calc-custom-tick" value="0.05" step="0.0001">
+                                    <span class="tw-input-unit">pt</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    feeLabel.textContent = "사용자 정의 거래 수수료 반영";
+                    capitalUnit.textContent = "단위";
+                    unitEntry.textContent = "pt";
+                    unitStop.textContent = "pt";
+                    unitTarget.textContent = "pt";
+                }
+
+                // 이벤트 재바인딩
+                bindDynamicEvents();
+                recalc();
+            };
+
+            const updateFuturesSpecBanner = () => {
+                const fSelect = container.querySelector('#calc-futures-symbol');
+                const banner = container.querySelector('#futures-spec-banner');
+                if (!fSelect || !banner) return;
+
+                const sym = fSelect.value;
+                const spec = FUTURES_SPECS[sym] || FUTURES_SPECS['NQ'];
+
+                banner.innerHTML = `
+                    <div class="tw-spec-item">
+                        <span class="lbl">1포인트(pt) 가치</span>
+                        <span class="val">$${spec.pointValue.toLocaleString()}</span>
+                    </div>
+                    <div class="tw-spec-item">
+                        <span class="lbl">최소 틱 단위</span>
+                        <span class="val">${spec.tickSize} pt</span>
+                    </div>
+                    <div class="tw-spec-item">
+                        <span class="lbl">1틱(Tick) 가치</span>
+                        <span class="val highlight">$${spec.tickValue ? spec.tickValue.toFixed(2) : (spec.pointValue * spec.tickSize).toFixed(2)}</span>
+                    </div>
+                    <div class="tw-spec-item">
+                        <span class="lbl">최소 주문 단위</span>
+                        <span class="val">1 계약 (승수 ${spec.pointValue})</span>
+                    </div>
+                    <div class="tw-spec-desc">
+                        <i class="ph ph-info"></i> ${spec.desc}
+                    </div>
+                `;
+
+                // 입력 예시 가이드
+                if (!entryInput.value || entryInput.value === "32800") {
+                    entryInput.value = spec.samplePrice || "";
+                    if (spec.samplePrice) {
+                        const defaultStopDiff = spec.samplePrice * 0.01;
+                        stopInput.value = Number(spec.samplePrice - defaultStopDiff).toFixed(2);
+                        targetInput.value = Number(spec.samplePrice + (defaultStopDiff * 2)).toFixed(2);
+                    }
+                }
+            };
+
+            const bindDynamicEvents = () => {
+                const fSelect = container.querySelector('#calc-futures-symbol');
+                if (fSelect) {
+                    fSelect.addEventListener('change', () => {
+                        updateFuturesSpecBanner();
+                        recalc();
+                    });
+                }
+                const cSelect = container.querySelector('#calc-crypto-symbol');
+                if (cSelect) {
+                    cSelect.addEventListener('change', () => {
+                        const sym = cSelect.value;
+                        const spec = CRYPTO_SPECS[sym];
+                        if (spec) {
+                            entryInput.value = spec.samplePrice;
+                            stopInput.value = (spec.samplePrice * 0.98).toFixed(2);
+                            targetInput.value = (spec.samplePrice * 1.04).toFixed(2);
+                        }
+                        recalc();
+                    });
+                }
+                const customInputs = container.querySelectorAll('#calc-custom-mult, #calc-custom-tick, #calc-us-fractional');
+                customInputs.forEach(inp => inp.addEventListener('input', recalc));
+            };
+
+            // 자산 탭 클릭 이벤트
+            container.querySelectorAll('.tw-market-tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    container.querySelectorAll('.tw-market-tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentAsset = btn.getAttribute('data-asset');
+                    renderDynamicFields(currentAsset);
+                });
+            });
+
+            // 포지션 방향 토글러 이벤트
+            const dirToggle = container.querySelector('#calc-dir-toggle');
+            if (dirToggle) {
+                dirToggle.querySelectorAll('.tw-dir-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        dirToggle.querySelectorAll('.tw-dir-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        currentDirection = btn.getAttribute('data-dir');
+                        recalc();
+                    });
+                });
+            }
+
+            // 1R 리스크 모드 토글 (비율 % vs 고정금액)
             btnPct.addEventListener('click', () => {
                 riskMode = 'percent';
                 btnPct.classList.add('active');
@@ -943,113 +1723,218 @@
                 riskMode = 'fixed';
                 btnFixed.classList.add('active');
                 btnPct.classList.remove('active');
-                riskUnit.textContent = "원";
-                riskValInput.value = "100000";
+                riskUnit.textContent = currentAsset === 'krx' ? "원" : (currentAsset === 'crypto' ? "USDT" : "$");
+                const cap = parseFloat(capitalInput.value) || 10000;
+                riskValInput.value = currentAsset === 'krx' ? (cap * 0.01).toString() : (cap * 0.01).toFixed(0);
                 recalc();
             });
 
+            // 퀵 리스크 % 버튼 (0.5%, 1.0%, 1.5%, 2.0%)
+            container.querySelectorAll('.tw-risk-pill').forEach(pill => {
+                pill.addEventListener('click', () => {
+                    container.querySelectorAll('.tw-risk-pill').forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    if (riskMode !== 'percent') {
+                        riskMode = 'percent';
+                        btnPct.classList.add('active');
+                        btnFixed.classList.remove('active');
+                        riskUnit.textContent = "%";
+                    }
+                    riskValInput.value = pill.getAttribute('data-val');
+                    recalc();
+                });
+            });
+
+            // 핵심 실시간 계산 로직
             const recalc = () => {
+                const entryVal = parseFloat(entryInput.value) || 0;
+                const stopVal = parseFloat(stopInput.value) || 0;
+                const targetVal = parseFloat(targetInput.value) || 0;
+
+                // 자동 포지션 방향 감지 (사용자가 명시하지 않았더라도 손절가 비교)
+                if (entryVal > 0 && stopVal > 0) {
+                    const detectedDir = stopVal < entryVal ? 'Long' : 'Short';
+                    // 토글 버튼 상태 동기화
+                    if (dirToggle) {
+                        dirToggle.querySelectorAll('.tw-dir-btn').forEach(b => {
+                            b.classList.toggle('active', b.getAttribute('data-dir') === detectedDir);
+                        });
+                    }
+                    currentDirection = detectedDir;
+                }
+
+                // 틱/포인트 차이 뱃지 업데이트
+                if (entryVal > 0 && stopVal > 0) {
+                    const diff = Math.abs(entryVal - stopVal);
+                    let tickSz = 1;
+                    if (currentAsset === 'futures') {
+                        const fSym = container.querySelector('#calc-futures-symbol')?.value || 'NQ';
+                        tickSz = FUTURES_SPECS[fSym]?.tickSize || 0.25;
+                    } else if (currentAsset === 'us') {
+                        tickSz = 0.01;
+                    }
+                    const ticks = tickSz > 0 ? Math.round(diff / tickSz) : 0;
+                    badgeStopTicks.textContent = `손절폭: ${diff.toFixed(2)} (${ticks.toLocaleString()} 틱)`;
+                } else {
+                    badgeStopTicks.textContent = `손절폭: 0`;
+                }
+
+                if (entryVal > 0 && targetVal > 0) {
+                    const diff = Math.abs(targetVal - entryVal);
+                    let tickSz = 1;
+                    if (currentAsset === 'futures') {
+                        const fSym = container.querySelector('#calc-futures-symbol')?.value || 'NQ';
+                        tickSz = FUTURES_SPECS[fSym]?.tickSize || 0.25;
+                    } else if (currentAsset === 'us') {
+                        tickSz = 0.01;
+                    }
+                    const ticks = tickSz > 0 ? Math.round(diff / tickSz) : 0;
+                    badgeTargetTicks.textContent = `기대폭: ${diff.toFixed(2)} (${ticks.toLocaleString()} 틱)`;
+                } else {
+                    badgeTargetTicks.textContent = `기대폭: 0`;
+                }
+
                 const params = {
+                    assetType: currentAsset,
                     capital: capitalInput.value,
                     riskMode: riskMode,
                     riskValue: riskValInput.value,
                     entryPrice: entryInput.value,
                     stopLoss: stopInput.value,
                     targetPrice: targetInput.value,
-                    includeFees: feeCheck.checked
+                    direction: currentDirection,
+                    includeFees: feeCheck.checked,
+                    futuresSymbol: container.querySelector('#calc-futures-symbol')?.value || 'NQ',
+                    cryptoSymbol: container.querySelector('#calc-crypto-symbol')?.value || 'BTCUSDT',
+                    customMultiplier: container.querySelector('#calc-custom-mult')?.value || 1,
+                    customTickSize: container.querySelector('#calc-custom-tick')?.value || 0.01,
+                    allowFractional: container.querySelector('#calc-us-fractional')?.value === 'frac'
                 };
 
                 const res = Calculator.calculate(params);
                 if (!res || res.error) {
                     resultBox.innerHTML = `
-                        <div style="text-align:center; padding: 30px 10px;">
-                            <div class="tw-calc-hero-badge"><i class="ph ph-shield"></i> POSITION SIZING</div>
-                            <h3 style="font-size:16px; margin: 12px 0 6px; color:#fff;">진입보다 먼저, 리스크를 정하세요</h3>
-                            <p style="font-size:12px; color:var(--text-muted); line-height:1.5;">
-                                ${res && res.error ? `<span style="color:var(--pos);">${res.error}</span>` : '예수금, 매수가, 손절가를 입력하면 계좌 기준 최적의 매수 주수와 손익비를 계산합니다.'}
+                        <div style="text-align:center; padding: 40px 15px;">
+                            <div class="tw-calc-hero-badge"><i class="ph ph-shield"></i> RISK MANAGEMENT</div>
+                            <h3 style="font-size:17px; margin: 14px 0 8px; color:#fff;">진입보다 먼저, 1R 리스크를 정하세요</h3>
+                            <p style="font-size:13px; color:var(--text-muted); line-height:1.6;">
+                                ${res && res.error ? `<span style="color:var(--pos); font-weight:600;">${res.error}</span>` : '운용 자본금, 진입가, 원칙 손절가를 입력하시면 1R 기준 최적의 진입 포지션과 손익비를 계산합니다.'}
                             </p>
-                            <div style="margin-top:20px; font-size:11px; color:var(--text-muted); background:rgba(255,255,255,0.03); padding:10px; border-radius:6px;">
-                                계산 공식: 허용 손실금(1R) ÷ 1주당 손절폭 = 매수 수량(주)
+                            <div style="margin-top:24px; font-size:12px; color:var(--text-muted); background:rgba(255,255,255,0.03); padding:12px; border-radius:8px; line-height:1.5;">
+                                💡 <strong>핵심 공식:</strong> 1R 허용 손실금 ÷ (1단위당 손절폭 × 승수) = 적정 진입 수량
                             </div>
                         </div>
                     `;
                     return;
                 }
 
+                // 상품 표시 이름
+                let displayName = "선택 종목";
+                if (currentAsset === 'krx') {
+                    displayName = container.querySelector('#calc-item-name')?.value || '국내주식';
+                } else if (currentAsset === 'us') {
+                    displayName = (container.querySelector('#calc-item-name')?.value || 'NVDA') + " (US)";
+                } else if (currentAsset === 'futures') {
+                    const fSym = container.querySelector('#calc-futures-symbol')?.value || 'NQ';
+                    displayName = (FUTURES_SPECS[fSym]?.name || fSym) + ` [${fSym}]`;
+                } else if (currentAsset === 'crypto') {
+                    displayName = (container.querySelector('#calc-crypto-symbol')?.value || 'BTCUSDT');
+                } else if (currentAsset === 'custom') {
+                    displayName = container.querySelector('#calc-custom-name')?.value || 'Custom Asset';
+                }
+
                 resultBox.innerHTML = `
-                    <div class="tw-calc-hero-badge"><i class="ph ph-check-circle"></i> 계산 완료 • 추천 포지션</div>
-                    <h3 style="font-size:18px; color:#fff; margin-bottom:14px;">
-                        ${container.querySelector('#calc-stock-name').value || '선택 종목'}
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div class="tw-calc-hero-badge">
+                            <i class="ph ph-check-circle"></i> DAJAVATA RISK REPORT
+                        </div>
+                        <span class="tw-badge ${res.direction === 'Long' ? 'tw-badge-status-active' : 'tw-badge-status-cancel'}">
+                            ${res.direction === 'Long' ? '🟢 LONG 매수' : '🔴 SHORT 매도'}
+                        </span>
+                    </div>
+
+                    <h3 style="font-size:18px; color:#fff; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                        ${displayName}
                     </h3>
 
-                    <div class="tw-calc-result-row highlight">
-                        <span class="k" style="font-weight:700; color:#fff;">추천 매수 수량</span>
-                        <span class="v">${res.shares.toLocaleString()} 주</span>
+                    <!-- 히어로 카드: 추천 진입 수량 -->
+                    <div class="tw-calc-hero-qty-box">
+                        <div class="lbl">추천 최적 포지션 규모</div>
+                        <div class="qty-val">${res.qty.toLocaleString()} <span class="unit">${res.unitName}</span></div>
+                        <div class="sub-val">총 포지션 가치: ${formatAssetVal(res.notionalValue, currentAsset)} (${formatNumber(res.portfolioPercent, 1)}%)</div>
                     </div>
 
                     <div class="tw-calc-result-row">
-                        <span class="k">총 매수 금액 (계좌 비중)</span>
-                        <span class="v">${formatKRW(res.totalCost)} (${formatNumber(res.portfolioPercent, 1)}%)</span>
+                        <span class="k">1회 거래 확정 손실 (1R)</span>
+                        <span class="v neg">-${formatAssetVal(res.allowedRisk, currentAsset)}</span>
                     </div>
 
                     <div class="tw-calc-result-row">
-                        <span class="k">1주당 손절폭</span>
-                        <span class="v neg">-${formatKRW(res.lossPerShare)} (-${formatNumber(res.lossPercent, 2)}%)</span>
+                        <span class="k">단위당 손절 가격폭</span>
+                        <span class="v neg">-${formatNumber(res.priceDiff, 2)} (${formatNumber(res.lossPercent, 2)}%)</span>
                     </div>
 
-                    <div class="tw-calc-result-row">
-                        <span class="k">손절 시 최대 손실 (1R)</span>
-                        <span class="v neg">-${formatKRW(res.allowedRisk)}</span>
-                    </div>
+                    ${currentAsset === 'futures' ? `
+                        <div class="tw-calc-result-row">
+                            <span class="k">1계약당 틱 손실 / 틱 가치</span>
+                            <span class="v" style="color:#fff;">${res.stopTicks} Ticks ($${(res.lossPerUnit).toLocaleString()})</span>
+                        </div>
+                    ` : ''}
 
                     ${res.rrRatio > 0 ? `
                         <div class="tw-calc-result-row">
-                            <span class="k">목표 손익비 (RR)</span>
-                            <span class="v ${res.rrRatio >= 2 ? 'pos' : ''}"><strong>1 : ${formatNumber(res.rrRatio, 2)}</strong></span>
+                            <span class="k">목표 손익비 (Risk/Reward)</span>
+                            <span class="v ${res.rrRatio >= 2 ? 'pos' : (res.rrRatio >= 1.5 ? '' : 'neg')}">
+                                <strong>1 : ${formatNumber(res.rrRatio, 2)}</strong>
+                                ${res.rrRatio >= 2 ? '<span style="font-size:11px; margin-left:4px;" class="tw-badge tw-badge-status-active">우수</span>' : ''}
+                            </span>
                         </div>
                         <div class="tw-calc-result-row">
-                            <span class="k">목표 익절 시 예상 수익</span>
-                            <span class="v pos">+${formatKRW(res.targetProfit)} (+${formatNumber(res.rrRatio, 2)}R)</span>
+                            <span class="k">목표 익절 시 기대 순수익</span>
+                            <span class="v pos">+${formatAssetVal(res.targetProfit, currentAsset)} (+${formatNumber(res.rrRatio, 2)}R)</span>
                         </div>
                     ` : ''}
 
                     ${res.feeCost > 0 ? `
                         <div class="tw-calc-result-row">
-                            <span class="k">예상 세금 및 수수료</span>
-                            <span class="v" style="color:var(--text-muted); font-size:12px;">약 ${formatKRW(res.feeCost)}</span>
+                            <span class="k">예상 수수료 / 거래세</span>
+                            <span class="v" style="color:var(--text-muted); font-size:12px;">약 ${formatAssetVal(res.feeCost, currentAsset)}</span>
                         </div>
                     ` : ''}
 
-                    <!-- 경고 목록 -->
+                    <!-- 경고 및 퀀트 인사이트 박스 -->
                     ${res.warnings.map(w => `
-                        <div class="tw-alert-box tw-alert-warning">
+                        <div class="tw-alert-box tw-alert-warning" style="margin-top:10px;">
                             <div>${w}</div>
                         </div>
                     `).join('')}
 
                     <div style="margin-top:20px;">
                         <button class="tw-btn tw-btn-primary" style="width:100%;" id="btn-apply-to-plan">
-                            <i class="ph ph-file-plus"></i> 이 계산으로 시나리오 작성하기
+                            <i class="ph ph-file-plus"></i> 이 조건으로 매매 시나리오 수립하기
                         </button>
                     </div>
                 `;
 
-                // 시나리오 연계 버튼
+                // 시나리오 연계 버튼 클릭 이벤트
                 const applyBtn = resultBox.querySelector('#btn-apply-to-plan');
                 if (applyBtn) {
                     applyBtn.addEventListener('click', () => {
                         window.TraderRoom.navigate('trader-plan', {
                             action: 'newFromCalc',
                             calcData: {
-                                stockName: container.querySelector('#calc-stock-name').value,
-                                market: container.querySelector('#calc-market').value,
+                                assetType: currentAsset,
+                                stockName: displayName,
+                                market: currentAsset === 'krx' ? (container.querySelector('#calc-market')?.value || 'KOSDAQ') : (currentAsset === 'futures' ? 'CME Futures' : (currentAsset === 'us' ? 'US Equity' : 'Crypto')),
+                                direction: res.direction,
                                 entryPrice: parseFloat(entryInput.value),
                                 stopLoss: parseFloat(stopInput.value),
-                                targetPrice: parseFloat(targetInput.value),
-                                shares: res.shares,
+                                targetPrice: parseFloat(targetInput.value) || 0,
+                                shares: res.qty,
+                                unitName: res.unitName,
                                 capital: parseFloat(capitalInput.value),
                                 riskAmount: res.allowedRisk,
-                                totalAmount: res.totalCost,
+                                totalAmount: res.notionalValue,
                                 portfolioPercent: res.portfolioPercent,
                                 rrRatio: res.rrRatio
                             }
@@ -1058,17 +1943,16 @@
                 }
             };
 
-            // 입력 변경 시 실시간 재계산
+            // 입력 변경 시 실시간 재계산 이벤트 연결
             [capitalInput, riskValInput, entryInput, stopInput, targetInput].forEach(inp => {
                 inp.addEventListener('input', recalc);
             });
             feeCheck.addEventListener('change', recalc);
 
-            // 초기 실행
-            if (entryInput.value && stopInput.value) recalc();
-            else recalc();
+            // 초기 렌더링
+            renderDynamicFields(currentAsset);
 
-            // 초기화 버튼
+            // 초기화 버튼 이벤트
             const resetBtn = container.querySelector('#btn-reset-calc');
             if (resetBtn) {
                 resetBtn.addEventListener('click', () => {
@@ -1238,24 +2122,37 @@
                                     <select id="plan-market">
                                         <option value="KOSPI" ${calcData && calcData.market === 'KOSPI' ? 'selected' : ''}>코스피 (KOSPI)</option>
                                         <option value="KOSDAQ" ${calcData && calcData.market === 'KOSDAQ' ? 'selected' : ''}>코스닥 (KOSDAQ)</option>
+                                        <option value="US Equity" ${calcData && (calcData.market === 'US Equity' || calcData.market === 'NASDAQ' || calcData.market === 'NYSE') ? 'selected' : ''}>미국 주식 (US Equity)</option>
+                                        <option value="CME Futures" ${calcData && calcData.market === 'CME Futures' ? 'selected' : ''}>해외선물 (CME Futures)</option>
+                                        <option value="Crypto" ${calcData && calcData.market === 'Crypto' ? 'selected' : ''}>가상자산 (Crypto)</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="tw-form-group">
-                                <label>종목명 <span class="req">*</span></label>
+                                <label>종목명 / 상품명 <span class="req">*</span></label>
                                 <div class="tw-input-wrapper">
-                                    <input type="text" id="plan-stock-name" value="${calcData ? calcData.stockName : ''}" placeholder="예: 원익IPS">
+                                    <input type="text" id="plan-stock-name" value="${calcData ? calcData.stockName : ''}" placeholder="예: 원익IPS, NQ, NVDA">
                                 </div>
                             </div>
                         </div>
 
                         <div class="tw-input-grid-3">
                             <div class="tw-form-group">
+                                <label>포지션 방향</label>
+                                <div class="tw-input-wrapper">
+                                    <select id="plan-direction">
+                                        <option value="Long" ${calcData && calcData.direction === 'Long' ? 'selected' : ''}>🟢 LONG (매수)</option>
+                                        <option value="Short" ${calcData && calcData.direction === 'Short' ? 'selected' : ''}>🔴 SHORT (매도)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tw-form-group">
                                 <label>매매 타임프레임</label>
                                 <div class="tw-input-wrapper">
                                     <select id="plan-timeframe">
                                         <option value="스윙 (1~2주)">스윙 (1~2주)</option>
                                         <option value="단기 데이트레이딩">단기 데이트레이딩</option>
+                                        <option value="초단타 스캘핑">초단타 스캘핑</option>
                                         <option value="중장기 포지션">중장기 포지션</option>
                                     </select>
                                 </div>
@@ -1267,30 +2164,33 @@
                                         <option value="눌림목 반등">눌림목 반등</option>
                                         <option value="신고가 돌파">신고가 돌파</option>
                                         <option value="박스권 하단 매수">박스권 하단 매수</option>
+                                        <option value="유동성 소탕 (ICT Liquidity Sweep)">유동성 소탕 (Liquidity Sweep)</option>
+                                        <option value="FVG 공정가치갭 반등">FVG (공정가치갭) 매매</option>
                                         <option value="거래대금 주도주 매매">거래대금 주도주 매매</option>
                                         <option value="52주 소외 테마 반등">52주 소외 테마 반등</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="tw-form-group">
-                                <label>주요 가격대 (Key Level)</label>
-                                <div class="tw-input-wrapper">
-                                    <input type="text" id="plan-key-level" placeholder="예: 32,500원 전고점 지지대">
-                                </div>
+                        </div>
+
+                        <div class="tw-form-group">
+                            <label>주요 가격대 (Key Level)</label>
+                            <div class="tw-input-wrapper">
+                                <input type="text" id="plan-key-level" placeholder="예: 주요 지지/저항선, 전일 고점/저점">
                             </div>
                         </div>
 
                         <div class="tw-form-group">
                             <label>원칙 손절 기준 (무효화 조건) <span class="req">*</span></label>
                             <div class="tw-input-wrapper">
-                                <input type="text" id="plan-invalidation" value="${calcData && calcData.stopLoss ? calcData.stopLoss + '원 이탈 시 손절' : ''}" placeholder="어떤 조건이나 가격을 이탈하면 시나리오를 폐기하고 손절할 것인가?">
+                                <input type="text" id="plan-invalidation" value="${calcData && calcData.stopLoss ? calcData.stopLoss + ' 이탈 시 즉시 기계적 손절' : ''}" placeholder="어떤 조건이나 가격을 이탈하면 시나리오를 폐기하고 손절할 것인가?">
                             </div>
                         </div>
 
                         <div class="tw-form-group">
-                            <label>매수 확정 타점 (진입 트리거) <span class="req">*</span></label>
+                            <label>진입 확정 타점 (트리거) <span class="req">*</span></label>
                             <div class="tw-input-wrapper">
-                                <input type="text" id="plan-trigger" placeholder="예: 32,800원 부근 거래량 실린 5분봉 양봉 마감 시">
+                                <input type="text" id="plan-trigger" placeholder="예: 5분봉 거래량 실린 변곡 캔들 마감 시">
                             </div>
                         </div>
 
@@ -1303,33 +2203,33 @@
                     <!-- 탭 2: 리스크 요약 -->
                     <div class="editor-tab-content" id="tab-plan-risk" style="display:none;">
                         <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">
-                            리스크 계산기에서 계산된 결과를 입력하거나 직접 수치를 지정하세요.
+                            리스크 계산기에서 계산된 포지션 사이징 결과입니다. 필요 시 수치를 직접 조정할 수 있습니다.
                         </p>
                         <div class="tw-input-grid-3">
                             <div class="tw-form-group">
-                                <label>매수 예정가 (원)</label>
+                                <label>진입 예정가</label>
                                 <div class="tw-input-wrapper">
-                                    <input type="number" id="plan-calc-entry" value="${calcData ? calcData.entryPrice : ''}">
+                                    <input type="number" id="plan-calc-entry" value="${calcData ? calcData.entryPrice : ''}" step="any">
                                 </div>
                             </div>
                             <div class="tw-form-group">
-                                <label>원칙 손절가 (원)</label>
+                                <label>원칙 손절가</label>
                                 <div class="tw-input-wrapper">
-                                    <input type="number" id="plan-calc-stop" value="${calcData ? calcData.stopLoss : ''}">
+                                    <input type="number" id="plan-calc-stop" value="${calcData ? calcData.stopLoss : ''}" step="any">
                                 </div>
                             </div>
                             <div class="tw-form-group">
-                                <label>목표 익절가 (원)</label>
+                                <label>목표 익절가</label>
                                 <div class="tw-input-wrapper">
-                                    <input type="number" id="plan-calc-target" value="${calcData ? calcData.targetPrice : ''}">
+                                    <input type="number" id="plan-calc-target" value="${calcData ? calcData.targetPrice : ''}" step="any">
                                 </div>
                             </div>
                         </div>
                         <div class="tw-input-grid-2">
                             <div class="tw-form-group">
-                                <label>매수 수량 (주)</label>
+                                <label>추천 진입 수량 (${calcData && calcData.unitName ? calcData.unitName : '주/계약'})</label>
                                 <div class="tw-input-wrapper">
-                                    <input type="number" id="plan-calc-shares" value="${calcData ? calcData.shares : ''}">
+                                    <input type="number" id="plan-calc-shares" value="${calcData ? calcData.shares : ''}" step="any">
                                 </div>
                             </div>
                             <div class="tw-form-group">

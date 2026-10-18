@@ -845,6 +845,227 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* Multi-Asset Risk Calculator Styles */
+.tw-market-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 22px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+.tw-market-tabs::-webkit-scrollbar {
+    height: 4px;
+}
+.tw-market-tabs::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+.tw-market-tab-btn {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 135px;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    font-family: inherit;
+    text-align: left;
+}
+.tw-market-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+.tw-market-tab-btn.active {
+    background: rgba(249, 77, 93, 0.12);
+    border-color: var(--pos, #f94d5d);
+    box-shadow: 0 4px 16px rgba(249, 77, 93, 0.25);
+    transform: translateY(-2px);
+}
+.tw-market-tab-btn .flag {
+    font-size: 18px;
+    margin-bottom: 4px;
+    line-height: 1;
+}
+.tw-market-tab-btn .name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.3;
+}
+.tw-market-tab-btn .sub {
+    font-size: 11px;
+    color: var(--text-muted, #8b92a5);
+    margin-top: 2px;
+}
+.tw-market-tab-btn.active .name {
+    color: #fff;
+}
+.tw-market-tab-btn.active .sub {
+    color: var(--pos, #f94d5d);
+    font-weight: 600;
+}
+
+/* Futures Spec Summary Card */
+.tw-spec-banner {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+.tw-spec-item {
+    display: flex;
+    flex-direction: column;
+}
+.tw-spec-item .lbl {
+    font-size: 11px;
+    color: var(--text-muted, #8b92a5);
+    margin-bottom: 4px;
+}
+.tw-spec-item .val {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    font-variant-numeric: tabular-nums;
+}
+.tw-spec-item .val.highlight {
+    color: #38ef7d;
+}
+.tw-spec-desc {
+    grid-column: span 4;
+    font-size: 11px;
+    color: var(--text-muted, #8b92a5);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 8px;
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Position Direction Toggle (Long/Short) */
+.tw-pos-direction-toggle {
+    display: inline-flex;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tw-dir-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted, #8b92a5);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.tw-dir-btn:hover {
+    color: #fff;
+}
+.tw-dir-btn[data-dir="Long"].active {
+    background: #00e676;
+    color: #0d1117;
+    box-shadow: 0 2px 10px rgba(0, 230, 118, 0.35);
+}
+.tw-dir-btn[data-dir="Short"].active {
+    background: var(--pos, #f94d5d);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(249, 77, 93, 0.35);
+}
+
+/* Quick Risk Pills */
+.tw-quick-risk-group {
+    display: inline-flex;
+    gap: 4px;
+}
+.tw-risk-pill {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 11px;
+    color: var(--text-muted, #8b92a5);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+.tw-risk-pill:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+.tw-risk-pill.active {
+    background: rgba(249, 77, 93, 0.16);
+    border-color: var(--pos, #f94d5d);
+    color: #fff;
+    font-weight: 700;
+}
+
+/* Field Sub Note & Tick Pill */
+.tw-field-sub-note {
+    font-size: 11px;
+    color: var(--text-muted, #8b92a5);
+    margin-top: 5px;
+}
+.tw-tick-pill {
+    display: inline-block;
+    font-size: 11px;
+    color: #38ef7d;
+    background: rgba(56, 239, 125, 0.08);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(56, 239, 125, 0.15);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Hero Recommended Quantity Box */
+.tw-calc-hero-qty-box {
+    background: linear-gradient(135deg, rgba(249, 77, 93, 0.12) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(249, 77, 93, 0.28);
+    border-radius: 10px;
+    padding: 16px 14px;
+    margin-bottom: 16px;
+    text-align: center;
+}
+.tw-calc-hero-qty-box .lbl {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted, #8b92a5);
+    letter-spacing: 0.5px;
+}
+.tw-calc-hero-qty-box .qty-val {
+    font-size: 32px;
+    font-weight: 800;
+    color: #fff;
+    margin: 4px 0;
+    font-variant-numeric: tabular-nums;
+}
+.tw-calc-hero-qty-box .qty-val .unit {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--pos, #f94d5d);
+    margin-left: 4px;
+}
+.tw-calc-hero-qty-box .sub-val {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    font-variant-numeric: tabular-nums;
+}
+
 /* Responsive adjustments */
 @media (max-width: 1200px) {
     .tw-quick-grid {
@@ -884,5 +1105,11 @@
     }
     .tw-input-grid-2, .tw-input-grid-3 {
         grid-template-columns: 1fr;
+    }
+    .tw-spec-banner {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .tw-spec-desc {
+        grid-column: span 2;
     }
 }
