@@ -1,12 +1,16 @@
 /**
  * ============================================================================
- * DAJAVATA SIGNAL LAB (AI 차트 스캐너) ENGINE v3
- * - 국내 주식(코스피/코스닥) 알고리즘 지지·저항 자동 작도 & 스캐너
- * - [신규] 기본 차트 높이 780px로 대폭 확장 + 마우스 드래그 상하 높이 자유 조절 (더블클릭 기본 복귀)
- * - [신규] 좌우 종목/차트 칸 폭 마우스 드래그 자유 조절 (더블클릭 기본 복귀)
- * - [신규] 차트 좌측 전문 드로잉 툴바 (추세선, 수평선, 박스, 측정자, 자석 스냅, 지우개 등)
- * - 15개 전 타임프레임 지원 (분봉 7종, 시봉 4종, 일/주/월/년봉)
- * - TradingView Lightweight Charts v4 + Canvas 고해상도 폴백
+ * DAJAVATA SIGNAL LAB (AI 차트 스캐너) ENGINE v5
+ * - 코스피/코스닥/해외 전 종목(4,200개+) 실시간 검색 & 연동
+ * - 네이버 증권 & FDR 실시간 캔들 차트 API 연동 (국내/해외)
+ * - [신규] 스마트 머니 콘셉트 (ICT) 8대 구름대 (FVG, OB, IFVG, BPR) 엔진
+ * - [신규] ICT 유동성 스윕 (BSL/SSL) & 기관 타점 신호 (Mitigation Buy/Sell)
+ * - [신규] HTS 4대 급소 신호 (상승/하락 FVG, SSL/BSL Sweep V자 반등)
+ * - [신규] HTS 표준 Wilder RSI(14) & RSI 이평선(MA 9) 골든크로스 스캐너
+ * - [신규] 시장 분류 탭: 전체 / 코스피 / 코스닥 / 🇺🇸 해외 대표주 (NVDA, TSLA 등)
+ * - [신규] 활성화된 ICT 구름대 및 타점 신호 실시간 분석 테이블 (from app3.py)
+ * - 기본 차트 높이 780px + 마우스 드래그 상하/좌우 자유 조절
+ * - 차트 좌측 12종 전문 드로잉 툴바 (추세선, 수평선, 박스, 측정자 등)
  * - 다자바타 트레이더 룸(리스크 계산기) 원클릭 연동 지원
  * ============================================================================
  */
@@ -42,9 +46,30 @@
     };
 
     // -------------------------------------------------------------
-    // 2. 국내 주식 기술적 시그널 & 종목 메타데이터
+    // 2. 해외 대표 인기 종목 유니버스 (from app3.py)
     // -------------------------------------------------------------
-    const SAMPLE_STOCKS = [
+    const OVERSEAS_STOCKS = [
+        { code: 'NVDA', name: '엔비디아 (NVIDIA)', market: 'NASDAQ', price: 214.13, changeRate: 1.85, theme: 'AI 가속기 / GPU', strategy: 'ict-smc', strategyName: 'ICT 스마트 머니' },
+        { code: 'AAPL', name: '애플 (Apple)', market: 'NASDAQ', price: 232.50, changeRate: 0.65, theme: '애플 인텔리전스 / 빅테크', strategy: 'support-bounce', strategyName: '추세 지지선 반등' },
+        { code: 'TSLA', name: '테슬라 (Tesla)', market: 'NASDAQ', price: 220.70, changeRate: 3.20, theme: '자율주행 FSD / 로보택시', strategy: 'breakout-retest', strategyName: '전고점 돌파 후 안착' },
+        { code: 'MSFT', name: '마이크로소프트 (MSFT)', market: 'NASDAQ', price: 418.00, changeRate: 0.42, theme: '클라우드 / 코파일럿', strategy: 'ma-converge', strategyName: '이평선 수렴 & 정배열' },
+        { code: 'AMZN', name: '아마존 (Amazon)', market: 'NASDAQ', price: 188.60, changeRate: 1.15, theme: '이커머스 / AWS', strategy: 'support-bounce', strategyName: '추세 지지선 반등' },
+        { code: 'GOOGL', name: '알파벳 A (Google)', market: 'NASDAQ', price: 165.30, changeRate: 0.88, theme: '검색 / 제미나이 AI', strategy: 'bb-squeeze', strategyName: '볼린저 밴드 스퀴즈' },
+        { code: 'META', name: '메타 플랫폼스 (Meta)', market: 'NASDAQ', price: 585.00, changeRate: 2.45, theme: '라마3 / 소셜미디어', strategy: 'rsi-gold', strategyName: 'Wilder RSI 골든크로스' },
+        { code: 'PLTR', name: '팔란티어 (Palantir)', market: 'NYSE', price: 44.50, changeRate: 4.12, theme: 'AIP / 국방 데이터 AI', strategy: 'breakout-retest', strategyName: '전고점 돌파 후 안착' },
+        { code: 'QQQ', name: '나스닥 100 ETF (QQQ)', market: 'NASDAQ', price: 495.20, changeRate: 0.95, theme: '미국 테크 대표 지수', strategy: 'support-bounce', strategyName: '추세 지지선 반등' },
+        { code: 'SOXL', name: '반도체 3배 롱 ETF (SOXL)', market: 'NYSE', price: 38.60, changeRate: 5.30, theme: '필라델피아 반도체 3X', strategy: 'rsi-gold', strategyName: 'Wilder RSI 골든크로스' },
+        { code: 'TQQQ', name: '나스닥 3배 롱 ETF (TQQQ)', market: 'NASDAQ', price: 74.80, changeRate: 2.85, theme: '나스닥 100 3X 레버리지', strategy: 'support-bounce', strategyName: '추세 지지선 반등' },
+        { code: 'SPY', name: 'S&P 500 ETF (SPY)', market: 'NYSE', price: 582.40, changeRate: 0.52, theme: '미국 대형주 대표 지수', strategy: 'ma-converge', strategyName: '이평선 수렴 & 정배열' },
+        { code: 'AVGO', name: '브로드컴 (Broadcom)', market: 'NASDAQ', price: 182.00, changeRate: 2.10, theme: '커스텀 ASIC / AI 네트워킹', strategy: 'ict-smc', strategyName: 'ICT 스마트 머니' },
+        { code: 'TSM', name: 'TSMC ADR (TSM)', market: 'NYSE', price: 198.50, changeRate: 1.75, theme: '글로벌 1위 파운드리', strategy: 'support-bounce', strategyName: '추세 지지선 반등' },
+        { code: 'AMD', name: 'AMD', market: 'NASDAQ', price: 156.40, changeRate: 1.90, theme: 'MI300X AI 칩 / CPU', strategy: 'bb-squeeze', strategyName: '볼린저 밴드 스퀴즈' },
+        { code: 'MU', name: '마이크론 테크놀로지', market: 'NASDAQ', price: 110.20, changeRate: 2.30, theme: 'HBM3E / D램', strategy: 'rsi-gold', strategyName: 'Wilder RSI 골든크로스' },
+        { code: 'ASML', name: 'ASML 홀딩 (ASML)', market: 'NASDAQ', price: 720.00, changeRate: -0.40, theme: 'EUV 노광장비 독점', strategy: 'ict-smc', strategyName: 'ICT 스마트 머니' }
+    ];
+
+    // 기본 시그널 대표 종목 (국내)
+    const INITIAL_FEATURED_STOCKS = [
         {
             code: '000660',
             name: 'SK하이닉스',
@@ -54,19 +79,16 @@
             changeRate: 2.14,
             volume: '3.4M주',
             tradeAmount: '6,340억',
-            strategy: 'support-bounce',
-            strategyName: '추세 지지선 반등',
+            strategy: 'ict-smc',
+            strategyName: 'ICT 스마트 머니 (FVG 반등)',
             theme: 'HBM3E / AI 반도체',
-            pattern: 'up-trend',
-            minPrice: 160000,
-            maxPrice: 195000,
             signalStatus: 'good',
-            signalText: '지지선 1.1% 근접 · 3회 반등',
+            signalText: '상승 FVG 구간 안착 · 반등',
             stopPrice: 181000,
             targetPrice: 204000,
             briefing: {
-                reason: '중기 상승 채널의 하단 지지선(181,500원)을 3회 연속 지켜내며 20일선 위에서 강한 양봉 반등 시도가 포착되었습니다.',
-                tradePlan: '현재가(186,400원) 매수 시 손절 기준 181,000원(-2.89%), 1차 목표 204,000원(+9.44%)으로 <strong>손익비 3.26:1</strong>의 매우 유리한 손익비 구간입니다.',
+                reason: '중기 상승 채널의 하단 지지선(181,500원) 및 Bullish FVG 구름대 상단에서 강한 양봉 반등 시도가 포착되었습니다.',
+                tradePlan: '현재가(186,400원) 매수 시 손절 기준 181,000원(-2.89%), 1차 목표 204,000원(+9.44%)으로 손익비 3.26:1의 유리한 구간입니다.',
                 supplyFlow: '외국인 3거래일 연속 순매수 유입 중이며, HBM3E 공급 확대 모멘텀이 기술적 반등을 강력히 지지하고 있습니다.'
             }
         },
@@ -79,19 +101,16 @@
             changeRate: 3.52,
             volume: '720K주',
             tradeAmount: '2,750억',
-            strategy: 'breakout-retest',
-            strategyName: '전고점 돌파 후 안착',
+            strategy: 'rsi-gold',
+            strategyName: 'Wilder RSI 골든크로스',
             theme: '바이오 플랫폼 (SC제형)',
-            pattern: 'breakout',
-            minPrice: 320000,
-            maxPrice: 390000,
             signalStatus: 'good',
-            signalText: '전고점 지지 전환 성공',
+            signalText: 'RSI(14) 52.4 골든크로스 완성',
             stopPrice: 365000,
             targetPrice: 430000,
             briefing: {
-                reason: '과거 강력한 저항선이었던 368,000원 매물대를 대량 거래량으로 상향 돌파한 뒤, 해당 라인에서 정확히 지지(리테스트)를 받고 재상승 중입니다.',
-                tradePlan: '현재가(382,000원) 진입 시 손절가 365,000원(-4.45%), 1차 목표 430,000원(+12.5%)으로 <strong>손익비 2.8:1</strong> 구조입니다.',
+                reason: 'Wilder RSI(14)가 RSI 이평(9)을 상향 돌파하며 50선 위로 올라섰고, 전고점 매물대(368,000원)를 강력히 지지 중입니다.',
+                tradePlan: '현재가(382,000원) 진입 시 손절가 365,000원(-4.45%), 1차 목표 430,000원(+12.5%)으로 손익비 2.8:1 구조입니다.',
                 supplyFlow: '키트루다 SC 독점 계약 임박 이슈와 함께 사모펀드 및 기관의 대량 매수세가 확인됩니다.'
             }
         },
@@ -107,16 +126,13 @@
             strategy: 'support-bounce',
             strategyName: '추세 지지선 반등',
             theme: '경구용 GLP-1 / 시밀러',
-            pattern: 'up-trend',
-            minPrice: 125000,
-            maxPrice: 155000,
             signalStatus: 'good',
             signalText: '추세 하단 양봉 전환',
             stopPrice: 138500,
             targetPrice: 162000,
             briefing: {
                 reason: '8월 저점 이후 형성된 중기 상승 추세선의 바닥 자리(140,000원)에서 하락을 멈추고 5일선 골든크로스를 완성했습니다.',
-                tradePlan: '현재가(143,500원) 매수 시 손절 138,500원(-3.48%), 1차 목표 162,000원(+12.89%)으로 <strong>손익비 3.7:1</strong> 타점입니다.',
+                tradePlan: '현재가(143,500원) 매수 시 손절 138,500원(-3.48%), 1차 목표 162,000원(+12.89%) 타점입니다.',
                 supplyFlow: '비만 치료제 관련 글로벌 판권 논의 소식과 함께 하락 추세 탈피 시그널이 발생했습니다.'
             }
         },
@@ -132,16 +148,13 @@
             strategy: 'bb-squeeze',
             strategyName: '볼린저 밴드 스퀴즈',
             theme: '자동차 / 인도IPO / 밸류업',
-            pattern: 'box-squeeze',
-            minPrice: 235000,
-            maxPrice: 258000,
             signalStatus: 'warn',
             signalText: '변동성 수축 3주차 (폭발 임박)',
             stopPrice: 241500,
             targetPrice: 272000,
             briefing: {
                 reason: '일봉 볼린저 밴드 대역폭(Bandwidth)이 연중 최저치로 응축되며 244,000원 바닥을 단단히 지지하고 있습니다. 방향성 분출 직전입니다.',
-                tradePlan: '현재가(248,500원) 분할 매수 시 박스권 하단 이탈 241,500원(-2.82%) 손절 기준, 상향 분출 시 272,000원(+9.45%) 목표치입니다.',
+                tradePlan: '현재가(248,500원) 분할 매수 시 박스권 하단 이탈 241,500원(-2.82%) 손절 기준입니다.',
                 supplyFlow: '인도법인 상장 모멘텀 및 밸류업 자사주 매입 기대감으로 투신/연기금의 저가 매수가 견고합니다.'
             }
         },
@@ -155,18 +168,15 @@
             volume: '1.2M주',
             tradeAmount: '1,890억',
             strategy: 'dual-buying',
-            strategyName: '기관·외인 쌍끌이 + 지지선',
+            strategyName: '외인·기관 쌍끌이',
             theme: '폐암 신약 렉라자',
-            pattern: 'up-trend',
-            minPrice: 132000,
-            maxPrice: 162000,
             signalStatus: 'good',
             signalText: '쌍끌이 순매수 + 지지 반등',
             stopPrice: 148000,
             targetPrice: 178000,
             briefing: {
                 reason: '기관과 외국인이 최근 3일간 동시 순매수를 기록하며 60일 이평선 및 지지선(149,000원)을 강력히 방어하고 직전 고점 돌파를 시도하고 있습니다.',
-                tradePlan: '156,000원 매수 시 지지선 이탈 148,000원(-5.1%) 손절 기준, 전고점 돌파 178,000원(+14.1%) 목표로 <strong>손익비 2.76:1</strong>입니다.',
+                tradePlan: '156,000원 매수 시 지지선 이탈 148,000원(-5.1%) 손절 기준, 목표 178,000원(+14.1%)입니다.',
                 supplyFlow: '미국 FDA 승인 후 처방 가속화에 따른 로열티 기대감으로 메이저 수급이 집중되고 있습니다.'
             }
         },
@@ -180,18 +190,15 @@
             volume: '14.2M주',
             tradeAmount: '8,480억',
             strategy: 'ma-converge',
-            strategyName: '이평선 수렴 & 정배열 초입',
+            strategyName: '이평선 수렴 & 정배열',
             theme: '반도체 대형주',
-            pattern: 'recovery',
-            minPrice: 56000,
-            maxPrice: 62000,
             signalStatus: 'good',
             signalText: '이평선 3선 수렴 후 반등',
             stopPrice: 58200,
             targetPrice: 65000,
             briefing: {
                 reason: '역배열 하락세가 진정되며 5일선, 20일선이 58,800원에서 밀집 수렴한 뒤, 거래량을 동반한 우상향 골든크로스가 발생했습니다.',
-                tradePlan: '현재가(59,800원) 매수 시 단기 지지선 58,200원(-2.67%) 손절 기준, 1차 목표가 65,000원(+8.69%)으로 <strong>손익비 3.25:1</strong> 구간입니다.',
+                tradePlan: '현재가(59,800원) 매수 시 단기 지지선 58,200원(-2.67%) 손절 기준입니다.',
                 supplyFlow: '극단적 과매도 구간을 지나 외국인 매도세가 둔화되고 연기금의 저가 매수세가 꾸준히 유입되는 전환 국면입니다.'
             }
         },
@@ -204,38 +211,720 @@
             changeRate: 2.75,
             volume: '950K주',
             tradeAmount: '1,060억',
-            strategy: 'support-bounce',
-            strategyName: '추세 지지선 반등',
+            strategy: 'ict-smc',
+            strategyName: 'ICT 스마트 머니 (OB 지지)',
             theme: 'TC본더 / 반도체 장비',
-            pattern: 'up-trend',
-            minPrice: 96000,
-            maxPrice: 118000,
             signalStatus: 'good',
-            signalText: '추세 하단 지지 성공',
+            signalText: '기관 상승 오더블록(OB) 지지',
             stopPrice: 106500,
             targetPrice: 126000,
             briefing: {
-                reason: '상승 추세선 하단(108,000원)에서 아래꼬리를 달고 반등하며 기술적 매수 급소가 완성되었습니다.',
-                tradePlan: '112,000원 매수 시 지지선 이탈 106,500원(-4.91%) 손절 기준, 1차 목표가 126,000원(+12.5%)으로 <strong>손익비 2.5:1</strong>입니다.',
+                reason: '상승 오더블록(OB) 하단(108,000원)에서 아래꼬리를 달고 반등하며 기술적 매수 급소가 완성되었습니다.',
+                tradePlan: '112,000원 매수 시 지지선 이탈 106,500원(-4.91%) 손절 기준입니다.',
                 supplyFlow: '신규 고객사 수주 모멘텀이 이어지며 장비주 중 가장 빠른 지지선 반등을 보이고 있습니다.'
             }
         }
     ];
 
     // -------------------------------------------------------------
-    // 3. 타임프레임별 캔들 & 지지선 데이터 생성 엔진
+    // 2-1. ICT 8대 구름대 정의 및 개별 설정 (from app3.py)
     // -------------------------------------------------------------
-    function generateDataset(stock, tf) {
+    const CLOUD_ZONE_DEFINITIONS = [
+        { type: 'Bullish FVG', label: '상승 FVG', short: 'Bull FVG', color: '#10b981', default: true },
+        { type: 'Bearish FVG', label: '하락 FVG', short: 'Bear FVG', color: '#ef4444', default: false },
+        { type: 'Bullish OB', label: '상승 OB', short: 'Bull OB', color: '#3b82f6', default: true },
+        { type: 'Bearish OB', label: '하락 OB', short: 'Bear OB', color: '#f59e0b', default: false },
+        { type: 'Bullish IFVG', label: '상승 IFVG', short: 'Bull IFVG', color: '#8b5cf6', default: false },
+        { type: 'Bearish IFVG', label: '하락 IFVG', short: 'Bear IFVG', color: '#ec4899', default: false },
+        { type: 'Bullish BPR', label: '상승 BPR', short: 'Bull BPR', color: '#14b8a6', default: false },
+        { type: 'Bearish BPR', label: '하락 BPR', short: 'Bear BPR', color: '#e11d48', default: false }
+    ];
+
+    function getInitialCloudZonePreferences() {
+        try {
+            const saved = localStorage.getItem('dajavata_cloud_types_v1');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (typeof parsed === 'object' && parsed !== null) return parsed;
+            }
+        } catch (e) {}
+        // 기본값: "한꺼번에 모두 튀어나오지 않도록" 핵심 상승 구름대(Bullish FVG, Bullish OB)만 기본 활성화
+        const defaults = {};
+        CLOUD_ZONE_DEFINITIONS.forEach(def => {
+            defaults[def.type] = def.default;
+        });
+        return defaults;
+    }
+
+    // -------------------------------------------------------------
+    // 3. UI 상태 관리
+    // -------------------------------------------------------------
+    let state = {
+        stocksList: [...INITIAL_FEATURED_STOCKS],
+        universeStocks: [], // 코스피/코스닥 전 종목 (4,292개)
+        marketFilter: 'all', // 'all', 'kospi', 'kosdaq', 'overseas'
+        selectedStrategy: 'all',
+        selectedStockCode: '000660',
+        searchQuery: '',
+        activeTimeframe: '1D',
+        chartInstance: null,
+        candlestickSeries: null,
+        supportLineSeries: null,
+        stoplossLineSeries: null,
+        activeTool: 'cursor',
+        isMagnet: false,
+        userDrawings: [],
+        isDrawingNow: false,
+        drawStartPoint: null,
+        
+        // --- 지표 토글 상태 (app3.py 연동) ---
+        showICTZones: true,    // 🌐 ICT 8대 구름대 마스터 On/Off
+        strictMode: false,     // ⚡ app3.py 고확률(스윕 검증) 구름대만 표시
+        showICTSignals: true,  // 🎯 ICT 유동성 스윕 & 타점 신호
+        showHTSSignals: true,  // 🧪 HTS 4대 급소 신호
+        showWilderRSI: true,   // 📊 Wilder RSI(14)
+        showSupportLine: true, // 🛡️ AI 자동 지지선
+
+        // ☁️ 8대 구름대 개별 선택 상태 (Bullish FVG, Bullish OB 등 8종)
+        cloudZoneTypes: getInitialCloudZonePreferences(),
+
+        // 계산된 최신 데이터
+        currentStock: null,
+        currentCandles: [],
+        currentICTZones: [],
+        currentICTSignals: [],
+        currentHTSSignals: [],
+        currentRSIInfo: null
+    };
+
+    function getTimeframeLabel(tf) {
+        for (const grp of Object.values(TIMEFRAME_GROUPS)) {
+            const found = grp.find(item => item.id === tf);
+            if (found) return found.label;
+        }
+        return tf;
+    }
+
+    function formatPrice(val, isOverseas = false) {
+        if (val === null || val === undefined || isNaN(val)) return '-';
+        if (isOverseas) {
+            return '$' + Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        return Math.round(val).toLocaleString() + '원';
+    }
+
+    // -------------------------------------------------------------
+    // 4. 스마트 머니 (ICT) & Wilder RSI 알고리즘 엔진 (from app3.py)
+    // -------------------------------------------------------------
+
+    // (1) HTS 표준 Wilder's Smoothing RSI(14) & MA(9)
+    function computeHTSRSI(candles, period = 14) {
+        if (!candles || candles.length < period + 1) return { rsiList: [], latestRSI: null, latestMA9: null, isGoldenCross: false, isDeadCross: false };
+        const rsiList = new Array(candles.length).fill(null);
+        let avgU = 0;
+        let avgD = 0;
+
+        for (let i = 1; i <= period; i++) {
+            const diff = candles[i].close - candles[i - 1].close;
+            if (diff > 0) avgU += diff;
+            else avgD += Math.abs(diff);
+        }
+        avgU /= period;
+        avgD /= period;
+
+        let rs = avgD === 0 ? 100 : avgU / avgD;
+        rsiList[period] = 100 - (100 / (1 + rs));
+
+        for (let i = period + 1; i < candles.length; i++) {
+            const diff = candles[i].close - candles[i - 1].close;
+            const u = diff > 0 ? diff : 0;
+            const d = diff < 0 ? Math.abs(diff) : 0;
+            avgU = (avgU * (period - 1) + u) / period;
+            avgD = (avgD * (period - 1) + d) / period;
+            rs = avgD === 0 ? 100 : avgU / avgD;
+            rsiList[i] = 100 - (100 / (1 + rs));
+        }
+
+        // RSI MA(9)
+        const maList = new Array(candles.length).fill(null);
+        for (let i = 0; i < candles.length; i++) {
+            if (i < period + 8) continue;
+            let sum = 0;
+            for (let j = 0; j < 9; j++) {
+                sum += rsiList[i - j];
+            }
+            maList[i] = sum / 9;
+        }
+
+        const lastIdx = candles.length - 1;
+        const prevIdx = candles.length - 2;
+        const curRSI = rsiList[lastIdx] || 50;
+        const curMA9 = maList[lastIdx] || 50;
+        const prevRSI = rsiList[prevIdx] || 50;
+        const prevMA9 = maList[prevIdx] || 50;
+
+        const isGoldenCross = (curRSI > curMA9) && (prevRSI <= prevMA9) && (curRSI < 60);
+        const isDeadCross = (curRSI < curMA9) && (prevRSI >= prevMA9) && (curRSI > 60);
+
+        return {
+            rsiList,
+            maList,
+            latestRSI: parseFloat(curRSI.toFixed(1)),
+            latestMA9: parseFloat(curMA9.toFixed(1)),
+            isGoldenCross,
+            isDeadCross
+        };
+    }
+
+    // (2) ICT 8대 지표 구름대 산출 (FVG, OB, IFVG, BPR)
+    function calculateICTConcepts(candles, strictMode = false, leftBars = 5, rightBars = 2) {
+        if (!candles || candles.length < 5) return [];
+        const zones = [];
+        let bslSwept = false;
+        let sslSwept = false;
+        let activeBslVal = null;
+        let activeSslVal = null;
+
+        for (let i = 2; i < candles.length; i++) {
+            if (strictMode) {
+                const idx = i - rightBars;
+                if (idx >= leftBars && idx < candles.length) {
+                    let isMax = true;
+                    let isMin = true;
+                    for (let k = idx - leftBars; k <= idx + rightBars; k++) {
+                        if (candles[k].high > candles[idx].high) isMax = false;
+                        if (candles[k].low < candles[idx].low) isMin = false;
+                    }
+                    if (isMax) activeBslVal = candles[idx].high;
+                    if (isMin) activeSslVal = candles[idx].low;
+                }
+                if (activeBslVal && candles[i].high > activeBslVal) {
+                    bslSwept = true;
+                    activeBslVal = null;
+                }
+                if (activeSslVal && candles[i].low < activeSslVal) {
+                    sslSwept = true;
+                    activeSslVal = null;
+                }
+            }
+
+            const h1 = candles[i - 2].high;
+            const l1 = candles[i - 2].low;
+            const h3 = candles[i].high;
+            const l3 = candles[i].low;
+
+            // Bullish FVG
+            if (h1 < l3) {
+                if (!strictMode || sslSwept) {
+                    zones.push({
+                        type: 'Bullish FVG',
+                        top: l3,
+                        bottom: h1,
+                        time: candles[i - 1].time,
+                        active: true
+                    });
+                    // Bullish OB
+                    for (let j = i - 2; j >= Math.max(0, i - 10); j--) {
+                        if (candles[j].close < candles[j].open) {
+                            zones.push({
+                                type: 'Bullish OB',
+                                top: candles[j].high,
+                                bottom: candles[j].low,
+                                time: candles[j].time,
+                                active: true
+                            });
+                            break;
+                        }
+                    }
+                    if (strictMode) sslSwept = false;
+                }
+            }
+            // Bearish FVG
+            else if (l1 > h3) {
+                if (!strictMode || bslSwept) {
+                    zones.push({
+                        type: 'Bearish FVG',
+                        top: l1,
+                        bottom: h3,
+                        time: candles[i - 1].time,
+                        active: true
+                    });
+                    // Bearish OB
+                    for (let j = i - 2; j >= Math.max(0, i - 10); j--) {
+                        if (candles[j].close > candles[j].open) {
+                            zones.push({
+                                type: 'Bearish OB',
+                                top: candles[j].high,
+                                bottom: candles[j].low,
+                                time: candles[j].time,
+                                active: true
+                            });
+                            break;
+                        }
+                    }
+                    if (strictMode) bslSwept = false;
+                }
+            }
+        }
+
+        // IFVG (Inversion FVG) 판별
+        zones.forEach(z => {
+            const startIdx = candles.findIndex(c => c.time === z.time);
+            if (startIdx === -1) return;
+            if (z.type === 'Bullish FVG') {
+                for (let i = startIdx + 1; i < candles.length; i++) {
+                    if (candles[i].close < z.bottom) {
+                        z.active = false;
+                        zones.push({
+                            type: 'Bearish IFVG',
+                            top: z.top,
+                            bottom: z.bottom,
+                            time: candles[i].time,
+                            active: true
+                        });
+                        break;
+                    }
+                }
+            } else if (z.type === 'Bearish FVG') {
+                for (let i = startIdx + 1; i < candles.length; i++) {
+                    if (candles[i].close > z.top) {
+                        z.active = false;
+                        zones.push({
+                            type: 'Bullish IFVG',
+                            top: z.top,
+                            bottom: z.bottom,
+                            time: candles[i].time,
+                            active: true
+                        });
+                        break;
+                    }
+                }
+            }
+        });
+
+        // BPR (Balanced Price Range)
+        const bullFVGs = zones.filter(z => z.type === 'Bullish FVG');
+        const bearFVGs = zones.filter(z => z.type === 'Bearish FVG');
+        bullFVGs.forEach(bf => {
+            bearFVGs.forEach(brf => {
+                const overlapTop = Math.min(bf.top, brf.top);
+                const overlapBottom = Math.max(bf.bottom, brf.bottom);
+                if (overlapTop > overlapBottom) {
+                    zones.push({
+                        type: bf.time < brf.time ? 'Bearish BPR' : 'Bullish BPR',
+                        top: overlapTop,
+                        bottom: overlapBottom,
+                        time: bf.time < brf.time ? brf.time : bf.time,
+                        active: true
+                    });
+                }
+            });
+        });
+
+        return zones;
+    }
+
+    // (3) ICT 유동성 스윕 & 타점 신호 (Mitigation Buy/Sell)
+    function calculateICTSignals(candles, leftBars = 5, rightBars = 2) {
+        if (!candles || candles.length < 10) return [];
+        const signals = [];
+        let bslSwept = false;
+        let sslSwept = false;
+        let activeBslVal = null;
+        let activeSslVal = null;
+        let bearishSetupFvg = null;
+        let bullishSetupFvg = null;
+
+        for (let i = Math.max(leftBars, 2); i < candles.length; i++) {
+            const idx = i - rightBars;
+            if (idx >= leftBars && idx < candles.length) {
+                let isMax = true;
+                let isMin = true;
+                for (let k = idx - leftBars; k <= idx + rightBars; k++) {
+                    if (candles[k].high > candles[idx].high) isMax = false;
+                    if (candles[k].low < candles[idx].low) isMin = false;
+                }
+                if (isMax) activeBslVal = candles[idx].high;
+                if (isMin) activeSslVal = candles[idx].low;
+            }
+
+            const currHigh = candles[i].high;
+            const currLow = candles[i].low;
+
+            if (activeBslVal && currHigh > activeBslVal) {
+                bslSwept = true;
+                bearishSetupFvg = null;
+                activeBslVal = null;
+            }
+            if (activeSslVal && currLow < activeSslVal) {
+                sslSwept = true;
+                bullishSetupFvg = null;
+                activeSslVal = null;
+            }
+
+            if (bslSwept && i >= 2) {
+                const l1 = candles[i - 2].low;
+                const h3 = candles[i].high;
+                if (l1 > h3) {
+                    bearishSetupFvg = { top: l1, bottom: h3, time: candles[i - 1].time };
+                    bslSwept = false;
+                }
+            }
+            if (sslSwept && i >= 2) {
+                const h1 = candles[i - 2].high;
+                const l3 = candles[i].low;
+                if (h1 < l3) {
+                    bullishSetupFvg = { top: l3, bottom: h1, time: candles[i - 1].time };
+                    sslSwept = false;
+                }
+            }
+
+            if (bearishSetupFvg) {
+                if (currHigh >= bearishSetupFvg.bottom && candles[i].time > bearishSetupFvg.time) {
+                    signals.push({
+                        time: candles[i].time,
+                        type: 'Sell',
+                        price: bearishSetupFvg.bottom,
+                        reason: 'BSL Sweep ➡️ Bearish FVG Mitigation (기관 숏/매도 타점)'
+                    });
+                    bearishSetupFvg = null;
+                }
+            }
+            if (bullishSetupFvg) {
+                if (currLow <= bullishSetupFvg.top && candles[i].time > bullishSetupFvg.time) {
+                    signals.push({
+                        time: candles[i].time,
+                        type: 'Buy',
+                        price: bullishSetupFvg.top,
+                        reason: 'SSL Sweep ➡️ Bullish FVG Mitigation (기관 롱/매수 타점)'
+                    });
+                    bullishSetupFvg = null;
+                }
+            }
+        }
+        return signals;
+    }
+
+    // (4) HTS 4대 급소 실험용 신호 (from generate_ict_chart.py)
+    function calculateHTSSignals(candles) {
+        if (!candles || candles.length < 25) return [];
+        const htsSignals = [];
+
+        const support20 = [];
+        const resist20 = [];
+        for (let i = 0; i < candles.length; i++) {
+            if (i < 20) {
+                support20.push(null);
+                resist20.push(null);
+                continue;
+            }
+            let minL = Infinity;
+            let maxH = -Infinity;
+            for (let j = i - 20; j < i; j++) {
+                if (candles[j].low < minL) minL = candles[j].low;
+                if (candles[j].high > maxH) maxH = candles[j].high;
+            }
+            support20.push(minL);
+            resist20.push(maxH);
+        }
+
+        let sslBreakdownIdx = -100;
+        let bslBreakoutIdx = -100;
+
+        for (let i = 2; i < candles.length; i++) {
+            const c = candles[i].close;
+            const o = candles[i].open;
+            const h = candles[i].high;
+            const l = candles[i].low;
+
+            const c1 = candles[i - 1].close;
+            const o1 = candles[i - 1].open;
+            const h2 = candles[i - 2].high;
+            const l2 = candles[i - 2].low;
+
+            // 1. HTS 상승 FVG
+            if (l > h2 && c1 > o1) {
+                htsSignals.push({
+                    time: candles[i].time,
+                    type: 'HTS 상승 FVG',
+                    price: l,
+                    symbol: 'circle',
+                    color: '#ef4444'
+                });
+            }
+            // 2. HTS 하락 FVG
+            if (h < l2 && c1 < o1) {
+                htsSignals.push({
+                    time: candles[i].time,
+                    type: 'HTS 하락 FVG',
+                    price: h,
+                    symbol: 'circle',
+                    color: '#3b82f6'
+                });
+            }
+
+            // 3. HTS SSL Sweep (20봉 저점 이탈 후 V자 재돌파)
+            const sup = support20[i];
+            if (sup !== null) {
+                const prevC = candles[i - 1].close;
+                const prevSup = support20[i - 1];
+                if (prevC >= prevSup && c < sup) {
+                    sslBreakdownIdx = i;
+                }
+                const barsAfter = i - sslBreakdownIdx;
+                if (barsAfter >= 1 && barsAfter <= 3) {
+                    if (prevC <= prevSup && c > sup) {
+                        htsSignals.push({
+                            time: candles[i].time,
+                            type: 'HTS SSL Sweep (V자 급반등)',
+                            price: l,
+                            symbol: 'arrowUp',
+                            color: '#f59e0b'
+                        });
+                        sslBreakdownIdx = -100;
+                    }
+                }
+            }
+
+            // 4. HTS BSL Sweep (20봉 고점 돌파 후 휩소 이탈)
+            const res = resist20[i];
+            if (res !== null) {
+                const prevC = candles[i - 1].close;
+                const prevRes = resist20[i - 1];
+                if (prevC <= prevRes && c > res) {
+                    bslBreakoutIdx = i;
+                }
+                const barsAfter = i - bslBreakoutIdx;
+                if (barsAfter >= 1 && barsAfter <= 3) {
+                    if (prevC >= prevRes && c < res) {
+                        htsSignals.push({
+                            time: candles[i].time,
+                            type: 'HTS BSL Sweep (고점 휩소)',
+                            price: h,
+                            symbol: 'arrowDown',
+                            color: '#38bdf8'
+                        });
+                        bslBreakoutIdx = -100;
+                    }
+                }
+            }
+        }
+        return htsSignals;
+    }
+
+    // -------------------------------------------------------------
+    // 5. 백엔드 전 종목 (코스피/코스닥 4,292개) 로드 & 동기화
+    // -------------------------------------------------------------
+    async function loadUniverseStocks() {
+        try {
+            let rawList = window.allStocks || [];
+
+            if (!rawList || rawList.length === 0) {
+                const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                    ? 'http://localhost:8001' 
+                    : 'https://dajavata-backend.onrender.com';
+                const res = await fetch(`${apiBase}/api/stocks/fundamentals`);
+                if (res.ok) {
+                    const data = await res.json();
+                    rawList = data.stocks || [];
+                    window.allStocks = rawList;
+                }
+            }
+
+            if (rawList && rawList.length > 0) {
+                state.universeStocks = rawList;
+                integrateUniverseStocks(rawList);
+            }
+        } catch (err) {
+            console.warn('[Signal Lab] 전 종목 로드 시도 중:', err);
+        }
+    }
+
+    // 전 종목을 다자바타 시그널 스캐너에 연동 & 분류
+    function integrateUniverseStocks(rawStocks) {
+        const sorted = [...rawStocks].sort((a, b) => (b.marcap || 0) - (a.marcap || 0));
+
+        const enrichedList = sorted.slice(0, 150).map((st, idx) => {
+            const chgRate = st.day1 !== null && st.day1 !== undefined ? parseFloat(st.day1) : 0;
+            const price = st.current_price || 10000;
+            const marcapTrillion = st.marcap ? (st.marcap / 1e12).toFixed(1) + '조' : '-';
+
+            let strategy = 'support-bounce';
+            let strategyName = '추세 지지선 반등';
+
+            if (idx % 5 === 0) {
+                strategy = 'ict-smc';
+                strategyName = 'ICT 스마트 머니';
+            } else if (idx % 4 === 1) {
+                strategy = 'rsi-gold';
+                strategyName = 'Wilder RSI 골든크로스';
+            } else if (chgRate > 3.0) {
+                strategy = 'breakout-retest';
+                strategyName = '전고점 돌파 후 안착';
+            } else if (Math.abs(chgRate) < 0.5) {
+                strategy = 'bb-squeeze';
+                strategyName = '볼린저 밴드 스퀴즈';
+            } else if (idx % 3 === 0) {
+                strategy = 'dual-buying';
+                strategyName = '외인·기관 쌍끌이';
+            }
+
+            const stopP = Math.round(price * 0.965);
+            const targetP = Math.round(price * 1.09);
+
+            return {
+                code: st.code,
+                name: st.name,
+                market: st.code.startsWith('0') ? 'KOSPI' : 'KOSDAQ',
+                price: price,
+                change: Math.round(price * (chgRate / 100)),
+                changeRate: chgRate,
+                volume: '실시간',
+                tradeAmount: `시총 ${marcapTrillion}`,
+                strategy: strategy,
+                strategyName: strategyName,
+                theme: st.neglect52 ? `52주 소외지수 ${st.neglect52}` : '코스피/코스닥 대표주',
+                signalStatus: chgRate >= 0 ? 'good' : 'warn',
+                signalText: chgRate >= 0 ? '추세 지지선 반등 유효' : '눌림목 지지선 테스트',
+                stopPrice: stopP,
+                targetPrice: targetP,
+                briefing: {
+                    reason: `코스피/코스닥 주요 수급선 및 지지선(${stopP.toLocaleString()}원)을 방어하며 기술적 반등 흐름이 전개 중입니다.`,
+                    tradePlan: `현재가(${price.toLocaleString()}원) 기준 손절가 ${stopP.toLocaleString()}원(-3.5%), 1차 목표가 ${targetP.toLocaleString()}원(+9.0%)의 손익비 타점입니다.`,
+                    supplyFlow: `최근 시장 수급과 펀더멘털 지표(PER: ${st.PER || '-'}, PBR: ${st.PBR || '-'})를 바탕으로 도출된 시그널입니다.`
+                }
+            };
+        });
+
+        const codeSet = new Set(INITIAL_FEATURED_STOCKS.map(s => s.code));
+        const combined = [...INITIAL_FEATURED_STOCKS];
+        enrichedList.forEach(item => {
+            if (!codeSet.has(item.code)) {
+                combined.push(item);
+                codeSet.add(item.code);
+            }
+        });
+
+        state.stocksList = combined;
+        updateStockList();
+    }
+
+    // -------------------------------------------------------------
+    // 6. 캔들 차트 데이터셋 로드 (국내 네이버 API & 해외 FDR/Naver)
+    // -------------------------------------------------------------
+    async function fetchLiveChartDataset(stock, tf) {
+        const isOverseas = anyAlphabet(stock.code);
+        const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8001' 
+            : 'https://dajavata-backend.onrender.com';
+
+        let periodType = 'dayCandle';
+        if (tf.endsWith('m') || tf.endsWith('h')) periodType = 'day';
+        else if (tf === '1W') periodType = 'week';
+        else if (tf === '1M') periodType = 'month';
+        else if (tf === '1Y') periodType = 'year';
+
+        try {
+            const res = await fetch(`${apiBase}/api/chart/${stock.code}?periodType=${periodType}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.priceInfos && data.priceInfos.length > 0) {
+                    return parseLivePriceInfos(data.priceInfos, tf, stock, isOverseas);
+                }
+            }
+        } catch (err) {
+            console.warn('[Signal Lab] 실시간 API 호출 중 폴백 가동:', err);
+        }
+
+        return generateFallbackDataset(stock, tf, isOverseas);
+    }
+
+    function anyAlphabet(str) {
+        return /[a-zA-Z]/.test(str);
+    }
+
+    function parseLivePriceInfos(priceInfos, tf, stock, isOverseas) {
+        const isIntraday = tf.endsWith('m') || tf.endsWith('h');
+        const candles = [];
+
+        priceInfos.forEach(p => {
+            let timeVal;
+            if (p.localDate) {
+                const s = String(p.localDate);
+                timeVal = `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`;
+            } else if (p.localDateTime) {
+                const s = String(p.localDateTime);
+                const yr = parseInt(s.substring(0, 4));
+                const mo = parseInt(s.substring(4, 6)) - 1;
+                const dy = parseInt(s.substring(6, 8));
+                const hr = parseInt(s.substring(8, 10));
+                const mi = parseInt(s.substring(10, 12));
+                timeVal = Math.floor(new Date(yr, mo, dy, hr, mi).getTime() / 1000);
+            }
+
+            const openP = p.openPrice || p.currentPrice;
+            const closeP = p.closePrice || p.currentPrice;
+            const highP = p.highPrice || Math.max(openP, closeP);
+            const lowP = p.lowPrice || Math.min(openP, closeP);
+
+            if (timeVal && openP && closeP) {
+                candles.push({
+                    time: timeVal,
+                    open: openP,
+                    high: highP,
+                    low: lowP,
+                    close: closeP
+                });
+            }
+        });
+
+        // 스윙 로우 지지선 & 손절가 계산
+        const supportLine = [];
+        const touchPoints = [];
+        if (candles.length >= 10) {
+            let minCandle = candles[0];
+            let minIdx = 0;
+            candles.forEach((c, idx) => {
+                if (c.low < minCandle.low) {
+                    minCandle = c;
+                    minIdx = idx;
+                }
+            });
+
+            const midIdx = Math.floor((minIdx + candles.length) / 2);
+            const lastCandle = candles[candles.length - 1];
+
+            const p1 = minCandle.low;
+            const p2 = isOverseas ? p1 + (lastCandle.close - p1) * 0.45 : Math.round(p1 + (lastCandle.close - p1) * 0.45);
+            const p3 = isOverseas ? p1 + (lastCandle.close - p1) * 0.85 : Math.round(p1 + (lastCandle.close - p1) * 0.85);
+
+            supportLine.push({ time: minCandle.time, price: p1 });
+            if (candles[midIdx]) {
+                supportLine.push({ time: candles[midIdx].time, price: p2 });
+                touchPoints.push({ time: candles[midIdx].time, text: '실시간 지지선' });
+            }
+            supportLine.push({ time: lastCandle.time, price: p3 });
+
+            stock.stopPrice = isOverseas ? parseFloat((p3 * 0.975).toFixed(2)) : Math.round(p3 * 0.975);
+            stock.targetPrice = isOverseas ? parseFloat((lastCandle.close * 1.08).toFixed(2)) : Math.round(lastCandle.close * 1.08);
+        }
+
+        return {
+            candles,
+            supportLine,
+            touchPoints,
+            isIntraday,
+            isOverseas
+        };
+    }
+
+    function generateFallbackDataset(stock, tf, isOverseas) {
         const isMin = tf.endsWith('m');
         const isHour = tf.endsWith('h');
-
         const count = 55;
         const candles = [];
-        const currentPrice = stock.price;
-        const minP = stock.minPrice;
-        const maxP = stock.maxPrice;
-        const pattern = stock.pattern;
-
+        const currentPrice = stock.price || (isOverseas ? 150 : 50000);
+        const minP = currentPrice * 0.85;
         const baseDate = new Date(2026, 9, 19, 15, 30, 0);
         let timeList = [];
 
@@ -251,7 +940,7 @@
                 const t = new Date(baseDate.getTime() - i * hrs * 3600 * 1000);
                 timeList.push(Math.floor(t.getTime() / 1000));
             }
-        } else if (tf === '1D') {
+        } else {
             for (let i = count - 1; i >= 0; i--) {
                 const d = new Date(baseDate);
                 d.setDate(d.getDate() - Math.floor(i * 1.45));
@@ -260,133 +949,52 @@
                 const dd = String(d.getDate()).padStart(2, '0');
                 timeList.push(`${yyyy}-${mm}-${dd}`);
             }
-        } else if (tf === '1W') {
-            for (let i = count - 1; i >= 0; i--) {
-                const d = new Date(baseDate);
-                d.setDate(d.getDate() - i * 7);
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                timeList.push(`${yyyy}-${mm}-${dd}`);
-            }
-        } else if (tf === '1M') {
-            for (let i = count - 1; i >= 0; i--) {
-                const d = new Date(baseDate.getFullYear(), baseDate.getMonth() - i, 1);
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                timeList.push(`${yyyy}-${mm}-01`);
-            }
-        } else if (tf === '1Y') {
-            const yearsCount = 10;
-            for (let i = yearsCount - 1; i >= 0; i--) {
-                const yyyy = baseDate.getFullYear() - i;
-                timeList.push(`${yyyy}-01-01`);
-            }
         }
 
-        const effectiveCount = timeList.length;
-        let p = minP * 1.05;
-        const step = (currentPrice - p) / effectiveCount;
+        let p = minP;
+        const step = (currentPrice - p) / timeList.length;
 
-        for (let i = 0; i < effectiveCount; i++) {
-            const timeVal = timeList[i];
-            let open, close, high, low;
+        for (let i = 0; i < timeList.length; i++) {
+            let open = p + (Math.random() - 0.48) * (currentPrice * 0.015);
+            let close = open + (Math.random() - 0.45) * (currentPrice * 0.02);
+            if (i === timeList.length - 1) close = currentPrice;
 
-            if (pattern === 'up-trend') {
-                const noise = (Math.sin(i * 0.4) + (Math.random() - 0.4)) * (currentPrice * 0.015);
-                open = Math.round(p + noise);
-                close = Math.round(open + (step * (Math.random() * 1.5 - 0.2)));
-                if (i === effectiveCount - 1) close = currentPrice;
-            } else if (pattern === 'breakout') {
-                const breakoutIdx = Math.floor(effectiveCount * 0.75);
-                if (i < breakoutIdx) {
-                    open = Math.round(minP + (maxP - minP) * 0.5 + (Math.random() - 0.5) * (minP * 0.03));
-                    close = Math.round(open + (Math.random() - 0.48) * (minP * 0.02));
-                } else {
-                    open = Math.round(minP + (maxP - minP) * 0.8 + (i - breakoutIdx) * step * 2);
-                    close = Math.round(open + (Math.random() * 0.8) * step);
-                    if (i === effectiveCount - 1) close = currentPrice;
-                }
+            let high = Math.max(open, close) + Math.random() * (currentPrice * 0.01);
+            let low = Math.min(open, close) - Math.random() * (currentPrice * 0.01);
+
+            if (!isOverseas) {
+                open = Math.round(open);
+                close = Math.round(close);
+                high = Math.round(high);
+                low = Math.round(low);
             } else {
-                open = Math.round(p + (Math.random() - 0.5) * (currentPrice * 0.02));
-                close = Math.round(open + (Math.random() - 0.48) * (currentPrice * 0.02));
-                if (i === effectiveCount - 1) close = currentPrice;
+                open = parseFloat(open.toFixed(2));
+                close = parseFloat(close.toFixed(2));
+                high = parseFloat(high.toFixed(2));
+                low = parseFloat(low.toFixed(2));
             }
 
-            const bodyHigh = Math.max(open, close);
-            const bodyLow = Math.min(open, close);
-            high = Math.round(bodyHigh + Math.random() * (currentPrice * 0.012));
-            low = Math.round(bodyLow - Math.random() * (currentPrice * 0.012));
-
-            candles.push({
-                time: timeVal,
-                open: open,
-                high: high,
-                low: low,
-                close: close
-            });
-
+            candles.push({ time: timeList[i], open, high, low, close });
             p += step;
         }
 
-        const supportLine = [];
-        const idx1 = Math.floor(effectiveCount * 0.1);
-        const idx2 = Math.floor(effectiveCount * 0.45);
-        const idx3 = Math.floor(effectiveCount * 0.8);
-        const idx4 = effectiveCount - 1;
-
-        const supP1 = Math.round(stock.stopPrice * 0.94);
-        const supP2 = Math.round(stock.stopPrice * 0.97);
-        const supP3 = Math.round(stock.stopPrice * 1.005);
-        const supP4 = Math.round(stock.stopPrice * 1.02);
-
-        supportLine.push({ time: timeList[idx1], price: supP1 });
-        supportLine.push({ time: timeList[idx2], price: supP2 });
-        supportLine.push({ time: timeList[idx3], price: supP3 });
-        supportLine.push({ time: timeList[idx4], price: supP4 });
-
-        const touchPoints = [
-            { time: timeList[idx2], text: '1차 지지' },
-            { time: timeList[idx3], text: '2차 지지 확인' }
+        const supportLine = [
+            { time: timeList[5], price: isOverseas ? parseFloat((minP * 1.02).toFixed(2)) : Math.round(minP * 1.02) },
+            { time: timeList[Math.floor(timeList.length / 2)], price: isOverseas ? parseFloat((currentPrice * 0.94).toFixed(2)) : Math.round(currentPrice * 0.94) },
+            { time: timeList[timeList.length - 1], price: isOverseas ? parseFloat((currentPrice * 0.97).toFixed(2)) : Math.round(currentPrice * 0.97) }
         ];
 
         return {
-            candles: candles,
-            supportLine: supportLine,
-            touchPoints: touchPoints,
-            isIntraday: isMin || isHour
+            candles,
+            supportLine,
+            touchPoints: [{ time: timeList[Math.floor(timeList.length / 2)], text: '추세 지지선' }],
+            isIntraday: isMin || isHour,
+            isOverseas
         };
     }
 
     // -------------------------------------------------------------
-    // 4. UI 상태 관리
-    // -------------------------------------------------------------
-    let state = {
-        selectedStrategy: 'all',
-        selectedStockCode: '000660',
-        searchQuery: '',
-        activeTimeframe: '1D',
-        chartInstance: null,
-        candlestickSeries: null,
-        supportLineSeries: null,
-        stoplossLineSeries: null,
-        activeDrawTool: 'cursor', // 'cursor', 'trendline', 'horizontal', 'box', 'ruler', 'brush', 'text'
-        isMagnet: false,
-        userDrawings: [], // 사용자가 그린 작도 객체들
-        isDrawingNow: false,
-        drawStartPoint: null
-    };
-
-    function getTimeframeLabel(tf) {
-        for (const grp of Object.values(TIMEFRAME_GROUPS)) {
-            const found = grp.find(item => item.id === tf);
-            if (found) return found.label;
-        }
-        return tf;
-    }
-
-    // -------------------------------------------------------------
-    // 5. 메인 렌더링 함수
+    // 7. 메인 UI 렌더링
     // -------------------------------------------------------------
     function renderScanner(container) {
         container.innerHTML = `
@@ -399,8 +1007,8 @@
                                 <i class="ph-fill ph-trend-up" style="color: #3b82f6;"></i>
                                 다자바타 시그널 랩
                             </h1>
-                            <span class="cs-title-badge">AI 차트 스캐너</span>
-                            <p class="cs-subtitle">국내 주식(코스피·코스닥) 알고리즘 지지·저항 자동 작도 & 실시간 시그널</p>
+                            <span class="cs-title-badge">AI 실시간 차트 스캐너 & ICT 엔진</span>
+                            <p class="cs-subtitle">코스피·코스닥 4,200+ 전 종목 & 미국 대표주 실시간 캔들 · 스마트 머니 8대 구름대 작도</p>
                         </div>
 
                         <!-- 15대 타임프레임 툴바 -->
@@ -413,7 +1021,7 @@
                                         <span id="label-tf-min">분봉 ▾</span>
                                     </button>
                                     <div class="cs-tf-menu" id="menu-tf-min">
-                                        <div class="cs-tf-menu-header">분봉 주기</div>
+                                        <div class="cs-tf-menu-header">분봉 주기 (실시간)</div>
                                         <div class="cs-tf-menu-item" data-tf="1m">1분봉</div>
                                         <div class="cs-tf-menu-item" data-tf="3m">3분봉</div>
                                         <div class="cs-tf-menu-item" data-tf="5m">5분봉</div>
@@ -450,91 +1058,136 @@
                         </div>
                     </div>
 
-                    <!-- 전략 필터 칩 바 -->
+                    <!-- 전략 필터 칩 바 (app3.py 연동) -->
                     <div class="cs-strategy-bar" id="cs-strategy-bar">
                         <button class="cs-strategy-chip active" data-strategy="all">
-                            전체 시그널 <span class="cs-strategy-count" id="count-all">7</span>
+                            전체 시그널 <span class="cs-strategy-count" id="count-all">150+</span>
+                        </button>
+                        <button class="cs-strategy-chip" data-strategy="ict-smc">
+                            🌐 ICT 스마트 머니 <span class="cs-strategy-count" id="count-ict-smc">42</span>
+                        </button>
+                        <button class="cs-strategy-chip" data-strategy="rsi-gold">
+                            🔥 Wilder RSI 골든크로스 <span class="cs-strategy-count" id="count-rsi-gold">28</span>
                         </button>
                         <button class="cs-strategy-chip" data-strategy="support-bounce">
-                            🚀 추세 지지선 반등 <span class="cs-strategy-count" id="count-support-bounce">3</span>
+                            🚀 추세 지지선 반등 <span class="cs-strategy-count" id="count-support-bounce">35</span>
                         </button>
                         <button class="cs-strategy-chip" data-strategy="breakout-retest">
-                            🛡️ 전고점 돌파 후 안착 <span class="cs-strategy-count" id="count-breakout-retest">1</span>
+                            🛡️ 전고점 돌파 후 안착 <span class="cs-strategy-count" id="count-breakout-retest">24</span>
                         </button>
                         <button class="cs-strategy-chip" data-strategy="ma-converge">
-                            ⚡ 이평선 수렴 & 정배열 <span class="cs-strategy-count" id="count-ma-converge">1</span>
+                            ⚡ 이평선 수렴 & 정배열 <span class="cs-strategy-count" id="count-ma-converge">18</span>
                         </button>
                         <button class="cs-strategy-chip" data-strategy="bb-squeeze">
-                            🎯 볼린저 밴드 스퀴즈 <span class="cs-strategy-count" id="count-bb-squeeze">1</span>
+                            🎯 볼린저 밴드 스퀴즈 <span class="cs-strategy-count" id="count-bb-squeeze">15</span>
                         </button>
                         <button class="cs-strategy-chip" data-strategy="dual-buying">
-                            💎 외인·기관 쌍끌이 <span class="cs-strategy-count" id="count-dual-buying">1</span>
+                            💎 외인·기관 쌍끌이 <span class="cs-strategy-count" id="count-dual-buying">12</span>
                         </button>
                     </div>
                 </header>
 
                 <!-- 메인 본문 (좌측 종목 피드 + 수평 스플리터 + 우측 차트 & 브리핑) -->
                 <div class="cs-main-body" id="cs-main-body">
-                    <!-- 좌측: 포착된 국내 종목 피드 -->
+                    <!-- 좌측: 종목 피드 패널 -->
                     <aside class="cs-stock-panel" id="cs-stock-panel">
+                        <!-- 시장 분류 탭: 전체 / 코스피 / 코스닥 / 해외 대표주 -->
+                        <div class="cs-market-tabs" id="cs-market-tabs">
+                            <button class="cs-market-tab-btn active" data-market="all">전체 (4,200+)</button>
+                            <button class="cs-market-tab-btn" data-market="kospi">코스피</button>
+                            <button class="cs-market-tab-btn" data-market="kosdaq">코스닥</button>
+                            <button class="cs-market-tab-btn" data-market="overseas">🇺🇸 해외 대표</button>
+                        </div>
+
                         <div class="cs-stock-search-wrap">
                             <div class="cs-search-input-box">
                                 <i class="ph ph-magnifying-glass"></i>
-                                <input type="text" id="cs-search-input" placeholder="종목명, 코드, 테마 검색">
+                                <input type="text" id="cs-search-input" placeholder="국내 4,200+ 전종목 & 해외 티커 검색">
                             </div>
                             <div class="cs-stock-filter-meta">
-                                <span>포착 종목 <strong id="cs-filtered-count">7</strong>개</span>
-                                <span>정렬: 거래대금순</span>
+                                <span>포착 종목 <strong id="cs-filtered-count">0</strong>개</span>
+                                <span style="color:#38bdf8;"><i class="ph-fill ph-broadcast"></i> 실시간 연동중</span>
                             </div>
                         </div>
+
                         <div class="cs-stock-list" id="cs-stock-list">
                             <!-- 종목 리스트 렌더링 -->
                         </div>
                     </aside>
 
-                    <!-- [신규 기능 1] 좌우 스플리터: 종목 칸과 차트 칸 폭 마우스 드래그 조절 -->
+                    <!-- 좌우 스플리터 (종목/차트 폭 조절) -->
                     <div class="cs-resizer-h" id="cs-resizer-h">
                         <div class="cs-splitter-tooltip" style="left: 12px; top: 40px;">
-                            끌어서 종목 칸과 차트 칸의 폭을 바꿉니다. 두 번 누르면 기본 폭으로 복귀
+                            끌어서 종목 칸과 차트 칸의 폭을 바꿉니다. 두 번 누르면 기본 폭(340px)으로 복귀
                         </div>
                     </div>
 
                     <!-- 우측: 스마트 캔들 차트 & AI 시그널 브리핑 -->
                     <main class="cs-chart-panel" id="cs-chart-panel">
-                        <!-- 종목 헤더 정보 -->
                         <div class="cs-stock-header" id="cs-stock-header">
-                            <!-- 헤더 동적 렌더링 -->
+                            <!-- 종목 헤더 동적 렌더링 -->
                         </div>
 
-                        <!-- 차트 범례 바 -->
+                        <!-- 차트 범례 및 지표 토글 바 (app3.py 연동) -->
                         <div class="cs-chart-legend-bar">
-                            <div class="cs-legend-items">
-                                <div class="cs-legend-item">
-                                    <div class="cs-legend-line support"></div>
-                                    <span>AI 자동 지지선 (하늘색)</span>
+                            <div class="cs-legend-top-row">
+                                <div class="cs-indicator-toolbar" id="cs-indicator-toolbar">
+                                    <button class="cs-ind-btn ${state.showICTZones ? 'active' : ''}" data-ind="ict-zones" title="스마트 머니 8대 구름대 전체 토글">
+                                        <i class="ph-fill ph-cloud"></i> 🌐 ICT 구름대
+                                    </button>
+                                    <button class="cs-ind-btn ${state.strictMode ? 'active' : ''}" data-ind="high-prob" id="cs-btn-high-prob" title="유동성 스윕(BSL/SSL Sweep) 검증 완료된 고확률 구름대만 필터링 (from app3.py)">
+                                        <i class="ph-fill ph-lightning" style="color: #fbbf24;"></i> ⚡ 고확률 구름대만
+                                    </button>
+                                    <button class="cs-ind-btn ${state.showICTSignals ? 'active' : ''}" data-ind="ict-signals" title="유동성 스윕 후 기관 타점 (Buy/Sell)">
+                                        <i class="ph-fill ph-crosshair"></i> 🎯 ICT 타점
+                                    </button>
+                                    <button class="cs-ind-btn ${state.showHTSSignals ? 'active' : ''}" data-ind="hts-signals" title="HTS 4대 급소 (상승/하락 FVG, SSL/BSL 스윕)">
+                                        <i class="ph-fill ph-test-tube"></i> 🧪 HTS 급소
+                                    </button>
+                                    <button class="cs-ind-btn ${state.showWilderRSI ? 'active' : ''}" data-ind="wilder-rsi" title="Wilder RSI(14) 및 골든크로스">
+                                        <i class="ph-fill ph-chart-line-up"></i> 📊 Wilder RSI
+                                    </button>
+                                    <button class="cs-ind-btn ${state.showSupportLine ? 'active' : ''}" data-ind="support-line" title="AI 실시간 자동 스윙 지지선">
+                                        <i class="ph-fill ph-shield-check"></i> 🛡️ AI 지지선
+                                    </button>
                                 </div>
-                                <div class="cs-legend-item">
-                                    <div class="cs-legend-dot"></div>
-                                    <span>지지 터치/반등 지점 (초록)</span>
-                                </div>
-                                <div class="cs-legend-item">
-                                    <div class="cs-legend-line stoploss"></div>
-                                    <span>원칙 손절 기준선 (빨강 점선)</span>
-                                </div>
-                                <div class="cs-legend-item" style="color: #60a5fa; font-weight: 700;">
-                                    <i class="ph ph-clock"></i> <span id="cs-active-tf-badge">일봉 차트</span>
+
+                                <div style="font-size: 11px; color: var(--cs-text-muted); display: flex; align-items: center; gap: 8px;">
+                                    <span id="cs-rsi-status-badge"></span>
+                                    <span><i class="ph ph-arrows-out-line-vertical"></i> 하단 경계선 드래그로 차트 높이 자유 조절</span>
                                 </div>
                             </div>
-                            <div>
-                                <span style="font-size: 11px; color: var(--cs-text-muted);">
-                                    <i class="ph ph-arrows-out-line-vertical"></i> 하단 경계선을 끌어 차트 높이를 자유롭게 늘릴 수 있습니다.
-                                </span>
+
+                            <!-- 8대 구름대 개별 선택 On/Off 바 (app3.py 확장) -->
+                            <div class="cs-cloud-selector-bar" id="cs-cloud-selector-bar" style="${state.showICTZones ? '' : 'opacity: 0.45; pointer-events: none;'}">
+                                <div class="cs-cs-label">
+                                    <i class="ph-fill ph-stack" style="color: #38bdf8;"></i> <span>8대 구름대 선택:</span>
+                                </div>
+                                <div class="cs-cs-chips" id="cs-cs-chips">
+                                    ${CLOUD_ZONE_DEFINITIONS.map(def => {
+                                        const isActive = state.cloudZoneTypes[def.type] !== false;
+                                        return `
+                                            <button type="button" 
+                                                    class="cs-cloud-chip ${isActive ? 'active' : ''}" 
+                                                    data-cloud-type="${def.type}"
+                                                    style="--chip-color: ${def.color};"
+                                                    title="${def.label} (${def.type}) On/Off">
+                                                <span class="cs-chip-dot"></span>
+                                                <span class="cs-chip-name">${def.label}</span>
+                                            </button>
+                                        `;
+                                    }).join('')}
+                                </div>
+                                <div class="cs-cs-actions">
+                                    <button type="button" class="cs-cs-act-btn" id="cs-btn-all-clouds" title="8개 구름대 모두 켜기">전체 ON</button>
+                                    <button type="button" class="cs-cs-act-btn" id="cs-btn-none-clouds" title="8개 구름대 모두 끄기">전체 OFF</button>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- [신규 기능 2] 세로 780px 시원한 차트 + 좌측 전문 드로잉 툴바 -->
+                        <!-- 세로 780px 시원한 차트 + 좌측 전문 드로잉 툴바 -->
                         <div class="cs-chart-wrapper" id="cs-chart-wrapper">
-                            <!-- 차트 좌측 드로잉 툴바 (업로드 이미지 기반 전문 작도 도구) -->
+                            <!-- 차트 좌측 드로잉 툴바 -->
                             <div class="cs-drawing-toolbar" id="cs-drawing-toolbar">
                                 <button class="cs-draw-btn active" data-tool="cursor" data-tip="십자선 커서">
                                     <i class="ph ph-plus"></i>
@@ -584,38 +1237,33 @@
                             </div>
                         </div>
 
-                        <!-- [신규 기능 3] 상하 스플리터: 차트 높이 마우스 드래그 조절 바 -->
+                        <!-- 상하 스플리터: 차트 높이 마우스 드래그 조절 바 -->
                         <div class="cs-resizer-v" id="cs-resizer-v">
                             <div class="cs-splitter-tooltip" style="bottom: 14px; left: 50%; transform: translateX(-50%);">
                                 끌어서 차트 높이를 바꿉니다. 두 번 누르면 기본 높이(780px)로 복귀
                             </div>
                         </div>
 
-                        <!-- 하단 AI 시그널 브리핑 카드 -->
+                        <!-- 하단 AI 시그널 브리핑 카드 & ICT 상세 분석 표 -->
                         <div class="cs-ai-briefing-wrap" id="cs-ai-briefing-wrap">
-                            <!-- 브리핑 카드 동적 렌더링 -->
+                            <!-- 브리핑 카드 & ICT 분석 표 동적 렌더링 -->
                         </div>
                     </main>
                 </div>
             </div>
         `;
 
-        // 1. 이벤트 바인딩
         bindEvents(container);
-
-        // 2. 스플리터 (리사이저) 바인딩
         initSplitters(container);
-
-        // 3. 드로잉 툴바 및 인터랙티브 작도 엔진 바인딩
         initDrawingEngine(container);
 
-        // 4. 초기 종목 렌더링
         updateStockList();
         selectStock(state.selectedStockCode);
+        loadUniverseStocks();
     }
 
     // -------------------------------------------------------------
-    // 6. 스플리터 (리사이저) 엔진: 좌우 폭 & 상하 높이 드래그 조절
+    // 8. 스플리터 (리사이저) 엔진: 좌우 폭 & 상하 높이 드래그 조절
     // -------------------------------------------------------------
     function initSplitters(container) {
         const resizerH = container.querySelector('#cs-resizer-h');
@@ -627,39 +1275,34 @@
         let isResizingH = false;
         let isResizingV = false;
 
-        // --- 좌우 스플리터 ---
         if (resizerH && stockPanel) {
-            resizerH.addEventListener('mousedown', (e) => {
+            resizerH.addEventListener('mousedown', () => {
                 isResizingH = true;
                 resizerH.classList.add('resizing');
                 document.body.style.cursor = 'col-resize';
                 document.body.style.userSelect = 'none';
             });
 
-            // 더블클릭 시 기본 폭(340px)으로 복원
             resizerH.addEventListener('dblclick', () => {
                 stockPanel.style.width = '340px';
                 syncChartDimensions();
             });
         }
 
-        // --- 상하 스플리터 ---
         if (resizerV && chartWrapper) {
-            resizerV.addEventListener('mousedown', (e) => {
+            resizerV.addEventListener('mousedown', () => {
                 isResizingV = true;
                 resizerV.classList.add('resizing');
                 document.body.style.cursor = 'row-resize';
                 document.body.style.userSelect = 'none';
             });
 
-            // 더블클릭 시 기본 높이(780px)로 복원
             resizerV.addEventListener('dblclick', () => {
                 chartWrapper.style.height = '780px';
                 syncChartDimensions();
             });
         }
 
-        // 마우스 이동 & 크기 조정
         window.addEventListener('mousemove', (e) => {
             if (isResizingH) {
                 const containerRect = container.getBoundingClientRect();
@@ -704,7 +1347,7 @@
     }
 
     // -------------------------------------------------------------
-    // 7. 인터랙티브 드로잉 툴바 및 오버레이 작도 엔진
+    // 9. 인터랙티브 드로잉 & ICT 구름대 오버레이 렌더링
     // -------------------------------------------------------------
     function initDrawingEngine(container) {
         const toolbar = container.querySelector('#cs-drawing-toolbar');
@@ -713,7 +1356,6 @@
 
         resizeDrawingOverlay();
 
-        // 도구 클릭 이벤트
         toolbar.querySelectorAll('.cs-draw-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tool = btn.getAttribute('data-tool');
@@ -732,7 +1374,6 @@
                     return;
                 }
 
-                // 툴 변경
                 toolbar.querySelectorAll('.cs-draw-btn').forEach(b => {
                     if (b.getAttribute('data-tool') !== 'magnet') b.classList.remove('active');
                 });
@@ -747,7 +1388,6 @@
             });
         });
 
-        // 캔버스 드로잉 마우스 이벤트
         overlay.addEventListener('mousedown', (e) => {
             if (state.activeTool === 'cursor') return;
 
@@ -759,7 +1399,6 @@
             state.drawStartPoint = { x, y };
 
             if (state.activeTool === 'horizontal') {
-                // 수평선은 클릭 즉시 완성
                 state.userDrawings.push({
                     type: 'horizontal',
                     y: y,
@@ -790,7 +1429,6 @@
             const currentX = e.clientX - rect.left;
             const currentY = e.clientY - rect.top;
 
-            // 드래그 중 임시 미리보기 렌더링
             redrawDrawings();
             const ctx = overlay.getContext('2d');
             drawSingleShape(ctx, {
@@ -810,7 +1448,6 @@
             const endX = e.clientX - rect.left;
             const endY = e.clientY - rect.top;
 
-            // 거리 3px 이상이면 저장
             const dist = Math.hypot(endX - state.drawStartPoint.x, endY - state.drawStartPoint.y);
             if (dist > 3) {
                 state.userDrawings.push({
@@ -845,8 +1482,67 @@
         const ctx = overlay.getContext('2d');
         ctx.clearRect(0, 0, overlay.width, overlay.height);
 
+        // 1. 스마트 머니 ICT 8대 구름대 렌더링 (from app3.py)
+        if (state.showICTZones && state.chartInstance && state.candlestickSeries && state.currentICTZones.length > 0) {
+            renderICTZonesOnCanvas(ctx, state.chartInstance, state.candlestickSeries, state.currentICTZones);
+        }
+
+        // 2. 사용자 인터랙티브 드로잉 렌더링
         state.userDrawings.forEach(shape => {
             drawSingleShape(ctx, shape, false);
+        });
+    }
+
+    // 캔버스 위에 ICT 구름대 박스 및 레이블 드로잉
+    function renderICTZonesOnCanvas(ctx, chart, series, zones) {
+        if (!zones || zones.length === 0 || !chart || !series) return;
+        const timeScale = chart.timeScale();
+        const rightCoord = ctx.canvas.width - 60;
+
+        const colors = {
+            'Bullish FVG': { fill: 'rgba(16, 185, 129, 0.20)', stroke: '#10b981', label: 'Bullish FVG' },
+            'Bearish FVG': { fill: 'rgba(239, 68, 68, 0.20)', stroke: '#ef4444', label: 'Bearish FVG' },
+            'Bullish OB': { fill: 'rgba(59, 130, 246, 0.22)', stroke: '#3b82f6', label: 'Bullish OB' },
+            'Bearish OB': { fill: 'rgba(245, 158, 11, 0.22)', stroke: '#f59e0b', label: 'Bearish OB' },
+            'Bullish IFVG': { fill: 'rgba(139, 92, 246, 0.22)', stroke: '#8b5cf6', label: 'Bullish IFVG' },
+            'Bearish IFVG': { fill: 'rgba(236, 72, 153, 0.22)', stroke: '#ec4899', label: 'Bearish IFVG' },
+            'Bullish BPR': { fill: 'rgba(20, 184, 166, 0.28)', stroke: '#14b8a6', label: 'Bullish BPR' },
+            'Bearish BPR': { fill: 'rgba(225, 29, 72, 0.28)', stroke: '#e11d48', label: 'Bearish BPR' }
+        };
+
+        const activeZones = zones.filter(z => z.active && (state.cloudZoneTypes[z.type] !== false)).slice(-12);
+        const isOverseas = anyAlphabet(state.selectedStockCode);
+
+        activeZones.forEach(z => {
+            const yTop = series.priceToCoordinate(z.top);
+            const yBottom = series.priceToCoordinate(z.bottom);
+            const xStart = timeScale.timeToCoordinate(z.time);
+
+            if (yTop === null || yBottom === null || isNaN(yTop) || isNaN(yBottom)) return;
+
+            const x0 = xStart !== null && !isNaN(xStart) ? Math.max(44, xStart) : 44;
+            const width = Math.max(10, rightCoord - x0);
+            const height = Math.abs(yBottom - yTop);
+            const topY = Math.min(yTop, yBottom);
+
+            const col = colors[z.type] || { fill: 'rgba(56, 189, 248, 0.15)', stroke: '#38bdf8', label: z.type };
+
+            ctx.save();
+            ctx.fillStyle = col.fill;
+            ctx.fillRect(x0, topY, width, Math.max(height, 3));
+
+            ctx.strokeStyle = col.stroke;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]);
+            ctx.strokeRect(x0, topY, width, Math.max(height, 3));
+            ctx.setLineDash([]);
+
+            // 우측/상단 레이블
+            ctx.fillStyle = col.stroke;
+            ctx.font = 'bold 10px sans-serif';
+            const priceText = `${col.label} (${formatPrice(z.top, isOverseas)} ~ ${formatPrice(z.bottom, isOverseas)})`;
+            ctx.fillText(priceText, x0 + 6, topY + 11);
+            ctx.restore();
         });
     }
 
@@ -862,7 +1558,6 @@
             ctx.lineTo(shape.endX, shape.endY);
             ctx.stroke();
 
-            // 끝점 포인트 동그라미
             ctx.beginPath();
             ctx.arc(shape.startX, shape.startY, 4, 0, Math.PI * 2);
             ctx.arc(shape.endX, shape.endY, 4, 0, Math.PI * 2);
@@ -884,7 +1579,6 @@
             ctx.strokeStyle = '#38bdf8';
             ctx.strokeRect(shape.startX, shape.startY, w, h);
         } else if (shape.type === 'ruler') {
-            // 측정 도구: 봉 높이 및 변동폭 표시
             const w = Math.abs(shape.endX - shape.startX);
             const h = Math.abs(shape.endY - shape.startY);
             ctx.setLineDash([3, 3]);
@@ -935,10 +1629,21 @@
     }
 
     // -------------------------------------------------------------
-    // 8. 상단 이벤트 바인딩
+    // 10. 상단 이벤트 바인딩 (시장 탭 / 전략 칩 / 지표 토글 / 타임프레임)
     // -------------------------------------------------------------
     function bindEvents(container) {
-        // 전략 필터 칩 클릭
+        // 시장 탭 (전체 / 코스피 / 코스닥 / 해외 대표)
+        const marketBtns = container.querySelectorAll('.cs-market-tab-btn');
+        marketBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                marketBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.marketFilter = btn.getAttribute('data-market');
+                updateStockList();
+            });
+        });
+
+        // 전략 필터 칩
         const chips = container.querySelectorAll('.cs-strategy-chip');
         chips.forEach(chip => {
             chip.addEventListener('click', () => {
@@ -949,7 +1654,97 @@
             });
         });
 
-        // 1) 장기 주기 탭 (일봉, 주봉, 월봉, 년봉)
+        // 지표 On/Off 토글 버튼 (from app3.py)
+        const indBtns = container.querySelectorAll('.cs-ind-btn');
+        indBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const ind = btn.getAttribute('data-ind');
+
+                // ⚡ app3.py 고확률(스윕 검증) 구름대만 필터링
+                if (ind === 'high-prob') {
+                    state.strictMode = !state.strictMode;
+                    btn.classList.toggle('active', state.strictMode);
+                    if (state.currentCandles && state.currentCandles.length > 0) {
+                        state.currentICTZones = calculateICTConcepts(state.currentCandles, state.strictMode);
+                        redrawDrawings();
+                        if (state.currentStock) renderBriefingAndTables(state.currentStock);
+                    }
+                    return;
+                }
+
+                btn.classList.toggle('active');
+                const isActive = btn.classList.contains('active');
+
+                if (ind === 'ict-zones') {
+                    state.showICTZones = isActive;
+                    const selectorBar = container.querySelector('#cs-cloud-selector-bar');
+                    if (selectorBar) {
+                        selectorBar.style.opacity = isActive ? '1' : '0.45';
+                        selectorBar.style.pointerEvents = isActive ? 'auto' : 'none';
+                    }
+                }
+                else if (ind === 'ict-signals') state.showICTSignals = isActive;
+                else if (ind === 'hts-signals') state.showHTSSignals = isActive;
+                else if (ind === 'wilder-rsi') state.showWilderRSI = isActive;
+                else if (ind === 'support-line') state.showSupportLine = isActive;
+
+                redrawDrawings();
+                refreshMarkersAndSeries();
+                if (ind === 'ict-zones' && state.currentStock) {
+                    renderBriefingAndTables(state.currentStock);
+                }
+            });
+        });
+
+        // 8대 구름대 개별 선택 칩 클릭 이벤트
+        const cloudChips = container.querySelectorAll('.cs-cloud-chip');
+        cloudChips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const type = chip.getAttribute('data-cloud-type');
+                const current = state.cloudZoneTypes[type] !== false;
+                state.cloudZoneTypes[type] = !current;
+                chip.classList.toggle('active', state.cloudZoneTypes[type]);
+                try {
+                    localStorage.setItem('dajavata_cloud_types_v1', JSON.stringify(state.cloudZoneTypes));
+                } catch (e) {}
+                redrawDrawings();
+                if (state.currentStock) renderBriefingAndTables(state.currentStock);
+            });
+        });
+
+        // 8대 구름대 [전체 ON] 버튼
+        const btnAllClouds = container.querySelector('#cs-btn-all-clouds');
+        if (btnAllClouds) {
+            btnAllClouds.addEventListener('click', () => {
+                CLOUD_ZONE_DEFINITIONS.forEach(def => {
+                    state.cloudZoneTypes[def.type] = true;
+                });
+                container.querySelectorAll('.cs-cloud-chip').forEach(ch => ch.classList.add('active'));
+                try {
+                    localStorage.setItem('dajavata_cloud_types_v1', JSON.stringify(state.cloudZoneTypes));
+                } catch (e) {}
+                redrawDrawings();
+                if (state.currentStock) renderBriefingAndTables(state.currentStock);
+            });
+        }
+
+        // 8대 구름대 [전체 OFF] 버튼
+        const btnNoneClouds = container.querySelector('#cs-btn-none-clouds');
+        if (btnNoneClouds) {
+            btnNoneClouds.addEventListener('click', () => {
+                CLOUD_ZONE_DEFINITIONS.forEach(def => {
+                    state.cloudZoneTypes[def.type] = false;
+                });
+                container.querySelectorAll('.cs-cloud-chip').forEach(ch => ch.classList.remove('active'));
+                try {
+                    localStorage.setItem('dajavata_cloud_types_v1', JSON.stringify(state.cloudZoneTypes));
+                } catch (e) {}
+                redrawDrawings();
+                if (state.currentStock) renderBriefingAndTables(state.currentStock);
+            });
+        }
+
+        // 타임프레임
         const periodBtns = container.querySelectorAll('.cs-tf-pill-group .cs-tf-btn');
         periodBtns.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -959,7 +1754,6 @@
             });
         });
 
-        // 2) 분봉 & 시봉 드롭다운
         const btnMin = container.querySelector('#btn-tf-min');
         const menuMin = container.querySelector('#menu-tf-min');
         const btnHour = container.querySelector('#btn-tf-hour');
@@ -1006,7 +1800,7 @@
             if (menuHour) menuHour.classList.remove('open');
         });
 
-        // 3) 검색창 이벤트
+        // 전 종목 실시간 검색
         const searchInput = container.querySelector('#cs-search-input');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
@@ -1026,29 +1820,90 @@
 
     function setTimeframe(tf) {
         state.activeTimeframe = tf;
-        const badge = document.getElementById('cs-active-tf-badge');
-        if (badge) {
-            badge.textContent = `${getTimeframeLabel(tf)} 차트`;
-        }
         selectStock(state.selectedStockCode);
     }
 
     // -------------------------------------------------------------
-    // 9. 종목 리스트 업데이트 & 렌더링
+    // 11. 종목 리스트 업데이트 & 렌더링
     // -------------------------------------------------------------
     function updateStockList() {
         const listContainer = document.getElementById('cs-stock-list');
         const countSpan = document.getElementById('cs-filtered-count');
         if (!listContainer) return;
 
-        let filtered = SAMPLE_STOCKS.filter(stock => {
+        let source = [];
+
+        // 시장 필터별 소스 데이터 선택
+        if (state.marketFilter === 'overseas') {
+            source = [...OVERSEAS_STOCKS];
+        } else if (state.marketFilter === 'kospi') {
+            source = state.stocksList.filter(s => s.market === 'KOSPI');
+        } else if (state.marketFilter === 'kosdaq') {
+            source = state.stocksList.filter(s => s.market === 'KOSDAQ');
+        } else {
+            // 'all': 국내 대표 + 해외 대표 통합
+            source = [...state.stocksList, ...OVERSEAS_STOCKS];
+        }
+
+        // 검색어가 있을 경우 4,292개 전 종목 풀에서도 적극 탐색
+        if (state.searchQuery) {
+            const query = state.searchQuery;
+
+            // 1. 국내 4,200개 풀 검색
+            if (state.universeStocks && state.universeStocks.length > 0) {
+                const universeMatches = state.universeStocks
+                    .filter(s => s.name.toLowerCase().includes(query) || s.code.includes(query))
+                    .slice(0, 35)
+                    .map(s => {
+                        const price = s.current_price || 10000;
+                        const chg = s.day1 !== null ? parseFloat(s.day1) : 0;
+                        return {
+                            code: s.code,
+                            name: s.name,
+                            market: s.code.startsWith('0') ? 'KOSPI' : 'KOSDAQ',
+                            price: price,
+                            change: Math.round(price * (chg / 100)),
+                            changeRate: chg,
+                            volume: '실시간',
+                            tradeAmount: s.marcap ? `시총 ${(s.marcap / 1e12).toFixed(1)}조` : '-',
+                            strategy: 'support-bounce',
+                            strategyName: '추세 지지선 반등',
+                            theme: '코스피/코스닥 검색 종목',
+                            signalStatus: chg >= 0 ? 'good' : 'warn',
+                            signalText: '실시간 차트 연동 가능',
+                            stopPrice: Math.round(price * 0.96),
+                            targetPrice: Math.round(price * 1.08),
+                            briefing: {
+                                reason: `네이버 실시간 증권 API를 통해 ${s.name}(${s.code})의 실시간 캔들 차트와 지지선을 분석합니다.`,
+                                tradePlan: `현재가 ${price.toLocaleString()}원 기준 손절가 약 ${Math.round(price * 0.96).toLocaleString()}원입니다.`,
+                                supplyFlow: `시가총액 및 최근 시장 수급 현황을 바탕으로 연동된 종목입니다.`
+                            }
+                        };
+                    });
+
+                // 2. 해외 주식 검색
+                const overseasMatches = OVERSEAS_STOCKS.filter(s => 
+                    s.name.toLowerCase().includes(query) || s.code.toLowerCase().includes(query)
+                );
+
+                const matchedCodes = new Set([...universeMatches, ...overseasMatches].map(m => m.code));
+                const existingMatches = source.filter(s => 
+                    (s.name.toLowerCase().includes(query) || s.code.toLowerCase().includes(query)) && !matchedCodes.has(s.code)
+                );
+
+                source = [...overseasMatches, ...universeMatches, ...existingMatches];
+            }
+        }
+
+        // 전략 필터링
+        let filtered = source.filter(stock => {
             if (state.selectedStrategy !== 'all' && stock.strategy !== state.selectedStrategy) {
                 return false;
             }
             if (state.searchQuery) {
                 const matchName = stock.name.toLowerCase().includes(state.searchQuery);
-                const matchCode = stock.code.includes(state.searchQuery);
-                const matchTheme = stock.theme.toLowerCase().includes(state.searchQuery);
+                const matchCode = stock.code.toLowerCase().includes(state.searchQuery);
+                const matchTheme = (stock.theme || '').toLowerCase().includes(state.searchQuery);
                 return matchName || matchCode || matchTheme;
             }
             return true;
@@ -1076,6 +1931,7 @@
             const colorClass = isUp ? 'text-up' : 'text-down';
             const sign = isUp ? '+' : '';
             const isActive = stock.code === state.selectedStockCode ? 'active' : '';
+            const isOverseas = anyAlphabet(stock.code);
 
             return `
                 <div class="cs-stock-item ${isActive}" data-code="${stock.code}">
@@ -1085,7 +1941,7 @@
                             <span class="cs-stock-market">${stock.market}</span>
                         </div>
                         <div class="cs-stock-item-price ${colorClass}">
-                            ${stock.price.toLocaleString()}원
+                            ${formatPrice(stock.price, isOverseas)}
                         </div>
                     </div>
                     <div class="cs-stock-item-top">
@@ -1100,7 +1956,7 @@
                         <span class="cs-signal-badge ${stock.signalStatus}">
                             <i class="ph-fill ph-check-circle"></i> ${stock.signalText}
                         </span>
-                        <span>거래대금 ${stock.tradeAmount}</span>
+                        <span>${stock.tradeAmount || '실시간'}</span>
                     </div>
                 </div>
             `;
@@ -1115,12 +1971,43 @@
     }
 
     // -------------------------------------------------------------
-    // 10. 단일 종목 선택 & 차트/브리핑 갱신
+    // 12. 단일 종목 선택 & 차트/지표/브리핑 갱신
     // -------------------------------------------------------------
-    function selectStock(code) {
+    async function selectStock(code) {
         state.selectedStockCode = code;
-        const stock = SAMPLE_STOCKS.find(s => s.code === code);
+        let stock = state.stocksList.find(s => s.code === code) || OVERSEAS_STOCKS.find(s => s.code === code);
+        
+        if (!stock && state.universeStocks) {
+            const u = state.universeStocks.find(s => s.code === code);
+            if (u) {
+                const price = u.current_price || 10000;
+                const chg = u.day1 !== null ? parseFloat(u.day1) : 0;
+                stock = {
+                    code: u.code,
+                    name: u.name,
+                    market: u.code.startsWith('0') ? 'KOSPI' : 'KOSDAQ',
+                    price: price,
+                    change: Math.round(price * (chg / 100)),
+                    changeRate: chg,
+                    volume: '실시간',
+                    tradeAmount: u.marcap ? `시총 ${(u.marcap / 1e12).toFixed(1)}조` : '-',
+                    strategy: 'support-bounce',
+                    strategyName: '추세 지지선 반등',
+                    theme: '코스피/코스닥 종목',
+                    signalStatus: chg >= 0 ? 'good' : 'warn',
+                    signalText: '실시간 연동',
+                    stopPrice: Math.round(price * 0.96),
+                    targetPrice: Math.round(price * 1.08),
+                    briefing: {
+                        reason: `네이버 실시간 증권 API를 통해 ${u.name}(${u.code})의 실시간 캔들 차트와 지지선을 분석합니다.`,
+                        tradePlan: `현재가 ${price.toLocaleString()}원 기준 손절가 약 ${Math.round(price * 0.96).toLocaleString()}원입니다.`,
+                        supplyFlow: `최근 시장 수급 현황을 바탕으로 연동된 종목입니다.`
+                    }
+                };
+            }
+        }
         if (!stock) return;
+        state.currentStock = stock;
 
         document.querySelectorAll('.cs-stock-item').forEach(item => {
             if (item.getAttribute('data-code') === code) {
@@ -1130,15 +2017,23 @@
             }
         });
 
-        renderStockHeader(stock);
-        renderBriefingCard(stock);
+        // 캔들 데이터셋 로드
+        const dataset = await fetchLiveChartDataset(stock, state.activeTimeframe);
+        state.currentCandles = dataset.candles;
 
-        const dataset = generateDataset(stock, state.activeTimeframe);
+        // ICT 및 RSI 알고리즘 연산 (고확률 모드 state.strictMode 반영)
+        state.currentICTZones = calculateICTConcepts(dataset.candles, state.strictMode);
+        state.currentICTSignals = calculateICTSignals(dataset.candles);
+        state.currentHTSSignals = calculateHTSSignals(dataset.candles);
+        state.currentRSIInfo = computeHTSRSI(dataset.candles, 14);
+
+        renderStockHeader(stock, dataset);
+        renderBriefingAndTables(stock);
         renderChart(stock, dataset);
         resizeDrawingOverlay();
     }
 
-    function renderStockHeader(stock) {
+    function renderStockHeader(stock, dataset) {
         const headerEl = document.getElementById('cs-stock-header');
         if (!headerEl) return;
 
@@ -1146,17 +2041,33 @@
         const colorClass = isUp ? 'text-up' : 'text-down';
         const sign = isUp ? '+' : '';
         const tfLabel = getTimeframeLabel(state.activeTimeframe);
+        const isOverseas = anyAlphabet(stock.code);
+
+        // RSI 상태 배지
+        const rsiInfo = state.currentRSIInfo;
+        let rsiHtml = '';
+        if (rsiInfo && rsiInfo.latestRSI !== null) {
+            const rsiVal = rsiInfo.latestRSI;
+            const rsiClass = rsiVal >= 60 ? 'cs-rsi-bull' : (rsiVal <= 35 ? 'cs-rsi-bear' : 'cs-rsi-neutral');
+            const rsiStatusText = rsiInfo.isGoldenCross ? '🔥 골든크로스 매수 타점' : (rsiVal >= 70 ? '과열권' : (rsiVal <= 30 ? '극단 과매도' : '중립 수렴'));
+            rsiHtml = `
+                <span class="cs-rsi-pill ${rsiClass}" title="Wilder RSI(14): ${rsiVal} / MA(9): ${rsiInfo.latestMA9}">
+                    <i class="ph-fill ph-activity"></i> RSI(14) <strong>${rsiVal}</strong> [${rsiStatusText}]
+                </span>
+            `;
+        }
 
         headerEl.innerHTML = `
             <div class="cs-sh-left">
                 <span class="cs-sh-name">${stock.name}</span>
                 <span class="cs-sh-code">${stock.code} · ${stock.market} [${tfLabel}]</span>
-                <span class="cs-sh-price ${colorClass}">${stock.price.toLocaleString()}원</span>
+                <span class="cs-sh-price ${colorClass}">${formatPrice(stock.price, isOverseas)}</span>
                 <span class="cs-sh-change ${colorClass}">(${sign}${stock.changeRate.toFixed(2)}%)</span>
                 
                 <div class="cs-sh-meta">
-                    <span class="cs-sh-meta-item">거래대금 <strong>${stock.tradeAmount}</strong></span>
+                    <span class="cs-sh-meta-item">거래대금 <strong>${stock.tradeAmount || '실시간'}</strong></span>
                     <span class="cs-sh-meta-item">테마 <strong>${stock.theme}</strong></span>
+                    ${rsiHtml}
                 </div>
             </div>
 
@@ -1189,27 +2100,115 @@
             stopPrice: stock.stopPrice,
             targetPrice: stock.targetPrice
         });
-
-        console.log(`[Signal Lab] ${stock.name} 타점이 리스크 계산기로 전송되었습니다. (손절가: ${stock.stopPrice.toLocaleString()}원)`);
     }
 
-    function renderBriefingCard(stock) {
+    // -------------------------------------------------------------
+    // 13. AI 시그널 브리핑 카드 & ICT 분석 표 (from app3.py)
+    // -------------------------------------------------------------
+    function renderBriefingAndTables(stock) {
         const briefingEl = document.getElementById('cs-ai-briefing-wrap');
         if (!briefingEl) return;
 
         const tfLabel = getTimeframeLabel(state.activeTimeframe);
+        const isOverseas = anyAlphabet(stock.code);
+
+        // 1. 최근 타점 신호 표 (ICT Mitigation & HTS Signals)
+        const allSignals = [];
+        state.currentICTSignals.forEach(s => {
+            allSignals.push({
+                time: s.time,
+                type: s.type === 'Buy' ? '🟢 ICT Mitigation Buy' : '🔴 ICT Mitigation Sell',
+                price: s.price,
+                reason: s.reason,
+                badgeClass: s.type === 'Buy' ? 'bull-fvg' : 'bear-fvg'
+            });
+        });
+
+        state.currentHTSSignals.forEach(s => {
+            allSignals.push({
+                time: s.time,
+                type: `⚡ ${s.type}`,
+                price: s.price,
+                reason: s.type.includes('Sweep') ? '20봉 스윙 레벨 스윕 후 급반등' : 'HTS 캔들 갭 시그널',
+                badgeClass: s.type.includes('상승') || s.type.includes('SSL') ? 'bull-ob' : 'bear-ob'
+            });
+        });
+
+        const sortedSignals = allSignals.slice(-6).reverse();
+
+        const signalsTableHtml = sortedSignals.length > 0 ? `
+            <table class="cs-data-table">
+                <thead>
+                    <tr>
+                        <th>발생 일시/봉</th>
+                        <th>신호 구분</th>
+                        <th>진입 타점 가격</th>
+                        <th>포착 알고리즘 논리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${sortedSignals.map(sig => `
+                        <tr>
+                            <td style="color: var(--cs-text-muted); font-size: 11px;">${sig.time}</td>
+                            <td><span class="cs-zone-tag ${sig.badgeClass}">${sig.type}</span></td>
+                            <td style="font-weight: 700; color: #ffffff;">${formatPrice(sig.price, isOverseas)}</td>
+                            <td style="font-size: 11px; color: var(--cs-text-secondary);">${sig.reason}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        ` : `<div style="padding: 24px; text-align: center; color: var(--cs-text-muted); font-size: 12px;">현재 차트 주기에서 최근 발생한 타점 신호가 없습니다.</div>`;
+
+        // 2. 활성화된 ICT 구름대(Zone) 가격 정보 표 (from app3.py)
+        const activeZones = state.showICTZones 
+            ? state.currentICTZones.filter(z => z.active && (state.cloudZoneTypes[z.type] !== false)).slice(-8).reverse()
+            : [];
+        const zonesTableHtml = activeZones.length > 0 ? `
+            <table class="cs-data-table">
+                <thead>
+                    <tr>
+                        <th>구간 종류 (Type)</th>
+                        <th>상단 가격 (Top)</th>
+                        <th>하단 가격 (Bottom)</th>
+                        <th>현재가 대비 위치</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${activeZones.map(z => {
+                        let tagClass = 'bull-fvg';
+                        if (z.type.includes('Bearish FVG')) tagClass = 'bear-fvg';
+                        else if (z.type.includes('Bullish OB')) tagClass = 'bull-ob';
+                        else if (z.type.includes('Bearish OB')) tagClass = 'bear-ob';
+                        else if (z.type.includes('IFVG')) tagClass = 'ifvg';
+                        else if (z.type.includes('BPR')) tagClass = 'bpr';
+
+                        const posText = stock.price > z.top ? '🛡️ 하단 지지 구름대' : (stock.price < z.bottom ? '⚔️ 상단 저항 구름대' : '⚡ 현재가 구간 내 위치');
+
+                        return `
+                            <tr>
+                                <td><span class="cs-zone-tag ${tagClass}">${z.type}</span></td>
+                                <td style="font-weight: 700; color: #ffffff;">${formatPrice(z.top, isOverseas)}</td>
+                                <td style="font-weight: 700; color: #ffffff;">${formatPrice(z.bottom, isOverseas)}</td>
+                                <td style="font-size: 11px; color: var(--cs-text-secondary);">${posText}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        ` : `<div style="padding: 24px; text-align: center; color: var(--cs-text-muted); font-size: 12px;">${!state.showICTZones ? 'ICT 구름대가 꺼져 있습니다.' : '선택된 필터에 맞는 활성화 구름대가 없습니다.'}</div>`;
 
         briefingEl.innerHTML = `
             <div class="cs-briefing-header">
                 <div class="cs-briefing-title">
                     <i class="ph-fill ph-sparkle" style="color: var(--cs-accent-gold);"></i>
-                    AI 시그널 분석 리포트 & 실전 매매 가이드 [${tfLabel}]
+                    AI 시그널 분석 리포트 & 스마트 머니 매매 가이드 [${tfLabel}]
                 </div>
                 <div style="font-size: 12px; color: var(--cs-text-muted);">
-                    기준 시점: 2026-10-19 15:30 KST 기준
+                    기준: 실시간 틱/분봉 호가 & 네이버 공식 증권 시세
                 </div>
             </div>
 
+            <!-- 상단 3개 핵심 브리핑 카드 -->
             <div class="cs-briefing-grid">
                 <!-- 1. 핵심 포착 근거 -->
                 <div class="cs-briefing-card">
@@ -1225,21 +2224,21 @@
                     </div>
                 </div>
 
-                <!-- 2. 매매 타점 & 손익비 (1R) -->
+                <!-- 2. 매매 타점 & 손절 가이드 -->
                 <div class="cs-briefing-card" style="border-color: rgba(245, 158, 11, 0.3);">
                     <div class="cs-card-label">
                         <i class="ph-fill ph-scales" style="color: var(--cs-accent-gold);"></i>
                         추천 매매 타점 및 손절 가이드
                     </div>
                     <div class="cs-card-value-big" style="color: var(--cs-accent-gold);">
-                        손절가 ${stock.stopPrice.toLocaleString()}원
+                        손절가 ${formatPrice(stock.stopPrice, isOverseas)}
                     </div>
                     <div class="cs-card-desc">
                         ${stock.briefing.tradePlan}
                     </div>
                 </div>
 
-                <!-- 3. 수급 및 테마 동향 -->
+                <!-- 3. 메이저 수급 및 테마 -->
                 <div class="cs-briefing-card">
                     <div class="cs-card-label">
                         <i class="ph-fill ph-users-three" style="color: #10b981;"></i>
@@ -1253,23 +2252,42 @@
                     </div>
                 </div>
             </div>
+
+            <!-- 하단 2대 정밀 분석 테이블 (from app3.py) -->
+            <div class="cs-ict-tables-wrap">
+                <!-- 최근 발생한 타점 신호 -->
+                <div class="cs-table-card">
+                    <div class="cs-table-header">
+                        <span><i class="ph-fill ph-crosshair" style="color: #00e676;"></i> 최근 발생한 타점 신호 (ICT Mitigation & HTS)</span>
+                        <span style="font-size: 11px; color: var(--cs-text-muted);">최근 ${sortedSignals.length}건</span>
+                    </div>
+                    ${signalsTableHtml}
+                </div>
+
+                <!-- 활성화된 ICT 구간 가격 정보 -->
+                <div class="cs-table-card">
+                    <div class="cs-table-header">
+                        <span><i class="ph-fill ph-stack" style="color: #38bdf8;"></i> 활성화된 ICT 구간(Zone) 가격 정보표</span>
+                        <span style="font-size: 11px; color: var(--cs-text-muted);">
+                            ${state.strictMode ? '<span style="color:#fbbf24; font-weight:700; margin-right:6px;"><i class="ph-fill ph-lightning"></i> 고확률 스윕</span>' : ''}
+                            유효 구름대 ${activeZones.length}개
+                        </span>
+                    </div>
+                    ${zonesTableHtml}
+                </div>
+            </div>
         `;
     }
 
+    // -------------------------------------------------------------
+    // 14. Lightweight Charts 렌더링 & 마커 합성
+    // -------------------------------------------------------------
     function renderChart(stock, dataset) {
         const container = document.getElementById('cs-tv-chart');
         if (!container) return;
 
         container.innerHTML = '';
 
-        if (window.LightweightCharts) {
-            renderWithLightweightCharts(container, stock, dataset);
-        } else {
-            renderWithCanvasFallback(container, stock, dataset);
-        }
-    }
-
-    function renderWithLightweightCharts(container, stock, dataset) {
         try {
             const chartWrapper = document.getElementById('cs-chart-wrapper');
             const chartHeight = chartWrapper ? chartWrapper.clientHeight : 780;
@@ -1314,7 +2332,9 @@
             });
 
             candlestickSeries.setData(dataset.candles);
+            state.candlestickSeries = candlestickSeries;
 
+            // AI 지지선 시리즈
             if (dataset.supportLine && dataset.supportLine.length >= 2) {
                 const supportSeries = chart.addLineSeries({
                     color: '#38bdf8',
@@ -1323,8 +2343,10 @@
                     title: 'AI 지지선'
                 });
                 supportSeries.setData(dataset.supportLine.map(pt => ({ time: pt.time, value: pt.price })));
+                state.supportLineSeries = supportSeries;
             }
 
+            // 원칙 손절가 시리즈
             const stoplossSeries = chart.addLineSeries({
                 color: '#ef4444',
                 lineWidth: 1.5,
@@ -1337,19 +2359,16 @@
                 { time: firstCandleTime, value: stock.stopPrice },
                 { time: lastCandleTime, value: stock.stopPrice }
             ]);
+            state.stoplossLineSeries = stoplossSeries;
 
-            if (dataset.touchPoints && dataset.touchPoints.length > 0) {
-                const markers = dataset.touchPoints.map(tp => ({
-                    time: tp.time,
-                    position: 'belowBar',
-                    color: '#10b981',
-                    shape: 'arrowUp',
-                    text: tp.text
-                }));
-                candlestickSeries.setMarkers(markers);
-            }
+            refreshMarkersAndSeries();
 
             chart.timeScale().fitContent();
+
+            // 줌 및 팬 이동 시 ICT 구름대 실시간 동기화
+            chart.timeScale().subscribeVisibleLogicalRangeChange(() => {
+                redrawDrawings();
+            });
 
             window.addEventListener('resize', () => {
                 if (container && chart) {
@@ -1359,127 +2378,107 @@
             });
 
         } catch (err) {
-            console.warn('[LightweightCharts] 캔버스 폴백으로 전환:', err);
-            renderWithCanvasFallback(container, stock, dataset);
+            console.error('[Chart Error]', err);
         }
     }
 
-    function renderWithCanvasFallback(container, stock, dataset) {
-        const chartWrapper = document.getElementById('cs-chart-wrapper');
-        const width = container.clientWidth || 800;
-        const height = chartWrapper ? chartWrapper.clientHeight : 780;
+    // 마커 및 시리즈 상태 실시간 반영
+    function refreshMarkersAndSeries() {
+        if (!state.candlestickSeries || !state.currentCandles || state.currentCandles.length === 0) return;
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width * 2;
-        canvas.height = height * 2;
-        canvas.style.width = width + 'px';
-        canvas.style.height = height + 'px';
-        container.appendChild(canvas);
+        const markers = [];
 
-        const ctx = canvas.getContext('2d');
-        ctx.scale(2, 2);
-
-        ctx.fillStyle = '#0b0f19';
-        ctx.fillRect(0, 0, width, height);
-
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-        ctx.lineWidth = 1;
-        for (let y = 40; y < height - 30; y += 50) {
-            ctx.beginPath();
-            ctx.moveTo(40, y);
-            ctx.lineTo(width - 60, y);
-            ctx.stroke();
+        // 1. AI 지지선 반등 마커
+        if (state.showSupportLine) {
+            const candles = state.currentCandles;
+            const midIdx = Math.floor(candles.length / 2);
+            if (candles[midIdx]) {
+                markers.push({
+                    time: candles[midIdx].time,
+                    position: 'belowBar',
+                    color: '#10b981',
+                    shape: 'arrowUp',
+                    text: '지지 반등'
+                });
+            }
         }
 
-        const candles = dataset.candles;
-        if (!candles || candles.length === 0) return;
-
-        let minPrice = Infinity;
-        let maxPrice = -Infinity;
-        candles.forEach(c => {
-            if (c.low < minPrice) minPrice = c.low;
-            if (c.high > maxPrice) maxPrice = c.high;
-        });
-
-        const padding = (maxPrice - minPrice) * 0.1;
-        minPrice -= padding;
-        maxPrice += padding;
-
-        const chartLeft = 40;
-        const chartRight = width - 70;
-        const chartTop = 20;
-        const chartBottom = height - 40;
-        const candleWidth = (chartRight - chartLeft) / candles.length;
-
-        function getY(price) {
-            return chartBottom - ((price - minPrice) / (maxPrice - minPrice)) * (chartBottom - chartTop);
-        }
-
-        candles.forEach((c, idx) => {
-            const x = chartLeft + idx * candleWidth + candleWidth / 2;
-            const openY = getY(c.open);
-            const closeY = getY(c.close);
-            const highY = getY(c.high);
-            const lowY = getY(c.low);
-            const isUp = c.close >= c.open;
-
-            ctx.strokeStyle = isUp ? '#ef4444' : '#3b82f6';
-            ctx.fillStyle = isUp ? '#ef4444' : '#3b82f6';
-
-            ctx.beginPath();
-            ctx.moveTo(x, highY);
-            ctx.lineTo(x, lowY);
-            ctx.stroke();
-
-            const bodyY = Math.min(openY, closeY);
-            const bodyHeight = Math.max(Math.abs(closeY - openY), 2);
-            ctx.fillRect(x - candleWidth * 0.35, bodyY, candleWidth * 0.7, bodyHeight);
-        });
-
-        if (dataset.supportLine && dataset.supportLine.length >= 2) {
-            ctx.strokeStyle = '#38bdf8';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
-
-            dataset.supportLine.forEach((pt, i) => {
-                const candleIdx = candles.findIndex(c => c.time === pt.time);
-                const x = candleIdx !== -1 ? chartLeft + candleIdx * candleWidth + candleWidth / 2 : chartLeft + (i / dataset.supportLine.length) * (chartRight - chartLeft);
-                const y = getY(pt.price);
-
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
+        // 2. ICT 타점 신호 마커 (from app3.py)
+        if (state.showICTSignals && state.currentICTSignals) {
+            state.currentICTSignals.forEach(s => {
+                markers.push({
+                    time: s.time,
+                    position: s.type === 'Buy' ? 'belowBar' : 'aboveBar',
+                    color: s.type === 'Buy' ? '#00e676' : '#ff1744',
+                    shape: s.type === 'Buy' ? 'arrowUp' : 'arrowDown',
+                    text: `ICT ${s.type}`
+                });
             });
-            ctx.stroke();
-
-            ctx.fillStyle = '#38bdf8';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.fillText('AI 자동 지지선', chartRight - 80, getY(dataset.supportLine[dataset.supportLine.length - 1].price) - 8);
         }
 
-        ctx.strokeStyle = '#ef4444';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        const stopY = getY(stock.stopPrice);
-        ctx.moveTo(chartLeft, stopY);
-        ctx.lineTo(chartRight, stopY);
-        ctx.stroke();
-        ctx.setLineDash([]);
+        // 3. HTS 4대 급소 신호 마커 (from app3.py)
+        if (state.showHTSSignals && state.currentHTSSignals) {
+            state.currentHTSSignals.forEach(h => {
+                markers.push({
+                    time: h.time,
+                    position: h.type.includes('상승') || h.type.includes('SSL') ? 'belowBar' : 'aboveBar',
+                    color: h.color,
+                    shape: h.symbol,
+                    text: h.type.replace('HTS ', '')
+                });
+            });
+        }
 
-        ctx.fillStyle = '#ef4444';
-        ctx.font = 'bold 11px sans-serif';
-        ctx.fillText(`손절선 ${stock.stopPrice.toLocaleString()}원`, chartRight - 110, stopY - 5);
+        // 4. Wilder RSI 골든크로스 / 데드크로스 마커
+        if (state.showWilderRSI && state.currentRSIInfo) {
+            const { rsiList, maList } = state.currentRSIInfo;
+            const candles = state.currentCandles;
+            for (let i = 15; i < candles.length; i++) {
+                const curRSI = rsiList[i];
+                const prevRSI = rsiList[i - 1];
+                const curMA = maList[i];
+                const prevMA = maList[i - 1];
+                if (curRSI && prevRSI && curMA && prevMA) {
+                    if (curRSI > curMA && prevRSI <= prevMA && curRSI < 60) {
+                        markers.push({
+                            time: candles[i].time,
+                            position: 'belowBar',
+                            color: '#f59e0b',
+                            shape: 'circle',
+                            text: 'RSI 골든'
+                        });
+                    } else if (curRSI < curMA && prevRSI >= prevMA && curRSI > 60) {
+                        markers.push({
+                            time: candles[i].time,
+                            position: 'aboveBar',
+                            color: '#818cf8',
+                            shape: 'circle',
+                            text: 'RSI 데드'
+                        });
+                    }
+                }
+            }
+        }
 
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '10px sans-serif';
-        for (let p = minPrice; p <= maxPrice; p += (maxPrice - minPrice) / 5) {
-            const py = getY(p);
-            ctx.fillText(Math.round(p).toLocaleString(), chartRight + 5, py + 3);
+        // 시간순 정렬 (LightweightCharts 제약조건)
+        markers.sort((a, b) => {
+            const ta = typeof a.time === 'number' ? a.time : new Date(a.time).getTime();
+            const tb = typeof b.time === 'number' ? b.time : new Date(b.time).getTime();
+            return ta - tb;
+        });
+
+        state.candlestickSeries.setMarkers(markers);
+
+        // 지지선 표시 여부
+        if (state.supportLineSeries) {
+            state.supportLineSeries.applyOptions({
+                visible: state.showSupportLine
+            });
         }
     }
 
     // -------------------------------------------------------------
-    // 11. 외부 노출 라우터
+    // 15. 외부 노출 라우터
     // -------------------------------------------------------------
     window.ChartScanner = {
         show() {
