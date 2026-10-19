@@ -74,21 +74,21 @@
             code: '000660',
             name: 'SK하이닉스',
             market: 'KOSPI',
-            price: 186400,
-            change: 3900,
-            changeRate: 2.14,
-            volume: '3.4M주',
-            tradeAmount: '6,340억',
+            price: 1304000,
+            change: 39000,
+            changeRate: 3.08,
+            volume: '3.7M주',
+            tradeAmount: '시총 952.6조',
             strategy: 'ict-smc',
             strategyName: 'ICT 스마트 머니 (FVG 반등)',
             theme: 'HBM3E / AI 반도체',
             signalStatus: 'good',
             signalText: '상승 FVG 구간 안착 · 반등',
-            stopPrice: 181000,
-            targetPrice: 204000,
+            stopPrice: 1258000,
+            targetPrice: 1421000,
             briefing: {
-                reason: '중기 상승 채널의 하단 지지선(181,500원) 및 Bullish FVG 구름대 상단에서 강한 양봉 반등 시도가 포착되었습니다.',
-                tradePlan: '현재가(186,400원) 매수 시 손절 기준 181,000원(-2.89%), 1차 목표 204,000원(+9.44%)으로 손익비 3.26:1의 유리한 구간입니다.',
+                reason: '중기 상승 채널의 하단 지지선(1,250,000원) 및 Bullish FVG 구름대 상단에서 강한 양봉 반등 시도가 포착되었습니다.',
+                tradePlan: '현재가(1,304,000원) 매수 시 손절 기준 1,258,000원(-3.53%), 1차 목표 1,421,000원(+8.97%)으로 손익비 2.54:1의 유리한 구간입니다.',
                 supplyFlow: '외국인 3거래일 연속 순매수 유입 중이며, HBM3E 공급 확대 모멘텀이 기술적 반등을 강력히 지지하고 있습니다.'
             }
         },
@@ -96,21 +96,21 @@
             code: '196170',
             name: '알테오젠',
             market: 'KOSDAQ',
-            price: 382000,
-            change: 13000,
-            changeRate: 3.52,
+            price: 239500,
+            change: 5500,
+            changeRate: 2.35,
             volume: '720K주',
-            tradeAmount: '2,750억',
+            tradeAmount: '시총 127.8조',
             strategy: 'rsi-gold',
             strategyName: 'Wilder RSI 골든크로스',
             theme: '바이오 플랫폼 (SC제형)',
             signalStatus: 'good',
             signalText: 'RSI(14) 52.4 골든크로스 완성',
-            stopPrice: 365000,
-            targetPrice: 430000,
+            stopPrice: 231000,
+            targetPrice: 261000,
             briefing: {
-                reason: 'Wilder RSI(14)가 RSI 이평(9)을 상향 돌파하며 50선 위로 올라섰고, 전고점 매물대(368,000원)를 강력히 지지 중입니다.',
-                tradePlan: '현재가(382,000원) 진입 시 손절가 365,000원(-4.45%), 1차 목표 430,000원(+12.5%)으로 손익비 2.8:1 구조입니다.',
+                reason: 'Wilder RSI(14)가 RSI 이평(9)을 상향 돌파하며 50선 위로 올라섰고, 전고점 매물대(230,000원)를 강력히 지지 중입니다.',
+                tradePlan: '현재가(239,500원) 진입 시 손절가 231,000원(-3.55%), 1차 목표 261,000원(+8.98%) 구조입니다.',
                 supplyFlow: '키트루다 SC 독점 계약 임박 이슈와 함께 사모펀드 및 기관의 대량 매수세가 확인됩니다.'
             }
         },
@@ -118,21 +118,21 @@
             code: '000250',
             name: '삼천당제약',
             market: 'KOSDAQ',
-            price: 143500,
-            change: 2700,
-            changeRate: 1.92,
+            price: 211000,
+            change: 2000,
+            changeRate: 0.96,
             volume: '540K주',
-            tradeAmount: '780억',
+            tradeAmount: '시총 48.7조',
             strategy: 'support-bounce',
             strategyName: '추세 지지선 반등',
             theme: '경구용 GLP-1 / 시밀러',
             signalStatus: 'good',
             signalText: '추세 하단 양봉 전환',
-            stopPrice: 138500,
-            targetPrice: 162000,
+            stopPrice: 203500,
+            targetPrice: 230000,
             briefing: {
-                reason: '8월 저점 이후 형성된 중기 상승 추세선의 바닥 자리(140,000원)에서 하락을 멈추고 5일선 골든크로스를 완성했습니다.',
-                tradePlan: '현재가(143,500원) 매수 시 손절 138,500원(-3.48%), 1차 목표 162,000원(+12.89%) 타점입니다.',
+                reason: '중기 상승 추세선의 바닥 자리(205,000원)에서 하락을 멈추고 5일선 골든크로스를 완성했습니다.',
+                tradePlan: '현재가(211,000원) 매수 시 손절 203,500원(-3.55%), 1차 목표 230,000원(+9.0%) 타점입니다.',
                 supplyFlow: '비만 치료제 관련 글로벌 판권 논의 소식과 함께 하락 추세 탈피 시그널이 발생했습니다.'
             }
         },
@@ -140,21 +140,21 @@
             code: '005380',
             name: '현대차',
             market: 'KOSPI',
-            price: 248500,
-            change: 3000,
-            changeRate: 1.22,
+            price: 324500,
+            change: 10500,
+            changeRate: 3.34,
             volume: '890K주',
-            tradeAmount: '2,210억',
+            tradeAmount: '시총 674.3조',
             strategy: 'bb-squeeze',
             strategyName: '볼린저 밴드 스퀴즈',
             theme: '자동차 / 인도IPO / 밸류업',
             signalStatus: 'warn',
             signalText: '변동성 수축 3주차 (폭발 임박)',
-            stopPrice: 241500,
-            targetPrice: 272000,
+            stopPrice: 313000,
+            targetPrice: 353000,
             briefing: {
-                reason: '일봉 볼린저 밴드 대역폭(Bandwidth)이 연중 최저치로 응축되며 244,000원 바닥을 단단히 지지하고 있습니다. 방향성 분출 직전입니다.',
-                tradePlan: '현재가(248,500원) 분할 매수 시 박스권 하단 이탈 241,500원(-2.82%) 손절 기준입니다.',
+                reason: '일봉 볼린저 밴드 대역폭(Bandwidth)이 연중 최저치로 응축되며 315,000원 바닥을 단단히 지지하고 있습니다. 방향성 분출 직전입니다.',
+                tradePlan: '현재가(324,500원) 분할 매수 시 박스권 하단 이탈 313,000원(-3.54%) 손절 기준입니다.',
                 supplyFlow: '인도법인 상장 모멘텀 및 밸류업 자사주 매입 기대감으로 투신/연기금의 저가 매수가 견고합니다.'
             }
         },
@@ -162,21 +162,21 @@
             code: '000100',
             name: '유한양행',
             market: 'KOSPI',
-            price: 156000,
-            change: 6500,
-            changeRate: 4.35,
+            price: 86900,
+            change: 6300,
+            changeRate: 7.82,
             volume: '1.2M주',
-            tradeAmount: '1,890억',
+            tradeAmount: '시총 69.8조',
             strategy: 'dual-buying',
             strategyName: '외인·기관 쌍끌이',
             theme: '폐암 신약 렉라자',
             signalStatus: 'good',
             signalText: '쌍끌이 순매수 + 지지 반등',
-            stopPrice: 148000,
-            targetPrice: 178000,
+            stopPrice: 83800,
+            targetPrice: 94700,
             briefing: {
-                reason: '기관과 외국인이 최근 3일간 동시 순매수를 기록하며 60일 이평선 및 지지선(149,000원)을 강력히 방어하고 직전 고점 돌파를 시도하고 있습니다.',
-                tradePlan: '156,000원 매수 시 지지선 이탈 148,000원(-5.1%) 손절 기준, 목표 178,000원(+14.1%)입니다.',
+                reason: '기관과 외국인이 최근 3일간 동시 순매수를 기록하며 60일 이평선 및 지지선(84,000원)을 강력히 방어하고 직전 고점 돌파를 시도하고 있습니다.',
+                tradePlan: '86,900원 매수 시 지지선 이탈 83,800원(-3.57%) 손절 기준, 목표 94,700원(+8.98%)입니다.',
                 supplyFlow: '미국 FDA 승인 후 처방 가속화에 따른 로열티 기대감으로 메이저 수급이 집중되고 있습니다.'
             }
         },
@@ -184,21 +184,21 @@
             code: '005930',
             name: '삼성전자',
             market: 'KOSPI',
-            price: 59800,
-            change: 500,
-            changeRate: 0.84,
+            price: 223500,
+            change: 6500,
+            changeRate: 3.00,
             volume: '14.2M주',
-            tradeAmount: '8,480억',
+            tradeAmount: '시총 1,306조',
             strategy: 'ma-converge',
             strategyName: '이평선 수렴 & 정배열',
             theme: '반도체 대형주',
             signalStatus: 'good',
             signalText: '이평선 3선 수렴 후 반등',
-            stopPrice: 58200,
-            targetPrice: 65000,
+            stopPrice: 215600,
+            targetPrice: 243600,
             briefing: {
-                reason: '역배열 하락세가 진정되며 5일선, 20일선이 58,800원에서 밀집 수렴한 뒤, 거래량을 동반한 우상향 골든크로스가 발생했습니다.',
-                tradePlan: '현재가(59,800원) 매수 시 단기 지지선 58,200원(-2.67%) 손절 기준입니다.',
+                reason: '역배열 하락세가 진정되며 5일선, 20일선이 218,000원에서 밀집 수렴한 뒤, 거래량을 동반한 우상향 골든크로스가 발생했습니다.',
+                tradePlan: '현재가(223,500원) 매수 시 단기 지지선 215,600원(-3.53%) 손절 기준입니다.',
                 supplyFlow: '극단적 과매도 구간을 지나 외국인 매도세가 둔화되고 연기금의 저가 매수세가 꾸준히 유입되는 전환 국면입니다.'
             }
         },
@@ -206,21 +206,21 @@
             code: '042700',
             name: '한미반도체',
             market: 'KOSPI',
-            price: 112000,
-            change: 3000,
-            changeRate: 2.75,
+            price: 216500,
+            change: 6000,
+            changeRate: 2.85,
             volume: '950K주',
-            tradeAmount: '1,060억',
+            tradeAmount: '시총 210.4조',
             strategy: 'ict-smc',
             strategyName: 'ICT 스마트 머니 (OB 지지)',
             theme: 'TC본더 / 반도체 장비',
             signalStatus: 'good',
             signalText: '기관 상승 오더블록(OB) 지지',
-            stopPrice: 106500,
-            targetPrice: 126000,
+            stopPrice: 208900,
+            targetPrice: 235900,
             briefing: {
-                reason: '상승 오더블록(OB) 하단(108,000원)에서 아래꼬리를 달고 반등하며 기술적 매수 급소가 완성되었습니다.',
-                tradePlan: '112,000원 매수 시 지지선 이탈 106,500원(-4.91%) 손절 기준입니다.',
+                reason: '상승 오더블록(OB) 하단(210,000원)에서 아래꼬리를 달고 반등하며 기술적 매수 급소가 완성되었습니다.',
+                tradePlan: '216,500원 매수 시 지지선 이탈 208,900원(-3.51%) 손절 기준입니다.',
                 supplyFlow: '신규 고객사 수주 모멘텀이 이어지며 장비주 중 가장 빠른 지지선 반등을 보이고 있습니다.'
             }
         }
@@ -720,14 +720,26 @@
             let rawList = window.allStocks || [];
 
             if (!rawList || rawList.length === 0) {
-                const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-                    ? 'http://localhost:8001' 
-                    : 'https://dajavata-backend.onrender.com';
-                const res = await fetch(`${apiBase}/api/stocks/fundamentals`);
-                if (res.ok) {
-                    const data = await res.json();
-                    rawList = data.stocks || [];
-                    window.allStocks = rawList;
+                const endpoints = [];
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                    endpoints.push('http://localhost:8001/api/stocks/fundamentals');
+                }
+                endpoints.push('https://dajavata-backend.onrender.com/api/stocks/fundamentals');
+
+                for (const ep of endpoints) {
+                    try {
+                        const res = await fetch(ep);
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data && data.stocks && data.stocks.length > 0) {
+                                rawList = data.stocks;
+                                window.allStocks = rawList;
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[Signal Lab] Fundamentals fetch failed on:', ep);
+                    }
                 }
             }
 
@@ -742,6 +754,28 @@
 
     // 전 종목을 다자바타 시그널 스캐너에 연동 & 분류
     function integrateUniverseStocks(rawStocks) {
+        const rawMap = new Map(rawStocks.map(s => [s.code, s]));
+
+        // 1. 대표 종목(INITIAL_FEATURED_STOCKS)의 가격/등락률/시총을 최신 실시간 데이터로 즉시 동기화
+        INITIAL_FEATURED_STOCKS.forEach(stock => {
+            const live = rawMap.get(stock.code);
+            if (live && live.current_price) {
+                stock.price = live.current_price;
+                const chg = live.day1 !== null && live.day1 !== undefined ? parseFloat(live.day1) : stock.changeRate;
+                stock.changeRate = chg;
+                stock.change = Math.round(stock.price * (chg / 100));
+                if (live.marcap) {
+                    stock.tradeAmount = `시총 ${(live.marcap / 1e12).toFixed(1)}조`;
+                }
+                stock.stopPrice = Math.round(stock.price * 0.965);
+                stock.targetPrice = Math.round(stock.price * 1.09);
+                if (stock.briefing) {
+                    stock.briefing.tradePlan = `현재가(${stock.price.toLocaleString()}원) 매수 시 손절 기준 ${stock.stopPrice.toLocaleString()}원(-3.5%), 1차 목표 ${stock.targetPrice.toLocaleString()}원(+9.0%)의 실시간 손익비 타점입니다.`;
+                }
+            }
+        });
+
+        // 2. 전체 4,200 종목 정렬 및 150대 우량주 리스트 생성
         const sorted = [...rawStocks].sort((a, b) => (b.marcap || 0) - (a.marcap || 0));
 
         const enrichedList = sorted.slice(0, 150).map((st, idx) => {
@@ -796,6 +830,7 @@
             };
         });
 
+        // 3. 결합: INITIAL_FEATURED_STOCKS 우선 유지하면서 중복 제거 및 리스트 구성
         const codeSet = new Set(INITIAL_FEATURED_STOCKS.map(s => s.code));
         const combined = [...INITIAL_FEATURED_STOCKS];
         enrichedList.forEach(item => {
@@ -806,6 +841,42 @@
         });
 
         state.stocksList = combined;
+
+        // 4. 현재 선택된 종목이 있다면 최신 가격 반영하여 헤더 재렌더링
+        if (state.currentStock) {
+            // 이미 실시간 캔들이 로드되어 차트와 연동 중이라면 차트 캔들 종가 및 일일 변동폭을 최우선 기준으로 유지
+            if (state.currentCandles && state.currentCandles.length > 0) {
+                const lastC = state.currentCandles[state.currentCandles.length - 1];
+                if (lastC && lastC.close) {
+                    state.currentStock.price = lastC.close;
+                }
+                if (state.currentCandles.length >= 2) {
+                    const prevC = state.currentCandles[state.currentCandles.length - 2];
+                    if (prevC && prevC.close) {
+                        const diff = lastC.close - prevC.close;
+                        state.currentStock.change = diff;
+                        state.currentStock.changeRate = parseFloat(((diff / prevC.close) * 100).toFixed(2));
+                    }
+                }
+            } else {
+                const currentLive = rawMap.get(state.currentStock.code);
+                if (currentLive && currentLive.current_price) {
+                    state.currentStock.price = currentLive.current_price;
+                    const chg = currentLive.day1 !== null && currentLive.day1 !== undefined ? parseFloat(currentLive.day1) : state.currentStock.changeRate;
+                    state.currentStock.changeRate = chg;
+                    state.currentStock.change = Math.round(state.currentStock.price * (chg / 100));
+                }
+            }
+            const currentLive = rawMap.get(state.currentStock.code);
+            if (currentLive && currentLive.marcap) {
+                state.currentStock.tradeAmount = `시총 ${(currentLive.marcap / 1e12).toFixed(1)}조`;
+            }
+            state.currentStock.stopPrice = Math.round(state.currentStock.price * 0.965);
+            state.currentStock.targetPrice = Math.round(state.currentStock.price * 1.09);
+            renderStockHeader(state.currentStock, { candles: state.currentCandles, isOverseas: isOverseasStock(state.currentStock.code, state.currentStock.market) });
+            renderBriefingAndTables(state.currentStock);
+        }
+
         updateStockList();
     }
 
@@ -813,10 +884,7 @@
     // 6. 캔들 차트 데이터셋 로드 (국내 네이버 API & 해외 FDR/Naver)
     // -------------------------------------------------------------
     async function fetchLiveChartDataset(stock, tf) {
-        const isOverseas = anyAlphabet(stock.code);
-        const apiBase = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-            ? 'http://localhost:8001' 
-            : 'https://dajavata-backend.onrender.com';
+        const isOverseas = isOverseasStock(stock.code, stock.market);
 
         let periodType = 'dayCandle';
         if (tf.endsWith('m') || tf.endsWith('h')) periodType = 'day';
@@ -825,23 +893,45 @@
         else if (tf === '1M') periodType = 'monthCandle';
         else if (tf === '1Y') periodType = 'yearCandle';
 
-        try {
-            const res = await fetch(`${apiBase}/api/chart/${stock.code}?periodType=${periodType}`);
-            if (res.ok) {
-                const data = await res.json();
-                if (data && data.priceInfos && data.priceInfos.length > 0) {
-                    return parseLivePriceInfos(data.priceInfos, tf, stock, isOverseas);
+        const endpoints = [];
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            endpoints.push(`http://localhost:8001/api/chart/${stock.code}?periodType=${periodType}`);
+        }
+        endpoints.push(`https://dajavata-backend.onrender.com/api/chart/${stock.code}?periodType=${periodType}`);
+
+        for (const ep of endpoints) {
+            try {
+                const res = await fetch(ep);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.priceInfos && data.priceInfos.length > 0) {
+                        return parseLivePriceInfos(data.priceInfos, tf, stock, isOverseas);
+                    }
                 }
+            } catch (err) {
+                // fall through
             }
-        } catch (err) {
-            console.warn('[Signal Lab] 실시간 API 호출 중 폴백 가동:', err);
         }
 
         return generateFallbackDataset(stock, tf, isOverseas);
     }
 
+    function isOverseasStock(code, market) {
+        if (market === 'NASDAQ' || market === 'NYSE' || market === 'AMEX') return true;
+        if (market === 'KOSPI' || market === 'KOSDAQ' || market === 'KONEX') return false;
+        if (typeof code === 'string') {
+            const c = code.trim().toUpperCase();
+            // 한국 6자리 종목코드: 숫자 6자리 또는 문자가 포함된 ETF/우선주 (예: 005930, 0233A0, 0197W0)
+            if (c.length === 6 && /\d/.test(c.substring(0, 3))) return false;
+            if (/^\d+$/.test(c)) return false;
+            // 미국/해외 주식 티커 (1~5자리 영문자, 점/대시 포함 예: NVDA, TSLA, BRK.B)
+            if (/^[A-Z]{1,5}(\.[A-Z])?$/.test(c)) return true;
+        }
+        return false;
+    }
+
     function anyAlphabet(str) {
-        return /[a-zA-Z]/.test(str);
+        return isOverseasStock(str);
     }
 
     function formatTimeDisplay(t) {
@@ -907,6 +997,17 @@
 
             const midIdx = Math.floor((minIdx + candles.length) / 2);
             const lastCandle = candles[candles.length - 1];
+            if (lastCandle && lastCandle.close) {
+                stock.price = lastCandle.close;
+                if (candles.length >= 2) {
+                    const prevCandle = candles[candles.length - 2];
+                    if (prevCandle && prevCandle.close) {
+                        const diff = lastCandle.close - prevCandle.close;
+                        stock.change = diff;
+                        stock.changeRate = parseFloat(((diff / prevCandle.close) * 100).toFixed(2));
+                    }
+                }
+            }
 
             const p1 = minCandle.low;
             const p2 = isOverseas ? p1 + (lastCandle.close - p1) * 0.45 : Math.round(p1 + (lastCandle.close - p1) * 0.45);
@@ -930,6 +1031,15 @@
 
             stock.stopPrice = isOverseas ? parseFloat((lastCandle.close * stopRatio).toFixed(2)) : Math.round(lastCandle.close * stopRatio);
             stock.targetPrice = isOverseas ? parseFloat((lastCandle.close * targetRatio).toFixed(2)) : Math.round(lastCandle.close * targetRatio);
+
+            const matchInList = state.stocksList.find(s => s.code === stock.code);
+            if (matchInList) {
+                matchInList.price = stock.price;
+                matchInList.change = stock.change;
+                matchInList.changeRate = stock.changeRate;
+                matchInList.stopPrice = stock.stopPrice;
+                matchInList.targetPrice = stock.targetPrice;
+            }
         }
 
         return {
@@ -2138,33 +2248,45 @@
         state.selectedStockCode = code;
         let stock = state.stocksList.find(s => s.code === code) || OVERSEAS_STOCKS.find(s => s.code === code);
         
-        if (!stock && state.universeStocks) {
+        // 전 종목 풀(universeStocks)에서 실시간 가격 및 시총 최신 동기화
+        if (state.universeStocks) {
             const u = state.universeStocks.find(s => s.code === code);
-            if (u) {
-                const price = u.current_price || 10000;
-                const chg = u.day1 !== null ? parseFloat(u.day1) : 0;
-                stock = {
-                    code: u.code,
-                    name: u.name,
-                    market: u.code.startsWith('0') ? 'KOSPI' : 'KOSDAQ',
-                    price: price,
-                    change: Math.round(price * (chg / 100)),
-                    changeRate: chg,
-                    volume: '실시간',
-                    tradeAmount: u.marcap ? `시총 ${(u.marcap / 1e12).toFixed(1)}조` : '-',
-                    strategy: 'support-bounce',
-                    strategyName: '추세 지지선 반등',
-                    theme: '코스피/코스닥 종목',
-                    signalStatus: chg >= 0 ? 'good' : 'warn',
-                    signalText: '실시간 연동',
-                    stopPrice: Math.round(price * 0.96),
-                    targetPrice: Math.round(price * 1.08),
-                    briefing: {
-                        reason: `네이버 실시간 증권 API를 통해 ${u.name}(${u.code})의 실시간 캔들 차트와 지지선을 분석합니다.`,
-                        tradePlan: `현재가 ${price.toLocaleString()}원 기준 손절가 약 ${Math.round(price * 0.96).toLocaleString()}원입니다.`,
-                        supplyFlow: `최근 시장 수급 현황을 바탕으로 연동된 종목입니다.`
+            if (u && u.current_price) {
+                const livePrice = u.current_price;
+                const liveChg = u.day1 !== null && u.day1 !== undefined ? parseFloat(u.day1) : (stock ? stock.changeRate : 0);
+                if (stock) {
+                    stock.price = livePrice;
+                    stock.changeRate = liveChg;
+                    stock.change = Math.round(livePrice * (liveChg / 100));
+                    if (u.marcap) {
+                        stock.tradeAmount = `시총 ${(u.marcap / 1e12).toFixed(1)}조`;
                     }
-                };
+                    stock.stopPrice = Math.round(livePrice * 0.965);
+                    stock.targetPrice = Math.round(livePrice * 1.09);
+                } else {
+                    stock = {
+                        code: u.code,
+                        name: u.name,
+                        market: u.code.startsWith('0') ? 'KOSPI' : 'KOSDAQ',
+                        price: livePrice,
+                        change: Math.round(livePrice * (liveChg / 100)),
+                        changeRate: liveChg,
+                        volume: '실시간',
+                        tradeAmount: u.marcap ? `시총 ${(u.marcap / 1e12).toFixed(1)}조` : '-',
+                        strategy: 'support-bounce',
+                        strategyName: '추세 지지선 반등',
+                        theme: '코스피/코스닥 종목',
+                        signalStatus: liveChg >= 0 ? 'good' : 'warn',
+                        signalText: '실시간 연동',
+                        stopPrice: Math.round(livePrice * 0.96),
+                        targetPrice: Math.round(livePrice * 1.08),
+                        briefing: {
+                            reason: `네이버 실시간 증권 API를 통해 ${u.name}(${u.code})의 실시간 캔들 차트와 지지선을 분석합니다.`,
+                            tradePlan: `현재가 ${livePrice.toLocaleString()}원 기준 손절가 약 ${Math.round(livePrice * 0.96).toLocaleString()}원입니다.`,
+                            supplyFlow: `최근 시장 수급 현황을 바탕으로 연동된 종목입니다.`
+                        }
+                    };
+                }
             }
         }
         if (!stock) return;
@@ -2192,6 +2314,17 @@
         renderBriefingAndTables(stock);
         renderChart(stock, dataset);
         resizeDrawingOverlay();
+
+        const listItemPrice = document.querySelector(`.cs-stock-item[data-code='${stock.code}'] .cs-stock-item-price`);
+        if (listItemPrice) {
+            listItemPrice.textContent = formatPrice(stock.price, dataset.isOverseas);
+            listItemPrice.className = `cs-stock-item-price ${stock.changeRate >= 0 ? 'text-up' : 'text-down'}`;
+        }
+        const listItemChg = document.querySelector(`.cs-stock-item[data-code='${stock.code}'] .cs-stock-item-chg`);
+        if (listItemChg) {
+            listItemChg.textContent = `${stock.changeRate >= 0 ? '+' : ''}${stock.changeRate.toFixed(2)}%`;
+            listItemChg.className = `cs-stock-item-chg ${stock.changeRate >= 0 ? 'text-up' : 'text-down'}`;
+        }
     }
 
     function renderStockHeader(stock, dataset) {
@@ -2358,7 +2491,10 @@
             </table>
         ` : `<div style="padding: 24px; text-align: center; color: var(--cs-text-muted); font-size: 12px;">${!state.showICTZones ? 'ICT 구름대가 꺼져 있습니다.' : '선택된 필터에 맞는 활성화 구름대가 없습니다.'}</div>`;
 
-        let dynamicTradePlan = stock.briefing.tradePlan;
+        let dynamicTradePlan = (stock.briefing && stock.briefing.tradePlan) 
+            ? stock.briefing.tradePlan 
+            : `[${tfLabel} 기준] 현재가 ${formatPrice(stock.price, isOverseas)} 진입 시 권장 손절가 ${formatPrice(stock.stopPrice, isOverseas)}, 1차 목표 ${formatPrice(stock.targetPrice, isOverseas)}의 매매 플랜입니다.`;
+
         if (state.activeTimeframe === '1Y') {
             dynamicTradePlan = `[년봉 기준] 현재가 ${formatPrice(stock.price, isOverseas)} 진입 시 장기 지지선 손절 ${formatPrice(stock.stopPrice, isOverseas)}, 1차 목표 ${formatPrice(stock.targetPrice, isOverseas)}의 장기 대세 사이클 플랜입니다.`;
         } else if (state.activeTimeframe === '1M') {
@@ -2389,10 +2525,10 @@
                         포착 알고리즘 근거
                     </div>
                     <div class="cs-card-value-big" style="color: #38bdf8;">
-                        ${stock.strategyName}
+                        ${stock.strategyName || 'ICT 스마트 머니'}
                     </div>
                     <div class="cs-card-desc">
-                        ${stock.briefing.reason}
+                        ${(stock.briefing && stock.briefing.reason) ? stock.briefing.reason : `실시간 스마트 머니 수급 및 차트 지지선을 기반으로 산출된 기술적 포착 시그널입니다.`}
                     </div>
                 </div>
 
@@ -2417,10 +2553,10 @@
                         메이저 수급 및 테마 모멘텀
                     </div>
                     <div class="cs-card-value-big" style="color: #10b981;">
-                        ${stock.theme.split('/')[0]}
+                        ${(stock.theme || '대표 테마주').split('/')[0]}
                     </div>
                     <div class="cs-card-desc">
-                        ${stock.briefing.supplyFlow}
+                        ${(stock.briefing && stock.briefing.supplyFlow) ? stock.briefing.supplyFlow : `외국인/기관 수급 및 주요 이평선/구름대 지지선에서 추세 추종 흐름이 확인됩니다.`}
                     </div>
                 </div>
             </div>
