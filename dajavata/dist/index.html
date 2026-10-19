@@ -13,6 +13,9 @@
     <!-- Styles -->
     <link rel="stylesheet" href="style.css?v=3">
     <link rel="stylesheet" href="trader_room.css?v=3">
+    <link rel="stylesheet" href="chart_scanner.css?v=1">
+    <!-- TradingView Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
     <!-- 모바일 전용 상단바 (PC에서는 CSS로 숨김) -->
@@ -76,6 +79,19 @@
                     </ul>
                 </div>
 
+                <!-- 신규 추가: AI 차트 스캐너 (시그널 랩) -->
+                <div class="menu-section">
+                    <h3>차트 분석 & 스캐너</h3>
+                    <ul id="scanner-menu-list">
+                        <li data-action="chart-scanner">
+                            <a href="#">
+                                <i class="ph-fill ph-trend-up" style="color: #3b82f6;"></i> AI 차트 스캐너 
+                                <span style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">NEW</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
                 <!-- 신규 추가: 트레이더 룸 (기존 기능 아래에 안전하게 추가) -->
                 <div class="menu-section">
                     <h3>트레이더 룸 (WORK)</h3>
@@ -128,10 +144,14 @@
 
             <!-- 신규: 트레이딩 룸 전용 뷰 컨테이너 (초기에는 숨김) -->
             <div id="trader-workspace-container" class="trader-workspace-container" style="display: none;"></div>
+
+            <!-- 신규: AI 차트 스캐너 전용 뷰 컨테이너 (초기에는 숨김) -->
+            <div id="chart-scanner-container" class="chart-scanner-container" style="display: none;"></div>
         </main>
     </div>
     
+    <script src="chart_scanner.js?v=1"></script>
     <script src="trader_room.js?v=2"></script>
-    <script src="app.js?v=6"></script>
+    <script src="app.js?v=7"></script>
 </body>
 </html>

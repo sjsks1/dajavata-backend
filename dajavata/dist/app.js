@@ -593,10 +593,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function showDefaultView() {
         const defaultView = document.getElementById('default-view-container');
         const workspace = document.getElementById('trader-workspace-container');
-        if (defaultView && workspace) {
-            defaultView.style.display = 'flex';
-            workspace.style.display = 'none';
-        }
+        const scanner = document.getElementById('chart-scanner-container');
+        if (defaultView) defaultView.style.display = 'flex';
+        if (workspace) workspace.style.display = 'none';
+        if (scanner) scanner.style.display = 'none';
     }
 
     // 테마 메뉴 클릭 이벤트
@@ -707,12 +707,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // AI 차트 스캐너 메뉴 클릭 이벤트
+    const scannerMenus = document.querySelectorAll('#scanner-menu-list li');
+    scannerMenus.forEach(menu => {
+        menu.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (window.ChartScanner) {
+                window.ChartScanner.show();
+            }
+        });
+    });
+
     // 트레이더 룸 메뉴 클릭 이벤트
     const traderMenus = document.querySelectorAll('#trader-menu-list li');
     traderMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
             e.preventDefault();
             const action = menu.getAttribute('data-action');
+            if (window.ChartScanner) {
+                window.ChartScanner.hide();
+            }
             if (window.TraderRoom) {
                 window.TraderRoom.navigate(action);
             }

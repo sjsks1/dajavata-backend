@@ -1,0 +1,929 @@
+/* ==========================================================================
+   DAJAVATA SIGNAL LAB (AI 차트 스캐너) 스타일시트
+   - 다자바타 고유의 프리미엄 딥 다크 네이비 테마
+   - 한국 주식 표준 컬러 (상승 빨강, 하락 파랑)
+   - 모던 와이드 반응형 레이아웃
+   ========================================================================== */
+
+:root {
+    --cs-bg-main: #0b0f19;
+    --cs-bg-card: #111827;
+    --cs-bg-card-hover: #172033;
+    --cs-bg-sub: #1e293b;
+    --cs-border: rgba(255, 255, 255, 0.08);
+    --cs-border-active: #3b82f6;
+    --cs-text-primary: #f8fafc;
+    --cs-text-secondary: #94a3b8;
+    --cs-text-muted: #64748b;
+    
+    /* 한국 주식 컬러 */
+    --cs-up: #ef4444;       /* 상승 빨강 */
+    --cs-up-bg: rgba(239, 68, 68, 0.12);
+    --cs-down: #3b82f6;     /* 하락 파랑 */
+    --cs-down-bg: rgba(59, 130, 246, 0.12);
+    
+    /* 액센트 컬러 */
+    --cs-accent-gold: #f59e0b;
+    --cs-accent-gold-bg: rgba(245, 158, 11, 0.15);
+    --cs-accent-cyan: #38bdf8;
+    --cs-accent-emerald: #10b981;
+}
+
+/* 전체 컨테이너 */
+.chart-scanner-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    min-width: 0;
+    background-color: var(--cs-bg-main);
+    color: var(--cs-text-primary);
+    overflow: hidden;
+    position: relative;
+    font-family: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+}
+
+/* 1. 상단 바 (헤더 + 전략 칩) */
+.cs-header-section {
+    padding: 16px 24px 12px 24px;
+    background: linear-gradient(180deg, #111827 0%, rgba(17, 24, 39, 0.7) 100%);
+    border-bottom: 1px solid var(--cs-border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.cs-header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.cs-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cs-title-wrap h1 {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin: 0;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cs-title-badge {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+.cs-subtitle {
+    font-size: 13px;
+    color: var(--cs-text-secondary);
+    margin: 0;
+}
+
+.cs-controls-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 타임프레임 종합 툴바 */
+.cs-timeframe-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.cs-tf-pill-group {
+    display: flex;
+    align-items: center;
+    background-color: var(--cs-bg-sub);
+    padding: 3px;
+    border-radius: 8px;
+    border: 1px solid var(--cs-border);
+    gap: 2px;
+}
+
+.cs-tf-btn {
+    background: none;
+    border: none;
+    color: var(--cs-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.cs-tf-btn:hover:not(.active) {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.cs-tf-btn.active {
+    background-color: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.4);
+}
+
+/* 드롭다운 셀렉터 */
+.cs-tf-dropdown-wrap {
+    position: relative;
+}
+
+.cs-tf-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background-color: var(--cs-bg-sub);
+    border: 1px solid var(--cs-border);
+    color: var(--cs-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cs-tf-dropdown-btn:hover {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.cs-tf-dropdown-btn.active {
+    background-color: #3b82f6;
+    color: #ffffff;
+    border-color: #3b82f6;
+}
+
+.cs-tf-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background-color: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    z-index: 150;
+    min-width: 140px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.cs-tf-menu.open {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cs-tf-menu-header {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--cs-text-muted);
+    padding: 4px 8px 2px 8px;
+    text-transform: uppercase;
+}
+
+.cs-tf-menu-item {
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cs-text-secondary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cs-tf-menu-item:hover {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: #ffffff;
+}
+
+.cs-tf-menu-item.active {
+    background-color: #3b82f6;
+    color: #ffffff;
+}
+
+/* 전략 칩 바 (가로 스크롤 가능) */
+.cs-strategy-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+}
+.cs-strategy-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.cs-strategy-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--cs-bg-sub);
+    border: 1px solid var(--cs-border);
+    color: var(--cs-text-secondary);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cs-strategy-chip:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    background-color: var(--cs-bg-card-hover);
+}
+
+.cs-strategy-chip.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(37, 99, 235, 0.3) 100%);
+    border-color: #3b82f6;
+    color: #60a5fa;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+}
+
+.cs-strategy-count {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: inherit;
+    font-size: 11px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-weight: 700;
+}
+
+.cs-strategy-chip.active .cs-strategy-count {
+    background-color: #3b82f6;
+    color: #ffffff;
+}
+
+/* 2. 메인 워크스페이스 (좌우 분할) */
+.cs-main-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* 좌측 종목 패널 */
+.cs-stock-panel {
+    width: 340px;
+    min-width: 300px;
+    max-width: 380px;
+    background-color: var(--cs-bg-card);
+    border-right: 1px solid var(--cs-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.cs-stock-search-wrap {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--cs-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.cs-search-input-box {
+    display: flex;
+    align-items: center;
+    background-color: var(--cs-bg-main);
+    border: 1px solid var(--cs-border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    gap: 8px;
+}
+
+.cs-search-input-box i {
+    color: var(--cs-text-muted);
+    font-size: 16px;
+}
+
+.cs-search-input-box input {
+    background: none;
+    border: none;
+    color: #ffffff;
+    font-size: 13px;
+    width: 100%;
+    outline: none;
+}
+
+.cs-search-input-box input::placeholder {
+    color: var(--cs-text-muted);
+}
+
+.cs-stock-filter-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--cs-text-muted);
+    padding: 0 2px;
+}
+
+.cs-stock-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cs-stock-item {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cs-stock-item:hover {
+    background-color: var(--cs-bg-card-hover);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.cs-stock-item.active {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.12) 0%, rgba(30, 41, 59, 0.6) 100%);
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.cs-stock-item-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cs-stock-item-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cs-stock-market {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--cs-text-muted);
+    background-color: var(--cs-bg-sub);
+    padding: 2px 4px;
+    border-radius: 4px;
+}
+
+.cs-stock-item-price {
+    font-size: 14px;
+    font-weight: 700;
+    text-align: right;
+}
+
+.cs-stock-item-chg {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cs-stock-item-mid {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.cs-theme-badge {
+    font-size: 11px;
+    color: #93c5fd;
+    background-color: rgba(59, 130, 246, 0.15);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.cs-signal-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.cs-signal-badge.good {
+    color: var(--cs-accent-emerald);
+    background-color: rgba(16, 185, 129, 0.15);
+}
+
+.cs-signal-badge.warn {
+    color: var(--cs-accent-gold);
+    background-color: var(--cs-accent-gold-bg);
+}
+
+.cs-stock-item-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--cs-text-muted);
+    border-top: 1px dashed rgba(255, 255, 255, 0.05);
+    padding-top: 5px;
+    margin-top: 2px;
+}
+
+/* 우측 차트 & 브리핑 패널 */
+.cs-chart-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow-y: auto;
+    background-color: var(--cs-bg-main);
+}
+
+/* 종목 헤더 바 */
+.cs-stock-header {
+    padding: 14px 24px;
+    background-color: var(--cs-bg-card);
+    border-bottom: 1px solid var(--cs-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.cs-sh-left {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cs-sh-name {
+    font-size: 22px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.cs-sh-code {
+    font-size: 13px;
+    color: var(--cs-text-muted);
+}
+
+.cs-sh-price {
+    font-size: 22px;
+    font-weight: 800;
+    margin-left: 4px;
+}
+
+.cs-sh-change {
+    font-size: 14px;
+    font-weight: 700;
+    margin-left: 2px;
+}
+
+.cs-sh-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--cs-text-secondary);
+}
+
+.cs-sh-meta-item strong {
+    color: #ffffff;
+}
+
+.cs-sh-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* 다자바타 리스크 계산기 원클릭 연동 버튼 (골드 프리미엄) */
+.cs-btn-calc-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #ffffff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    transition: all 0.2s ease;
+}
+
+.cs-btn-calc-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.45);
+}
+
+.cs-btn-theme-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--cs-bg-sub);
+    border: 1px solid var(--cs-border);
+    color: var(--cs-text-secondary);
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cs-btn-theme-link:hover {
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 차트 안내 범례 바 */
+.cs-chart-legend-bar {
+    padding: 8px 24px;
+    background-color: rgba(17, 24, 39, 0.5);
+    border-bottom: 1px solid var(--cs-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--cs-text-secondary);
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cs-legend-items {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.cs-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cs-legend-line {
+    width: 14px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.cs-legend-line.support {
+    background-color: var(--cs-accent-cyan);
+}
+
+.cs-legend-line.resistance {
+    background-color: var(--cs-accent-gold);
+}
+
+.cs-legend-line.stoploss {
+    background: repeating-linear-gradient(90deg, var(--cs-up), var(--cs-up) 3px, transparent 3px, transparent 6px);
+    height: 2px;
+}
+
+.cs-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--cs-accent-emerald);
+}
+
+/* 차트 컨테이너 - 사용자 피드백 반영: 세로 780px로 추가 대폭 확장 */
+.cs-chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 780px;
+    min-height: 600px;
+    background-color: #0b0f19;
+    border-bottom: 1px solid var(--cs-border);
+    display: flex;
+    overflow: hidden;
+}
+
+/* 차트 좌측 드로잉 툴바 (TradingView 정밀 작도 도구) */
+.cs-drawing-toolbar {
+    width: 44px;
+    background-color: #0d1322;
+    border-right: 1px solid var(--cs-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
+    gap: 3px;
+    flex-shrink: 0;
+    z-index: 10;
+    user-select: none;
+}
+
+.cs-draw-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--cs-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.cs-draw-btn:hover {
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.cs-draw-btn.active {
+    color: #38bdf8;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(59, 130, 246, 0.25) 100%);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+.cs-draw-divider {
+    width: 24px;
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.08);
+    margin: 4px 0;
+}
+
+/* 드로잉 툴 툴팁 */
+.cs-draw-btn[data-tip]:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #1e293b;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    pointer-events: none;
+}
+
+/* 차트 메인 영역 & 드로잉 오버레이 캔버스 */
+.cs-chart-canvas-box {
+    flex: 1;
+    position: relative;
+    height: 100%;
+    min-width: 0;
+}
+
+#cs-tv-chart {
+    width: 100%;
+    height: 100%;
+}
+
+.cs-drawing-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* 드로잉 모드 활성 시 JS에서 auto로 전환 */
+    z-index: 5;
+}
+
+.cs-drawing-overlay.drawing-active {
+    pointer-events: auto;
+    cursor: crosshair;
+}
+
+/* 좌우 스플리터 (종목 패널과 차트 패널 사이 리사이저) */
+.cs-resizer-h {
+    width: 6px;
+    cursor: col-resize;
+    background-color: transparent;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 20;
+}
+
+.cs-resizer-h:hover,
+.cs-resizer-h.resizing {
+    background-color: #3b82f6;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+}
+
+/* 상하 스플리터 (차트와 하단 AI 브리핑 사이 리사이저) */
+.cs-resizer-v {
+    height: 7px;
+    cursor: row-resize;
+    background-color: var(--cs-border);
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cs-resizer-v::after {
+    content: '';
+    width: 36px;
+    height: 2px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+.cs-resizer-v:hover,
+.cs-resizer-v.resizing {
+    background-color: #3b82f6;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+}
+
+/* 스플리터 호버 안내 툴팁 */
+.cs-splitter-tooltip {
+    position: absolute;
+    background-color: #0f172a;
+    color: #e2e8f0;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.cs-resizer-h:hover .cs-splitter-tooltip,
+.cs-resizer-v:hover .cs-splitter-tooltip {
+    opacity: 1;
+}
+
+/* 3. 하단 AI 시그널 브리핑 카드 */
+.cs-ai-briefing-wrap {
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background-color: var(--cs-bg-main);
+}
+
+.cs-briefing-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cs-briefing-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cs-briefing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.cs-briefing-card {
+    background-color: var(--cs-bg-card);
+    border: 1px solid var(--cs-border);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: all 0.2s ease;
+}
+
+.cs-briefing-card:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    background-color: var(--cs-bg-card-hover);
+}
+
+.cs-card-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--cs-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cs-card-value-big {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.cs-card-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--cs-text-secondary);
+}
+
+.cs-card-desc strong {
+    color: #ffffff;
+}
+
+/* 상승/하락 컬러 유틸리티 */
+.text-up {
+    color: var(--cs-up) !important;
+}
+
+.text-down {
+    color: var(--cs-down) !important;
+}
+
+.bg-up {
+    background-color: var(--cs-up-bg);
+}
+
+.bg-down {
+    background-color: var(--cs-down-bg);
+}
+
+/* 반응형 (모바일 & 태블릿) */
+@media (max-width: 1024px) {
+    .cs-briefing-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .cs-main-body {
+        flex-direction: column;
+    }
+    
+    .cs-stock-panel {
+        width: 100%;
+        max-width: 100%;
+        max-height: 240px;
+        border-right: none;
+        border-bottom: 1px solid var(--cs-border);
+    }
+    
+    .cs-chart-wrapper {
+        height: 340px;
+        min-height: 300px;
+    }
+    
+    .cs-header-section {
+        padding: 12px 16px;
+    }
+    
+    .cs-stock-header {
+        padding: 12px 16px;
+    }
+}
