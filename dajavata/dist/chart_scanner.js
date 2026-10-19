@@ -820,9 +820,10 @@
 
         let periodType = 'dayCandle';
         if (tf.endsWith('m') || tf.endsWith('h')) periodType = 'day';
-        else if (tf === '1W') periodType = 'week';
-        else if (tf === '1M') periodType = 'month';
-        else if (tf === '1Y') periodType = 'year';
+        else if (tf === '1D') periodType = 'dayCandle';
+        else if (tf === '1W') periodType = 'weekCandle';
+        else if (tf === '1M') periodType = 'monthCandle';
+        else if (tf === '1Y') periodType = 'yearCandle';
 
         try {
             const res = await fetch(`${apiBase}/api/chart/${stock.code}?periodType=${periodType}`);
@@ -841,6 +842,19 @@
 
     function anyAlphabet(str) {
         return /[a-zA-Z]/.test(str);
+    }
+
+    function formatTimeDisplay(t) {
+        if (!t) return '-';
+        if (typeof t === 'number') {
+            const d = new Date(t * 1000);
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            return `${mm}/${dd} ${hh}:${min}`;
+        }
+        return String(t);
     }
 
     function parseLivePriceInfos(priceInfos, tf, stock, isOverseas) {
@@ -901,12 +915,21 @@
             supportLine.push({ time: minCandle.time, price: p1 });
             if (candles[midIdx]) {
                 supportLine.push({ time: candles[midIdx].time, price: p2 });
-                touchPoints.push({ time: candles[midIdx].time, text: '실시간 지지선' });
+                touchPoints.push({ time: candles[midIdx].time, text: `${getTimeframeLabel(tf)} 지지선` });
             }
             supportLine.push({ time: lastCandle.time, price: p3 });
 
-            stock.stopPrice = isOverseas ? parseFloat((p3 * 0.975).toFixed(2)) : Math.round(p3 * 0.975);
-            stock.targetPrice = isOverseas ? parseFloat((lastCandle.close * 1.08).toFixed(2)) : Math.round(lastCandle.close * 1.08);
+            let stopRatio = 0.96;
+            let targetRatio = 1.08;
+            if (tf === '1Y') { stopRatio = 0.82; targetRatio = 1.35; }
+            else if (tf === '1M') { stopRatio = 0.88; targetRatio = 1.22; }
+            else if (tf === '1W') { stopRatio = 0.93; targetRatio = 1.14; }
+            else if (tf === '1D') { stopRatio = 0.96; targetRatio = 1.08; }
+            else if (tf.endsWith('h')) { stopRatio = 0.98; targetRatio = 1.04; }
+            else if (tf.endsWith('m')) { stopRatio = 0.99; targetRatio = 1.02; }
+
+            stock.stopPrice = isOverseas ? parseFloat((lastCandle.close * stopRatio).toFixed(2)) : Math.round(lastCandle.close * stopRatio);
+            stock.targetPrice = isOverseas ? parseFloat((lastCandle.close * targetRatio).toFixed(2)) : Math.round(lastCandle.close * targetRatio);
         }
 
         return {
@@ -921,46 +944,154 @@
     function generateFallbackDataset(stock, tf, isOverseas) {
         const isMin = tf.endsWith('m');
         const isHour = tf.endsWith('h');
-        const count = 55;
-        const candles = [];
+        const isIntraday = isMin || isHour;
         const currentPrice = stock.price || (isOverseas ? 150 : 50000);
-        const minP = currentPrice * 0.85;
-        const baseDate = new Date(2026, 9, 19, 15, 30, 0);
-        let timeList = [];
+        const candles = [];
+        const timeList = [];
+        const candlePrices = [];
 
-        if (isMin) {
-            const mins = parseInt(tf);
-            for (let i = count - 1; i >= 0; i--) {
-                const t = new Date(baseDate.getTime() - i * mins * 60 * 1000);
-                timeList.push(Math.floor(t.getTime() / 1000));
+        // 1. 타임프레임별 주기적 날짜/시간 목록 및 기준 가격 추세 생성
+        if (tf === '1Y') {
+            // 년봉: 2005년 ~ 2026년 (22년간의 장기 대세 사이클)
+            const startYear = 2005;
+            const endYear = 2026;
+            for (let y = startYear; y <= endYear; y++) {
+                timeList.push(`${y}-01-01`);
+            }
+            const n = timeList.length;
+            const startRatio = isOverseas ? 0.06 : 0.18;
+            const peakYear = 2021;
+            const peakRatio = 1.62;
+
+            for (let i = 0; i < n; i++) {
+                const y = startYear + i;
+                let targetBase;
+                if (y < peakYear) {
+                    const prog = (y - startYear) / (peakYear - startYear);
+                    targetBase = currentPrice * (startRatio + (peakRatio - startRatio) * Math.pow(prog, 1.25));
+                } else if (y === peakYear) {
+                    targetBase = currentPrice * peakRatio;
+                } else if (y === endYear) {
+                    targetBase = currentPrice;
+                } else {
+                    const prog = (y - peakYear) / (endYear - peakYear);
+                    targetBase = currentPrice * (peakRatio - (peakRatio - 1.0) * prog);
+                }
+                candlePrices.push(targetBase);
+            }
+        } else if (tf === '1M') {
+            // 월봉: 2021년 1월 ~ 2026년 10월 (70개월의 중장기 매크로 파동)
+            for (let y = 2021; y <= 2025; y++) {
+                for (let m = 1; m <= 12; m++) {
+                    timeList.push(`${y}-${String(m).padStart(2, '0')}-01`);
+                }
+            }
+            for (let m = 1; m <= 10; m++) {
+                timeList.push(`2026-${String(m).padStart(2, '0')}-01`);
+            }
+            const n = timeList.length;
+            for (let i = 0; i < n; i++) {
+                const wave = Math.sin(i / 5.2) * 0.14 + Math.cos(i / 10.5) * 0.08;
+                let targetBase = currentPrice * (0.84 + wave + (i / n) * 0.16);
+                if (i === n - 1) targetBase = currentPrice;
+                candlePrices.push(targetBase);
+            }
+        } else if (tf === '1W') {
+            // 주봉: 2025년 1월 ~ 2026년 10월 (약 94주, 주간 스윙 구조)
+            const curDate = new Date(2025, 0, 3);
+            const endDate = new Date(2026, 9, 16);
+            while (curDate <= endDate) {
+                const yyyy = curDate.getFullYear();
+                const mm = String(curDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(curDate.getDate()).padStart(2, '0');
+                timeList.push(`${yyyy}-${mm}-${dd}`);
+                curDate.setDate(curDate.getDate() + 7);
+            }
+            const n = timeList.length;
+            for (let i = 0; i < n; i++) {
+                const wave = Math.sin(i / 4.2) * 0.06 + Math.cos(i / 8.5) * 0.035;
+                let targetBase = currentPrice * (0.88 + wave + (i / n) * 0.12);
+                if (i === n - 1) targetBase = currentPrice;
+                candlePrices.push(targetBase);
+            }
+        } else if (tf === '1D') {
+            // 일봉: 2026년 6월 1일 ~ 10월 19일 (평일 거래일 약 100일)
+            const curDate = new Date(2026, 5, 1);
+            const endDate = new Date(2026, 9, 19);
+            while (curDate <= endDate) {
+                const dayOfWeek = curDate.getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    const yyyy = curDate.getFullYear();
+                    const mm = String(curDate.getMonth() + 1).padStart(2, '0');
+                    const dd = String(curDate.getDate()).padStart(2, '0');
+                    timeList.push(`${yyyy}-${mm}-${dd}`);
+                }
+                curDate.setDate(curDate.getDate() + 1);
+            }
+            const n = timeList.length;
+            for (let i = 0; i < n; i++) {
+                const dip = (i >= 38 && i <= 52) ? -0.065 : 0;
+                const wave = Math.sin(i / 5.5) * 0.035 + dip;
+                let targetBase = currentPrice * (0.92 + wave + (i / n) * 0.08);
+                if (i === n - 1) targetBase = currentPrice;
+                candlePrices.push(targetBase);
             }
         } else if (isHour) {
-            const hrs = parseInt(tf);
+            // 시봉 (1h, 2h, 4h, 8h)
+            const hrs = parseInt(tf) || 1;
+            const count = 70;
+            const baseTs = 1729351800; // 2026-10-19 15:30:00
             for (let i = count - 1; i >= 0; i--) {
-                const t = new Date(baseDate.getTime() - i * hrs * 3600 * 1000);
-                timeList.push(Math.floor(t.getTime() / 1000));
+                timeList.push(baseTs - i * hrs * 3600);
+            }
+            const n = timeList.length;
+            for (let i = 0; i < n; i++) {
+                const wave = Math.sin(i / 6.0) * 0.02 + Math.cos(i / 3.0) * 0.015;
+                let targetBase = currentPrice * (0.96 + wave + (i / n) * 0.04);
+                if (i === n - 1) targetBase = currentPrice;
+                candlePrices.push(targetBase);
             }
         } else {
+            // 분봉 (1m, 3m, 5m, 10m, 15m, 30m, 45m)
+            const mins = parseInt(tf) || 5;
+            const count = 75;
+            const baseTs = 1729351800;
             for (let i = count - 1; i >= 0; i--) {
-                const d = new Date(baseDate);
-                d.setDate(d.getDate() - Math.floor(i * 1.45));
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                timeList.push(`${yyyy}-${mm}-${dd}`);
+                timeList.push(baseTs - i * mins * 60);
+            }
+            const n = timeList.length;
+            for (let i = 0; i < n; i++) {
+                const micro = Math.sin(i / 4.0) * 0.008 + Math.cos(i / 2.0) * 0.005;
+                let targetBase = currentPrice * (0.985 + micro + (i / n) * 0.015);
+                if (i === n - 1) targetBase = currentPrice;
+                candlePrices.push(targetBase);
             }
         }
 
-        let p = minP;
-        const step = (currentPrice - p) / timeList.length;
+        // 2. 캔들 변동성 산출 (타임프레임별 최적화)
+        let volFactor = 0.015;
+        if (tf === '1Y') volFactor = 0.12;
+        else if (tf === '1M') volFactor = 0.045;
+        else if (tf === '1W') volFactor = 0.025;
+        else if (tf === '1D') volFactor = 0.015;
+        else if (isHour) volFactor = 0.008;
+        else if (isMin) volFactor = 0.003;
 
         for (let i = 0; i < timeList.length; i++) {
-            let open = p + (Math.random() - 0.48) * (currentPrice * 0.015);
-            let close = open + (Math.random() - 0.45) * (currentPrice * 0.02);
+            const p = candlePrices[i];
+            const prevClose = i > 0 ? candles[i - 1].close : p * 0.99;
+            let open = prevClose;
+            let close = p;
             if (i === timeList.length - 1) close = currentPrice;
 
-            let high = Math.max(open, close) + Math.random() * (currentPrice * 0.01);
-            let low = Math.min(open, close) - Math.random() * (currentPrice * 0.01);
+            if (i < timeList.length - 1 && Math.abs(close - open) < p * 0.002) {
+                close = (i % 2 === 0) ? open + p * volFactor * 0.6 : open - p * volFactor * 0.5;
+            }
+
+            const highVol = p * volFactor * (0.3 + (i % 5) * 0.15);
+            const lowVol = p * volFactor * (0.3 + ((i + 2) % 5) * 0.15);
+            let high = Math.max(open, close) + highVol;
+            let low = Math.min(open, close) - lowVol;
 
             if (!isOverseas) {
                 open = Math.round(open);
@@ -975,20 +1106,50 @@
             }
 
             candles.push({ time: timeList[i], open, high, low, close });
-            p += step;
         }
 
+        // 3. 지지선 & 손절가 산출
+        let minCandle = candles[0];
+        let minIdx = 0;
+        candles.forEach((c, idx) => {
+            if (c.low < minCandle.low) {
+                minCandle = c;
+                minIdx = idx;
+            }
+        });
+        const midIdx = Math.floor((minIdx + candles.length) / 2);
+        const lastCandle = candles[candles.length - 1];
+
+        const p1 = minCandle.low;
+        const p2 = isOverseas ? p1 + (lastCandle.close - p1) * 0.55 : Math.round(p1 + (lastCandle.close - p1) * 0.55);
+        const p3 = isOverseas ? p1 + (lastCandle.close - p1) * 0.90 : Math.round(p1 + (lastCandle.close - p1) * 0.90);
+
         const supportLine = [
-            { time: timeList[5], price: isOverseas ? parseFloat((minP * 1.02).toFixed(2)) : Math.round(minP * 1.02) },
-            { time: timeList[Math.floor(timeList.length / 2)], price: isOverseas ? parseFloat((currentPrice * 0.94).toFixed(2)) : Math.round(currentPrice * 0.94) },
-            { time: timeList[timeList.length - 1], price: isOverseas ? parseFloat((currentPrice * 0.97).toFixed(2)) : Math.round(currentPrice * 0.97) }
+            { time: minCandle.time, price: p1 },
+            { time: candles[midIdx].time, price: p2 },
+            { time: lastCandle.time, price: p3 }
         ];
+
+        let stopRatio = 0.96;
+        let targetRatio = 1.08;
+        if (tf === '1Y') { stopRatio = 0.82; targetRatio = 1.35; }
+        else if (tf === '1M') { stopRatio = 0.88; targetRatio = 1.22; }
+        else if (tf === '1W') { stopRatio = 0.93; targetRatio = 1.14; }
+        else if (tf === '1D') { stopRatio = 0.96; targetRatio = 1.08; }
+        else if (isHour) { stopRatio = 0.98; targetRatio = 1.04; }
+        else if (isMin) { stopRatio = 0.99; targetRatio = 1.02; }
+
+        stock.stopPrice = isOverseas ? parseFloat((lastCandle.close * stopRatio).toFixed(2)) : Math.round(lastCandle.close * stopRatio);
+        stock.targetPrice = isOverseas ? parseFloat((lastCandle.close * targetRatio).toFixed(2)) : Math.round(lastCandle.close * targetRatio);
 
         return {
             candles,
             supportLine,
-            touchPoints: [{ time: timeList[Math.floor(timeList.length / 2)], text: '추세 지지선' }],
-            isIntraday: isMin || isHour,
+            touchPoints: [
+                { time: minCandle.time, text: `${getTimeframeLabel(tf)} 저점 지지` },
+                { time: candles[midIdx].time, text: `${getTimeframeLabel(tf)} 추세 지지선` }
+            ],
+            isIntraday,
             isOverseas
         };
     }
@@ -2149,7 +2310,7 @@
                 <tbody>
                     ${sortedSignals.map(sig => `
                         <tr>
-                            <td style="color: var(--cs-text-muted); font-size: 11px;">${sig.time}</td>
+                            <td style="color: var(--cs-text-muted); font-size: 11px;">${formatTimeDisplay(sig.time)}</td>
                             <td><span class="cs-zone-tag ${sig.badgeClass}">${sig.type}</span></td>
                             <td style="font-weight: 700; color: #ffffff;">${formatPrice(sig.price, isOverseas)}</td>
                             <td style="font-size: 11px; color: var(--cs-text-secondary);">${sig.reason}</td>
@@ -2197,6 +2358,17 @@
             </table>
         ` : `<div style="padding: 24px; text-align: center; color: var(--cs-text-muted); font-size: 12px;">${!state.showICTZones ? 'ICT 구름대가 꺼져 있습니다.' : '선택된 필터에 맞는 활성화 구름대가 없습니다.'}</div>`;
 
+        let dynamicTradePlan = stock.briefing.tradePlan;
+        if (state.activeTimeframe === '1Y') {
+            dynamicTradePlan = `[년봉 기준] 현재가 ${formatPrice(stock.price, isOverseas)} 진입 시 장기 지지선 손절 ${formatPrice(stock.stopPrice, isOverseas)}, 1차 목표 ${formatPrice(stock.targetPrice, isOverseas)}의 장기 대세 사이클 플랜입니다.`;
+        } else if (state.activeTimeframe === '1M') {
+            dynamicTradePlan = `[월봉 기준] 현재가 ${formatPrice(stock.price, isOverseas)} 진입 시 월간 매물대 손절 ${formatPrice(stock.stopPrice, isOverseas)}, 목표 ${formatPrice(stock.targetPrice, isOverseas)}의 중장기 스윙 플랜입니다.`;
+        } else if (state.activeTimeframe === '1W') {
+            dynamicTradePlan = `[주봉 기준] 현재가 ${formatPrice(stock.price, isOverseas)} 진입 시 주간 추세 지지 손절 ${formatPrice(stock.stopPrice, isOverseas)}, 목표 ${formatPrice(stock.targetPrice, isOverseas)}의 주간 스윙 플랜입니다.`;
+        } else if (state.activeTimeframe.endsWith('m') || state.activeTimeframe.endsWith('h')) {
+            dynamicTradePlan = `[${tfLabel} 기준] 현재가 ${formatPrice(stock.price, isOverseas)} 진입 시 장중 지지 이탈 ${formatPrice(stock.stopPrice, isOverseas)}, 단기 목표 ${formatPrice(stock.targetPrice, isOverseas)}의 단기 매매 플랜입니다.`;
+        }
+
         briefingEl.innerHTML = `
             <div class="cs-briefing-header">
                 <div class="cs-briefing-title">
@@ -2234,7 +2406,7 @@
                         손절가 ${formatPrice(stock.stopPrice, isOverseas)}
                     </div>
                     <div class="cs-card-desc">
-                        ${stock.briefing.tradePlan}
+                        ${dynamicTradePlan}
                     </div>
                 </div>
 
