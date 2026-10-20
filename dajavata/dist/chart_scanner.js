@@ -49,23 +49,380 @@
     // 2. 해외 대표 인기 종목 유니버스 (from app3.py)
     // -------------------------------------------------------------
     const OVERSEAS_STOCKS = [
-        { code: 'NVDA', name: '엔비디아 (NVIDIA)', market: 'NASDAQ', price: 214.13, changeRate: 1.85, theme: 'AI 가속기 / GPU', strategy: 'ict-smc', strategyName: 'ICT 스마트 머니' },
-        { code: 'AAPL', name: '애플 (Apple)', market: 'NASDAQ', price: 232.50, changeRate: 0.65, theme: '애플 인텔리전스 / 빅테크', strategy: 'support-bounce', strategyName: '추세 지지선 반등' },
-        { code: 'TSLA', name: '테슬라 (Tesla)', market: 'NASDAQ', price: 220.70, changeRate: 3.20, theme: '자율주행 FSD / 로보택시', strategy: 'breakout-retest', strategyName: '전고점 돌파 후 안착' },
-        { code: 'MSFT', name: '마이크로소프트 (MSFT)', market: 'NASDAQ', price: 418.00, changeRate: 0.42, theme: '클라우드 / 코파일럿', strategy: 'ma-converge', strategyName: '이평선 수렴 & 정배열' },
-        { code: 'AMZN', name: '아마존 (Amazon)', market: 'NASDAQ', price: 188.60, changeRate: 1.15, theme: '이커머스 / AWS', strategy: 'support-bounce', strategyName: '추세 지지선 반등' },
-        { code: 'GOOGL', name: '알파벳 A (Google)', market: 'NASDAQ', price: 165.30, changeRate: 0.88, theme: '검색 / 제미나이 AI', strategy: 'bb-squeeze', strategyName: '볼린저 밴드 스퀴즈' },
-        { code: 'META', name: '메타 플랫폼스 (Meta)', market: 'NASDAQ', price: 585.00, changeRate: 2.45, theme: '라마3 / 소셜미디어', strategy: 'rsi-gold', strategyName: 'Wilder RSI 골든크로스' },
-        { code: 'PLTR', name: '팔란티어 (Palantir)', market: 'NYSE', price: 44.50, changeRate: 4.12, theme: 'AIP / 국방 데이터 AI', strategy: 'breakout-retest', strategyName: '전고점 돌파 후 안착' },
-        { code: 'QQQ', name: '나스닥 100 ETF (QQQ)', market: 'NASDAQ', price: 495.20, changeRate: 0.95, theme: '미국 테크 대표 지수', strategy: 'support-bounce', strategyName: '추세 지지선 반등' },
-        { code: 'SOXL', name: '반도체 3배 롱 ETF (SOXL)', market: 'NYSE', price: 38.60, changeRate: 5.30, theme: '필라델피아 반도체 3X', strategy: 'rsi-gold', strategyName: 'Wilder RSI 골든크로스' },
-        { code: 'TQQQ', name: '나스닥 3배 롱 ETF (TQQQ)', market: 'NASDAQ', price: 74.80, changeRate: 2.85, theme: '나스닥 100 3X 레버리지', strategy: 'support-bounce', strategyName: '추세 지지선 반등' },
-        { code: 'SPY', name: 'S&P 500 ETF (SPY)', market: 'NYSE', price: 582.40, changeRate: 0.52, theme: '미국 대형주 대표 지수', strategy: 'ma-converge', strategyName: '이평선 수렴 & 정배열' },
-        { code: 'AVGO', name: '브로드컴 (Broadcom)', market: 'NASDAQ', price: 182.00, changeRate: 2.10, theme: '커스텀 ASIC / AI 네트워킹', strategy: 'ict-smc', strategyName: 'ICT 스마트 머니' },
-        { code: 'TSM', name: 'TSMC ADR (TSM)', market: 'NYSE', price: 198.50, changeRate: 1.75, theme: '글로벌 1위 파운드리', strategy: 'support-bounce', strategyName: '추세 지지선 반등' },
-        { code: 'AMD', name: 'AMD', market: 'NASDAQ', price: 156.40, changeRate: 1.90, theme: 'MI300X AI 칩 / CPU', strategy: 'bb-squeeze', strategyName: '볼린저 밴드 스퀴즈' },
-        { code: 'MU', name: '마이크론 테크놀로지', market: 'NASDAQ', price: 110.20, changeRate: 2.30, theme: 'HBM3E / D램', strategy: 'rsi-gold', strategyName: 'Wilder RSI 골든크로스' },
-        { code: 'ASML', name: 'ASML 홀딩 (ASML)', market: 'NASDAQ', price: 720.00, changeRate: -0.40, theme: 'EUV 노광장비 독점', strategy: 'ict-smc', strategyName: 'ICT 스마트 머니' }
+        {
+            code: 'NVDA',
+            name: '엔비디아 (NVIDIA)',
+            market: 'NASDAQ',
+            price: 214.13,
+            change: 3.89,
+            changeRate: 1.85,
+            volume: '48.2M주',
+            tradeAmount: '시총 $3.48T',
+            theme: 'AI 가속기 / GPU',
+            strategy: 'ict-smc',
+            strategyName: 'ICT 스마트 머니',
+            signalStatus: 'good',
+            signalText: '상승 FVG 구간 안착 · 반등',
+            stopPrice: 206.50,
+            targetPrice: 234.00,
+            briefing: {
+                reason: 'Blackwell GPU 대량 양산 및 빅테크 AI 데이터센터 수주 지속으로 Bullish FVG 구간($208)에서 강력한 기관 순매수가 유입되었습니다.',
+                tradePlan: '현재가($214.13) 진입 시 직전 저점 이탈 $206.50(-3.56%) 손절 기준, 1차 목표가 $234.00(+9.28%) 설정이 유효합니다.',
+                supplyFlow: '골드만삭스 및 모건스탠리 창구 매수 우위 지속, 나스닥 100 지수 대비 상대 강도(RS) 최상위권을 유지 중입니다.'
+            }
+        },
+        {
+            code: 'AAPL',
+            name: '애플 (Apple)',
+            market: 'NASDAQ',
+            price: 232.50,
+            change: 1.50,
+            changeRate: 0.65,
+            volume: '36.8M주',
+            tradeAmount: '시총 $3.55T',
+            theme: '애플 인텔리전스 / 빅테크',
+            strategy: 'support-bounce',
+            strategyName: '추세 지지선 반등',
+            signalStatus: 'good',
+            signalText: '중기 추세선 지지 반등',
+            stopPrice: 224.20,
+            targetPrice: 253.50,
+            briefing: {
+                reason: '아이폰 신제품 및 애플 인텔리전스 업그레이드 사이클 진입과 함께 20일 이동평균선($228) 지지 확인 후 양봉 반등 중입니다.',
+                tradePlan: '현재가($232.50) 기준 지지선 이탈 $224.20(-3.57%) 손절, 목표 $253.50(+9.03%) 전략입니다.',
+                supplyFlow: '워런 버핏의 지분 일부 조정 완료 후 기관 패시브 자금의 재유입이 관측되고 있습니다.'
+            }
+        },
+        {
+            code: 'TSLA',
+            name: '테슬라 (Tesla)',
+            market: 'NASDAQ',
+            price: 220.70,
+            change: 6.85,
+            changeRate: 3.20,
+            volume: '54.1M주',
+            tradeAmount: '시총 $704.5B',
+            theme: '자율주행 FSD / 로보택시',
+            strategy: 'breakout-retest',
+            strategyName: '전고점 돌파 후 안착',
+            signalStatus: 'good',
+            signalText: '전고점 돌파 후 리테스트',
+            stopPrice: 212.80,
+            targetPrice: 242.00,
+            briefing: {
+                reason: '로보택시(Cybercab) 상용화 계획 및 FSD v13 배포 모멘텀으로 직전 저항선($215)을 거래량과 함께 강하게 상향 돌파했습니다.',
+                tradePlan: '현재가($220.70) 매수 시 돌파 지지선 이탈 $212.80(-3.58%) 손절, 전고점 $242.00(+9.65%) 1차 목표입니다.',
+                supplyFlow: '공매도 숏커버링 물량과 개인/기관의 공격적인 콜옵션 매수가 동반되며 거래대금이 급증하고 있습니다.'
+            }
+        },
+        {
+            code: 'MSFT',
+            name: '마이크로소프트 (MSFT)',
+            market: 'NASDAQ',
+            price: 418.00,
+            change: 1.75,
+            changeRate: 0.42,
+            volume: '18.4M주',
+            tradeAmount: '시총 $3.11T',
+            theme: '클라우드 / 코파일럿',
+            strategy: 'ma-converge',
+            strategyName: '이평선 수렴 & 정배열',
+            signalStatus: 'good',
+            signalText: '이평선 수렴 후 우상향',
+            stopPrice: 403.00,
+            targetPrice: 455.50,
+            briefing: {
+                reason: 'Azure 클라우드의 30%대 고성장과 코파일럿 유료 구독자 확대로 주요 이동평균선이 골든크로스를 그리며 밀집 수렴했습니다.',
+                tradePlan: '418.00달러 진입 시 손절가 403.00달러(-3.59%), 목표가 455.50달러(+8.97%)입니다.',
+                supplyFlow: '글로벌 연기금 및 국부펀드의 지속적인 스테디 바잉이 이어지는 방어적 성장주입니다.'
+            }
+        },
+        {
+            code: 'AMZN',
+            name: '아마존 (Amazon)',
+            market: 'NASDAQ',
+            price: 188.60,
+            change: 2.14,
+            changeRate: 1.15,
+            volume: '28.9M주',
+            tradeAmount: '시총 $1.96T',
+            theme: '이커머스 / AWS',
+            strategy: 'support-bounce',
+            strategyName: '추세 지지선 반등',
+            signalStatus: 'good',
+            signalText: '상승 채널 하단 반등',
+            stopPrice: 181.90,
+            targetPrice: 205.50,
+            briefing: {
+                reason: 'AWS 클라우드 마진 개선 및 전자상거래 물류 효율화로 상승 채널 하단 지지선($182)에서 강한 지지 캔들이 형성되었습니다.',
+                tradePlan: '현재가($188.60) 진입 시 $181.90(-3.55%) 손절, 목표가 $205.50(+8.96%) 타점입니다.',
+                supplyFlow: '북미 기관 중심의 실적 턴어라운드 베팅 자금이 활발히 유입되고 있습니다.'
+            }
+        },
+        {
+            code: 'GOOGL',
+            name: '알파벳 A (Google)',
+            market: 'NASDAQ',
+            price: 165.30,
+            change: 1.44,
+            changeRate: 0.88,
+            volume: '22.1M주',
+            tradeAmount: '시총 $2.05T',
+            theme: '검색 / 제미나이 AI',
+            strategy: 'bb-squeeze',
+            strategyName: '볼린저 밴드 스퀴즈',
+            signalStatus: 'warn',
+            signalText: '볼린저밴드 수축 (방향성 분출)',
+            stopPrice: 159.50,
+            targetPrice: 180.00,
+            briefing: {
+                reason: '제미나이 AI 검색 통합 및 유튜브 광고 수익 확대로 밴드 수축 후 상방 돌파 에너지를 축적하고 있습니다.',
+                tradePlan: '현재가($165.30) 매수 시 지지선 이탈 $159.50(-3.51%) 손절 기준입니다.',
+                supplyFlow: '반독점 소송 리스크가 주가에 상당 부분 선반영되었으며, 밸류에이션 매력이 부각 중입니다.'
+            }
+        },
+        {
+            code: 'META',
+            name: '메타 플랫폼스 (Meta)',
+            market: 'NASDAQ',
+            price: 585.00,
+            change: 13.98,
+            changeRate: 2.45,
+            volume: '12.5M주',
+            tradeAmount: '시총 $1.48T',
+            theme: '라마3 / 소셜미디어',
+            strategy: 'rsi-gold',
+            strategyName: 'Wilder RSI 골든크로스',
+            signalStatus: 'good',
+            signalText: 'RSI(14) 55선 골든크로스',
+            stopPrice: 564.00,
+            targetPrice: 638.00,
+            briefing: {
+                reason: '라마(Llama) 오픈소스 AI 생태계 주도와 AI 추천 기반 릴스 광고 단가 상승으로 모멘텀 지표가 강력히 개선되었습니다.',
+                tradePlan: '현재가($585.00) 매수 시 손절 $564.00(-3.59%), 목표 $638.00(+9.06%)입니다.',
+                supplyFlow: '외국계 헤지펀드의 적극적인 비중 확대가 확인되고 있습니다.'
+            }
+        },
+        {
+            code: 'PLTR',
+            name: '팔란티어 (Palantir)',
+            market: 'NYSE',
+            price: 44.50,
+            change: 1.76,
+            changeRate: 4.12,
+            volume: '65.2M주',
+            tradeAmount: '시총 $99.2B',
+            theme: 'AIP / 국방 데이터 AI',
+            strategy: 'breakout-retest',
+            strategyName: '전고점 돌파 후 안착',
+            signalStatus: 'good',
+            signalText: 'S&P500 편입 후 고점 돌파',
+            stopPrice: 42.90,
+            targetPrice: 48.60,
+            briefing: {
+                reason: 'S&P 500 지수 편입 및 기업용 AIP 플랫폼 부트캠프 계약 폭증으로 역사적 신고가 랠리를 지속하고 있습니다.',
+                tradePlan: '현재가($44.50) 매수 시 돌파 저항선 지지 $42.90(-3.60%) 손절, 목표 $48.60(+9.21%)입니다.',
+                supplyFlow: '패시브 펀드 인덱스 매수세와 미국 국방부 장기 계약 기대감이 뒷받침하고 있습니다.'
+            }
+        },
+        {
+            code: 'QQQ',
+            name: '나스닥 100 ETF (QQQ)',
+            market: 'NASDAQ',
+            price: 495.20,
+            change: 4.66,
+            changeRate: 0.95,
+            volume: '38.5M주',
+            tradeAmount: '순자산 $290B',
+            theme: '미국 테크 대표 지수',
+            strategy: 'support-bounce',
+            strategyName: '추세 지지선 반등',
+            signalStatus: 'good',
+            signalText: '기술주 지수 우상향 지지',
+            stopPrice: 477.80,
+            targetPrice: 539.50,
+            briefing: {
+                reason: '미국 금리 인하 사이클과 빅테크 실적 호조가 맞물려 주요 추세 지지선을 견고히 방어 중입니다.',
+                tradePlan: '495.20달러 기준 $477.80(-3.51%) 손절선, $539.50(+8.95%) 목표선입니다.',
+                supplyFlow: '글로벌 기관 ETF 순유입액 1위를 유지하고 있습니다.'
+            }
+        },
+        {
+            code: 'SOXL',
+            name: '반도체 3배 롱 ETF (SOXL)',
+            market: 'NYSE',
+            price: 38.60,
+            change: 1.94,
+            changeRate: 5.30,
+            volume: '78.4M주',
+            tradeAmount: '순자산 $11.5B',
+            theme: '필라델피아 반도체 3X',
+            strategy: 'rsi-gold',
+            strategyName: 'Wilder RSI 골든크로스',
+            signalStatus: 'good',
+            signalText: '단기 RSI 반등 매수 타점',
+            stopPrice: 37.20,
+            targetPrice: 42.10,
+            briefing: {
+                reason: '필라델피아 반도체 지수 반등에 힘입어 과매도권에서 단기 모멘텀 골든크로스가 포착되었습니다.',
+                tradePlan: '38.60달러 진입 시 37.20달러(-3.63%) 타이트한 손절, 1차 목표 42.10달러(+9.07%)입니다.',
+                supplyFlow: '레버리지 특성상 변동성이 크며, 단기 반도체 업황 개선 기대 자금이 쏠리고 있습니다.'
+            }
+        },
+        {
+            code: 'TQQQ',
+            name: '나스닥 3배 롱 ETF (TQQQ)',
+            market: 'NASDAQ',
+            price: 74.80,
+            change: 2.07,
+            changeRate: 2.85,
+            volume: '56.3M주',
+            tradeAmount: '순자산 $24.8B',
+            theme: '나스닥 100 3X 레버리지',
+            strategy: 'support-bounce',
+            strategyName: '추세 지지선 반등',
+            signalStatus: 'good',
+            signalText: '3배 레버리지 지지 반등',
+            stopPrice: 72.10,
+            targetPrice: 81.60,
+            briefing: {
+                reason: '나스닥 100 지수의 20일선 지지 확인과 동조화되어 상방 탄력이 급증하고 있습니다.',
+                tradePlan: '현재가($74.80) 기준 $72.10(-3.61%) 손절, 목표 $81.60(+9.09%) 설정입니다.',
+                supplyFlow: '초단기 공격형 매수세가 지수 반등 국면에서 빠르게 유입 중입니다.'
+            }
+        },
+        {
+            code: 'SPY',
+            name: 'S&P 500 ETF (SPY)',
+            market: 'NYSE',
+            price: 582.40,
+            change: 3.01,
+            changeRate: 0.52,
+            volume: '45.1M주',
+            tradeAmount: '순자산 $580B',
+            theme: '미국 대형주 대표 지수',
+            strategy: 'ma-converge',
+            strategyName: '이평선 수렴 & 정배열',
+            signalStatus: 'good',
+            signalText: '정배열 대세 상승 추세',
+            stopPrice: 561.80,
+            targetPrice: 634.50,
+            briefing: {
+                reason: '미국 500대 우량주의 이익 성장과 경기 연착륙 기대감으로 교과서적인 정배열 상승을 이어가고 있습니다.',
+                tradePlan: '현재가($582.40) 기준 $561.80(-3.54%) 손절, $634.50(+8.95%) 목표입니다.',
+                supplyFlow: '전 세계 연기금 및 퇴직연금 401(k) 패시브 자금의 확고한 순매수가 유지됩니다.'
+            }
+        },
+        {
+            code: 'AVGO',
+            name: '브로드컴 (Broadcom)',
+            market: 'NASDAQ',
+            price: 182.00,
+            change: 3.74,
+            changeRate: 2.10,
+            volume: '24.6M주',
+            tradeAmount: '시총 $848.2B',
+            theme: '커스텀 ASIC / AI 네트워킹',
+            strategy: 'ict-smc',
+            strategyName: 'ICT 스마트 머니',
+            signalStatus: 'good',
+            signalText: 'Bullish OB 반등 타점',
+            stopPrice: 175.50,
+            targetPrice: 198.50,
+            briefing: {
+                reason: '구글, 메타 등 빅테크의 자체 AI 칩(ASIC) 설계 위탁 증가 및 VMware 클라우드 소프트웨어 시너지로 Bullish Order Block에서 반등했습니다.',
+                tradePlan: '현재가($182.00) 매수 시 $175.50(-3.57%) 손절, $198.50(+9.07%) 목표입니다.',
+                supplyFlow: 'AI 인프라 필수 네트워킹(Tomahawk 5) 독점력으로 장기 펀드 매수가 탄탄합니다.'
+            }
+        },
+        {
+            code: 'TSM',
+            name: 'TSMC ADR (TSM)',
+            market: 'NYSE',
+            price: 198.50,
+            change: 3.41,
+            changeRate: 1.75,
+            volume: '19.8M주',
+            tradeAmount: '시총 $1.03T',
+            theme: '글로벌 1위 파운드리',
+            strategy: 'support-bounce',
+            strategyName: '추세 지지선 반등',
+            signalStatus: 'good',
+            signalText: '3나노 풀가동 지지 반등',
+            stopPrice: 191.40,
+            targetPrice: 216.50,
+            briefing: {
+                reason: '3나노/2나노 선단 공정 가동률 100% 지속 및 애플, 엔비디아, AMD 전량 위탁에 힘입어 상승 추세 지지선을 강력히 방어 중입니다.',
+                tradePlan: '현재가($198.50) 매수 시 $191.40(-3.58%) 손절, $216.50(+9.07%) 1차 목표입니다.',
+                supplyFlow: '글로벌 파운드리 시장점유율 60%를 바탕으로 한 외국인 매수세가 지속됩니다.'
+            }
+        },
+        {
+            code: 'AMD',
+            name: 'AMD',
+            market: 'NASDAQ',
+            price: 156.40,
+            change: 2.92,
+            changeRate: 1.90,
+            volume: '34.2M주',
+            tradeAmount: '시총 $253.4B',
+            theme: 'MI300X AI 칩 / CPU',
+            strategy: 'bb-squeeze',
+            strategyName: '볼린저 밴드 스퀴즈',
+            signalStatus: 'good',
+            signalText: '변동성 응축 후 반등',
+            stopPrice: 150.80,
+            targetPrice: 170.50,
+            briefing: {
+                reason: 'MI325X AI 가속기 출시와 서버용 에픽(EPYC) CPU 시장 점유율 확대로 바닥권에서 밴드 스퀴즈 후 우상향 전환했습니다.',
+                tradePlan: '156.40달러 매수 시 $150.80(-3.58%) 손절, $170.50(+9.02%) 목표입니다.',
+                supplyFlow: 'AI 칩 경쟁 구도 부각에 따른 저평가 메리트로 숏커버링 자금이 유입 중입니다.'
+            }
+        },
+        {
+            code: 'MU',
+            name: '마이크론 테크놀로지',
+            market: 'NASDAQ',
+            price: 110.20,
+            change: 2.48,
+            changeRate: 2.30,
+            volume: '29.7M주',
+            tradeAmount: '시총 $122.1B',
+            theme: 'HBM3E / D램',
+            strategy: 'rsi-gold',
+            strategyName: 'Wilder RSI 골든크로스',
+            signalStatus: 'good',
+            signalText: 'RSI 골든크로스 매수 시그널',
+            stopPrice: 106.30,
+            targetPrice: 120.20,
+            briefing: {
+                reason: '엔비디아 H200 및 B200용 HBM3E 메모리 완판 및 D램/낸드 가격 상승세로 기술적 지표가 일제히 골든크로스로 돌아섰습니다.',
+                tradePlan: '현재가($110.20) 진입 시 $106.30(-3.54%) 손절, $120.20(+9.07%) 목표입니다.',
+                supplyFlow: '메모리 슈퍼사이클 기대감으로 미국 반도체 전용 펀드의 순매수가 증가하고 있습니다.'
+            }
+        },
+        {
+            code: 'ASML',
+            name: 'ASML 홀딩 (ASML)',
+            market: 'NASDAQ',
+            price: 720.00,
+            change: -2.89,
+            changeRate: -0.40,
+            volume: '8.4M주',
+            tradeAmount: '시총 $284.5B',
+            theme: 'EUV 노광장비 독점',
+            strategy: 'ict-smc',
+            strategyName: 'ICT 스마트 머니',
+            signalStatus: 'good',
+            signalText: 'SSL Sweep 후 V자 반등',
+            stopPrice: 694.00,
+            targetPrice: 785.00,
+            briefing: {
+                reason: 'EUV 및 High-NA 독점 기술력을 기반으로 저점 유동성 스윕(SSL Sweep) 발생 후 강한 저가 매수세로 반등을 시도하고 있습니다.',
+                tradePlan: '현재가($720.00) 매수 시 지지선 이탈 $694.00(-3.61%) 손절, $785.00(+9.03%) 1차 목표입니다.',
+                supplyFlow: '단기 실적 노이즈를 딛고 장기 독점 해자를 주목하는 기관의 저점 분할 매수가 유입되고 있습니다.'
+            }
+        }
     ];
 
     // 기본 시그널 대표 종목 (국내)
@@ -1183,10 +1540,21 @@
                 }
             });
             finalCandles = Array.from(yearMap.values());
-            // 과거 5개년 대표 역사적 앵커 (2020~2024년 대세 사이클)
-            if (finalCandles.length < 5) {
+            // 과거 역사적 앵커 (2009년 상장 사이클부터 2024년까지 폭넓은 16개년 역사 복원)
+            if (finalCandles.length < 10) {
                 const p2025 = finalCandles[0] ? finalCandles[0].open : stock.price * 0.45;
                 const historicalAnchors = [
+                    { time: '2009-01-01', open: Math.round(p2025 * 0.10), high: Math.round(p2025 * 0.14), low: Math.round(p2025 * 0.08), close: Math.round(p2025 * 0.13) },
+                    { time: '2010-01-01', open: Math.round(p2025 * 0.13), high: Math.round(p2025 * 0.17), low: Math.round(p2025 * 0.11), close: Math.round(p2025 * 0.15) },
+                    { time: '2011-01-01', open: Math.round(p2025 * 0.15), high: Math.round(p2025 * 0.19), low: Math.round(p2025 * 0.12), close: Math.round(p2025 * 0.16) },
+                    { time: '2012-01-01', open: Math.round(p2025 * 0.16), high: Math.round(p2025 * 0.20), low: Math.round(p2025 * 0.14), close: Math.round(p2025 * 0.17) },
+                    { time: '2013-01-01', open: Math.round(p2025 * 0.17), high: Math.round(p2025 * 0.22), low: Math.round(p2025 * 0.15), close: Math.round(p2025 * 0.19) },
+                    { time: '2014-01-01', open: Math.round(p2025 * 0.19), high: Math.round(p2025 * 0.24), low: Math.round(p2025 * 0.17), close: Math.round(p2025 * 0.21) },
+                    { time: '2015-01-01', open: Math.round(p2025 * 0.21), high: Math.round(p2025 * 0.26), low: Math.round(p2025 * 0.18), close: Math.round(p2025 * 0.22) },
+                    { time: '2016-01-01', open: Math.round(p2025 * 0.22), high: Math.round(p2025 * 0.28), low: Math.round(p2025 * 0.19), close: Math.round(p2025 * 0.25) },
+                    { time: '2017-01-01', open: Math.round(p2025 * 0.25), high: Math.round(p2025 * 0.35), low: Math.round(p2025 * 0.23), close: Math.round(p2025 * 0.32) },
+                    { time: '2018-01-01', open: Math.round(p2025 * 0.32), high: Math.round(p2025 * 0.36), low: Math.round(p2025 * 0.22), close: Math.round(p2025 * 0.24) },
+                    { time: '2019-01-01', open: Math.round(p2025 * 0.24), high: Math.round(p2025 * 0.30), low: Math.round(p2025 * 0.21), close: Math.round(p2025 * 0.28) },
                     { time: '2020-01-01', open: Math.round(p2025 * 0.28), high: Math.round(p2025 * 0.35), low: Math.round(p2025 * 0.22), close: Math.round(p2025 * 0.32) },
                     { time: '2021-01-01', open: Math.round(p2025 * 0.32), high: Math.round(p2025 * 0.45), low: Math.round(p2025 * 0.29), close: Math.round(p2025 * 0.38) },
                     { time: '2022-01-01', open: Math.round(p2025 * 0.38), high: Math.round(p2025 * 0.41), low: Math.round(p2025 * 0.24), close: Math.round(p2025 * 0.26) },
@@ -1393,12 +1761,15 @@
             const prevClose = i > 0 ? candles[i - 1].close : p * 0.99;
             let open = prevClose;
             let close = p;
+            let high = 0;
+            let low = 0;
+
             if (i === timeList.length - 1) {
                 close = currentPrice;
                 if (tf === '1Y') {
-                    open = Math.round(currentPrice * (isOverseas ? 0.85 : 0.50));
-                    high = Math.round(currentPrice * (isOverseas ? 1.45 : 2.29));
-                    low = Math.round(currentPrice * (isOverseas ? 0.75 : 0.49));
+                    open = isOverseas ? parseFloat((currentPrice * 0.85).toFixed(2)) : Math.round(currentPrice * 0.50);
+                    high = isOverseas ? parseFloat((currentPrice * 1.45).toFixed(2)) : Math.round(currentPrice * 2.29);
+                    low = isOverseas ? parseFloat((currentPrice * 0.75).toFixed(2)) : Math.round(currentPrice * 0.49);
                 }
             }
 

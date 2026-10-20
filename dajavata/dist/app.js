@@ -562,32 +562,97 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 테마 상세 로드
-    function loadThemeDetails(themeName) {
+    // 테마 상세 로드 (3단계 장애 방지 캐싱 & CDN 폴백 엔진)
+    async function loadThemeDetails(themeName) {
         headerTitle.textContent = themeName + " 테마주";
         themeBadge.textContent = "테마상세";
         tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">해당 테마의 종목 데이터를 불러오는 중입니다...</td></tr>';
-        
-        fetch(`${API_URL}/${encodeURIComponent(themeName)}`)
-            .then(response => {
-                if (!response.ok) throw new Error("Theme details not found");
-                return response.json();
-            })
-            .then(data => {
-                renderTable(data.stocks, 'stocks', true);
-            })
-            .catch(error => {
-                console.error('Error fetching theme details:', error);
-                tbody.innerHTML = '<tr><td colspan="12" class="center">상세 데이터를 불러오는 데 실패했습니다.</td></tr>';
-                
-                setTimeout(() => {
-                    headerTitle.textContent = previousState.headerTitle || "전체 테마";
-                    themeBadge.textContent = previousState.themeBadge || "테마";
-                    renderTable(previousState.dataList || window.allThemes, previousState.mode || 'themes', false);
-                    currentPage = previousState.page || 1;
-                    renderCurrentPage();
-                }, 2000);
-            });
+
+        // 0단계: 메모리 캐시 확인 (0ms 즉시 렌더링)
+        if (window.themeDetailsCache && window.themeDetailsCache[themeName]) {
+            renderTable(window.themeDetailsCache[themeName], 'stocks', true);
+            return;
+        }
+
+        let stocks = null;
+
+        // 1단계: 백엔드 API (쿼리 파라미터 우선: 슬래시 '/' 인코딩 라우팅 오류 원천 차단)
+        const candidateUrls = [
+            `${API_BASE}/api/themes/detail?name=${encodeURIComponent(themeName)}`,
+            `${API_URL}/${encodeURIComponent(themeName)}`
+        ];
+
+        for (const url of candidateUrls) {
+            try {
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.stocks && data.stocks.length > 0) {
+                        stocks = data.stocks;
+                        break;
+                    }
+                }
+            } catch (e) {
+                // 다음 URL 시도
+            }
+        }
+
+        // 2단계: 백엔드 실패 또는 Render 데이터 누락 시 글로벌 CDN / Raw GitHub 풀백
+        if (!stocks) {
+            try {
+                if (!window.globalThemeDetailsStore) {
+                    const cdnUrls = [
+                        'https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/theme_details.json',
+                        'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/theme_details.json'
+                    ];
+                    for (const cdnUrl of cdnUrls) {
+                        try {
+                            const cdnRes = await fetch(cdnUrl);
+                            if (cdnRes.ok) {
+                                window.globalThemeDetailsStore = await cdnRes.json();
+                                break;
+                            }
+                        } catch (err) {}
+                    }
+                }
+
+                if (window.globalThemeDetailsStore) {
+                    const store = window.globalThemeDetailsStore;
+                    // exact match
+                    if (store[themeName]) {
+                        stocks = store[themeName];
+                    } else {
+                        // fuzzy / normalized match (공백, 대소문자, 슬래시 정규화)
+                        const normTarget = themeName.replace(/\s+/g, '').toLowerCase();
+                        for (const key of Object.keys(store)) {
+                            if (key.replace(/\s+/g, '').toLowerCase() === normTarget) {
+                                stocks = store[key];
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (cdnErr) {
+                console.warn('CDN fallback error:', cdnErr);
+            }
+        }
+
+        if (stocks && stocks.length > 0) {
+            if (!window.themeDetailsCache) window.themeDetailsCache = {};
+            window.themeDetailsCache[themeName] = stocks;
+            renderTable(stocks, 'stocks', true);
+        } else {
+            console.error('Error fetching theme details for:', themeName);
+            tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--danger);">상세 데이터를 불러오는 데 실패했습니다. 잠시 후 테마 목록으로 돌아갑니다.</td></tr>';
+            
+            setTimeout(() => {
+                headerTitle.textContent = previousState.headerTitle || "전체 테마";
+                themeBadge.textContent = previousState.themeBadge || "테마";
+                renderTable(previousState.dataList || window.allThemes, previousState.mode || 'themes', false);
+                currentPage = previousState.page || 1;
+                renderCurrentPage();
+            }, 2500);
+        }
     }
 
     function showDefaultView() {
