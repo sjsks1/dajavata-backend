@@ -205,6 +205,33 @@ body {
     letter-spacing: -0.5px;
 }
 
+.header-meta-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-update-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.24);
+    border-radius: 20px;
+    color: #38bdf8;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header-update-badge i {
+    font-size: 15px;
+    color: #38bdf8;
+}
+
 .header-stats {
     display: flex;
     gap: 24px;

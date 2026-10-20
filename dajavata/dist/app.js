@@ -43,15 +43,74 @@ document.addEventListener('DOMContentLoaded', () => {
     window.allStocks = [];
     window.allInsights = [];
 
+    // KST(한국시간 UTC+9) 변환 및 포맷 헬퍼 함수
+    function getKstDate(d) {
+        const base = d ? (d instanceof Date ? d : new Date(d)) : new Date();
+        const valid = !isNaN(base.getTime()) ? base : new Date();
+        const utc = valid.getTime() + (valid.getTimezoneOffset() * 60000);
+        return new Date(utc + (9 * 3600000));
+    }
+
+    function formatKstTime(rawVal, fallbackDate) {
+        if (rawVal && rawVal !== '오늘' && rawVal !== '-') {
+            if (/^\d{2}\.\d{2} \d{2}:\d{2}$/.test(rawVal)) return rawVal;
+            const parsed = new Date(rawVal);
+            if (!isNaN(parsed.getTime())) {
+                const kst = getKstDate(parsed);
+                const mm = String(kst.getMonth() + 1).padStart(2, '0');
+                const dd = String(kst.getDate()).padStart(2, '0');
+                const hh = String(kst.getHours()).padStart(2, '0');
+                const mi = String(kst.getMinutes()).padStart(2, '0');
+                return `${mm}.${dd} ${hh}:${mi}`;
+            }
+        }
+        const kst = getKstDate(fallbackDate || window._themeUpdatedAt || window._stockUpdatedAt);
+        const mm = String(kst.getMonth() + 1).padStart(2, '0');
+        const dd = String(kst.getDate()).padStart(2, '0');
+        const hh = String(kst.getHours()).padStart(2, '0');
+        const mi = String(kst.getMinutes()).padStart(2, '0');
+        return `${mm}.${dd} ${hh}:${mi}`;
+    }
+
+    function formatFullKstHeader(fallbackDate) {
+        const kst = getKstDate(fallbackDate || window._themeUpdatedAt || window._stockUpdatedAt);
+        const yyyy = kst.getFullYear();
+        const mm = String(kst.getMonth() + 1).padStart(2, '0');
+        const dd = String(kst.getDate()).padStart(2, '0');
+        const hh = String(kst.getHours()).padStart(2, '0');
+        const mi = String(kst.getMinutes()).padStart(2, '0');
+        return `최근 업데이트: ${yyyy}.${mm}.${dd} ${hh}:${mi} (KST)`;
+    }
+
+    function updateHeaderBadge() {
+        const badgeText = document.getElementById('header-update-text');
+        const badgeWrap = document.getElementById('header-update-badge');
+        if (!badgeText) return;
+        if (currentMode === 'insights') {
+            if (badgeWrap) badgeWrap.style.display = 'none';
+            return;
+        }
+        if (badgeWrap) badgeWrap.style.display = 'inline-flex';
+        const targetDate = (currentMode === 'stocks') ? (window._stockUpdatedAt || window._themeUpdatedAt) : (window._themeUpdatedAt || window._stockUpdatedAt);
+        badgeText.textContent = formatFullKstHeader(targetDate);
+    }
+
     // 전체 종목 데이터를 로드하는 Promise (재사용/재시도 가능하게 함수로 분리)
     function loadAllStocks() {
-        return fetch('https://dajavata-backend.onrender.com/api/stocks/fundamentals')
+        return fetch(`${API_BASE}/api/stocks/fundamentals`)
             .then(response => {
                 if (!response.ok) throw new Error('fundamentals fetch failed');
-                return response.json();
+                const serverDate = response.headers.get('date');
+                return response.json().then(data => ({ data, serverDate }));
             })
-            .then(data => {
+            .then(({ data, serverDate }) => {
                 window.allStocks = data.stocks || [];
+                if (data.updated_at) {
+                    window._stockUpdatedAt = new Date(data.updated_at);
+                } else if (serverDate) {
+                    window._stockUpdatedAt = new Date(serverDate);
+                }
+                updateHeaderBadge();
                 return window.allStocks;
             })
             .catch(error => {
@@ -99,11 +158,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Fetch data
     fetch(API_URL)
-        .then(response => response.json())
-        .then(data => {
+        .then(response => {
+            const serverDate = response.headers.get('date');
+            return response.json().then(data => ({ data, serverDate }));
+        })
+        .then(({ data, serverDate }) => {
             window.allThemes = data.themes || [];
+            if (data.updated_at) {
+                window._themeUpdatedAt = new Date(data.updated_at);
+            } else if (serverDate) {
+                window._themeUpdatedAt = new Date(serverDate);
+            }
+            updateHeaderBadge();
             if (window.allThemes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="center">데이터를 불러올 수 없습니다. API 연결을 확인해주세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15" class="center">데이터를 불러올 수 없습니다. API 연결을 확인해주세요.</td></tr>';
                 return;
             }
             // 최초 접속 시 전체 테마 렌더링
@@ -111,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(error => {
             console.error('Error fetching themes:', error);
-            tbody.innerHTML = '<tr><td colspan="12" class="center">데이터를 불러오는 중 오류가 발생했습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="15" class="center">데이터를 불러오는 중 오류가 발생했습니다.</td></tr>';
         });
 
     // 검색창 이벤트
@@ -141,6 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPage = 1;
         isThemeDetail = fromThemeDetail;
         if (searchInput) searchInput.value = ''; // 탭 전환 시 검색어 초기화
+        updateHeaderBadge();
         renderCurrentPage();
     }
 
@@ -316,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="right"><span class="${theme.high3yPos ? 'pos' : 'neg'} price-main">${theme.high3y}</span></td>
                     <td class="right"><span class="${theme.low3yPos ? 'pos' : 'neg'} price-main">${theme.low3y}</span></td>
                     <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">${theme.neglect3y}</span></td>
-                    <td class="center" style="color: var(--text-muted); font-size: 12px;">${theme.update}</td>
+                    <td class="center" style="color: var(--text-muted); font-size: 12px;" title="데이터 업데이트 시간 (한국시간)">${formatKstTime(theme.update, window._themeUpdatedAt)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -354,6 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <th class="right">PER</th>
                     <th class="right">EPS</th>
                     <th class="right">시가총액</th>
+                    <th class="center">업데이트</th>
                 </tr>
             `;
 
@@ -406,6 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td class="right"><span class="price-main">${per}</span></td>
                     <td class="right"><span class="price-main">${eps}</span></td>
                     <td class="right"><span class="price-main" style="font-size: 12px; color: var(--text-muted);">${marcapStr}</span></td>
+                    <td class="center" style="color: var(--text-muted); font-size: 12px;" title="데이터 업데이트 시간 (한국시간)">${formatKstTime(stock.update, window._stockUpdatedAt)}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -707,13 +778,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">전 종목 데이터를 불러오는 중입니다...</td></tr>';
 
-            fetch('https://dajavata-backend.onrender.com/api/stocks/fundamentals')
+            fetch(`${API_BASE}/api/stocks/fundamentals`)
                 .then(response => {
                     if (!response.ok) throw new Error("Stock data not found");
-                    return response.json();
+                    const serverDate = response.headers.get('date');
+                    return response.json().then(data => ({ data, serverDate }));
                 })
-                .then(data => {
+                .then(({ data, serverDate }) => {
                     let stocks = data.stocks || [];
+                    if (data.updated_at) {
+                        window._stockUpdatedAt = new Date(data.updated_at);
+                    } else if (serverDate) {
+                        window._stockUpdatedAt = new Date(serverDate);
+                    }
+                    updateHeaderBadge();
                     
                     if (action === 'stock-rising') {
                         stocks = stocks.filter(s => s.day3 > 0).sort((a, b) => b.day3 - a.day3);
