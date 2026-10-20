@@ -366,8 +366,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let displayMode = currentMode;
 
         if (searchInput && searchInput.value.trim()) {
-            const term = searchInput.value.toLowerCase().trim();
+            const rawTerm = searchInput.value.trim();
+            const term = rawTerm.toLowerCase();
             
+            // 검색 시 헤더 타이틀 및 뱃지를 검색 모드로 즉각 갱신
+            if (headerTitle) headerTitle.textContent = `"${rawTerm}" 검색 결과`;
+            if (themeBadge) themeBadge.textContent = "검색";
+
             let themeResults = window.allThemes.filter(item => {
                 const name = (item.name || '').toLowerCase();
                 const desc = (item.desc || '').toLowerCase();
@@ -385,6 +390,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     const code = (item.code || '').toLowerCase();
                     return name.includes(term) || code.includes(term);
                 });
+
+            // 검색된 종목들의 주가를 globalThemeDetailsStore의 최신 실시간 시세로 동기화
+            if (stockResults.length > 0 && window.globalThemeDetailsStore) {
+                const freshMap = new Map();
+                Object.values(window.globalThemeDetailsStore).forEach(arr => {
+                    if (Array.isArray(arr)) {
+                        arr.forEach(s => {
+                            if (s.code && s.current_price != null && s.current_price > 0) freshMap.set(s.code, s);
+                            if (s.name && s.current_price != null && s.current_price > 0) freshMap.set(s.name, s);
+                        });
+                    }
+                });
+                stockResults = stockResults.map(s => {
+                    const fresh = freshMap.get(s.code) || freshMap.get(s.name);
+                    if (fresh) {
+                        return {
+                            ...s,
+                            current_price: fresh.current_price,
+                            day1: fresh.day1 !== undefined && fresh.day1 !== null ? fresh.day1 : s.day1,
+                            update: fresh.update || s.update
+                        };
+                    }
+                    return s;
+                });
+            }
                 
             if (themeResults.length > 0 && stockResults.length === 0) {
                 filteredList = themeResults;
@@ -403,6 +433,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 filteredList = [];
                 displayMode = currentMode;
+            }
+        } else {
+            // 검색어가 없을 때 테마 상세가 아니면 기본 헤더 유지
+            if (!isThemeDetail && headerTitle && previousState.headerTitle) {
+                headerTitle.textContent = previousState.headerTitle;
+                if (themeBadge && previousState.themeBadge) themeBadge.textContent = previousState.themeBadge;
             }
         }
 
@@ -795,15 +831,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 stocks = stocks.map(item => {
                     const latest = stockMap.get(item.code) || stockMap.get(item.name);
+                    // item이 이미 최신 실시간 시세(current_price > 0)를 가지고 있다면 구버전 latest로 덮어쓰지 않고 최우선 보존
+                    const hasValidItemPrice = item.current_price != null && item.current_price > 0;
+                    const hasValidItemDay1 = item.day1 != null;
+
                     if (latest) {
                         return {
-                            ...item,
                             ...latest,
+                            ...item,
                             name: item.name || latest.name,
                             code: item.code || latest.code,
-                            current_price: latest.current_price !== undefined && latest.current_price !== null ? latest.current_price : item.current_price,
-                            day1: latest.day1 !== undefined && latest.day1 !== null ? latest.day1 : item.day1,
-                            day3: latest.day3 !== undefined && latest.day3 !== null ? latest.day3 : item.day3,
+                            current_price: hasValidItemPrice ? item.current_price : (latest.current_price || item.current_price),
+                            day1: hasValidItemDay1 ? item.day1 : (latest.day1 != null ? latest.day1 : item.day1),
+                            day3: item.day3 != null ? item.day3 : latest.day3,
                             high52: latest.high52 !== undefined ? latest.high52 : item.high52,
                             low52: latest.low52 !== undefined ? latest.low52 : item.low52,
                             neglect52: latest.neglect52 !== undefined ? latest.neglect52 : item.neglect52,
@@ -814,7 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             PER: latest.PER !== undefined ? latest.PER : item.PER,
                             EPS: latest.EPS !== undefined ? latest.EPS : item.EPS,
                             marcap: latest.marcap !== undefined ? latest.marcap : item.marcap,
-                            update: latest.update || item.update
+                            update: item.update || latest.update
                         };
                     }
                     return item;

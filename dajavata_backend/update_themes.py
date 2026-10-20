@@ -8,6 +8,7 @@ import pandas as pd
 import FinanceDataReader as fdr
 import numpy as np
 import math
+import datetime
 
 def clean_nan(obj):
     if isinstance(obj, dict):
@@ -210,6 +211,10 @@ async def main():
     
     loop = asyncio.get_running_loop()
     
+    # Get current Korean Standard Time (KST)
+    kst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+    kst_update_str = kst_now.strftime("%m.%d %H:%M")
+
     # Process sequentially to avoid FDR rate limits
     for i, code in enumerate(unique_codes):
         if i % 10 == 0:
@@ -217,11 +222,65 @@ async def main():
         metrics = await loop.run_in_executor(None, calculate_stock_metrics, code, df_krx)
         if metrics:
             metrics.update(integration_dict.get(code, {})) # merge PBR/PER
+            metrics['update'] = kst_update_str
             stock_metrics_dict[code] = metrics
 
     print(f"Successfully calculated metrics for {len(stock_metrics_dict)}/{len(unique_codes)} stocks.")
 
-    # 6. Aggregate metrics for themes
+    # 5.5. 네이버 실시간 호가/현재가 일괄 동기화 (100개씩 배치 호출하여 100% 실시간 시세 반영)
+    print("Fetching live real-time prices & change rates from Naver Polling API...")
+    async with aiohttp.ClientSession() as poll_session:
+        batch_size = 100
+        for i in range(0, len(unique_codes), batch_size):
+            batch = unique_codes[i:i+batch_size]
+            url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{','.join(batch)}"
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            try:
+                async with poll_session.get(url, headers=headers, timeout=10) as p_res:
+                    if p_res.status == 200:
+                        p_data = await p_res.json()
+                        for item in p_data.get('datas', []):
+                            c = item.get('itemCode')
+                            if not c:
+                                continue
+                            close_raw = item.get('closePriceRaw') or item.get('closePrice')
+                            ratio_raw = item.get('fluctuationsRatioRaw') or item.get('fluctuationsRatio')
+                            try:
+                                live_price = float(str(close_raw).replace(',', ''))
+                            except:
+                                live_price = None
+                            try:
+                                live_day1 = float(str(ratio_raw).replace('%', '').replace('+', ''))
+                            except:
+                                live_day1 = None
+                            
+                            if c in stock_metrics_dict:
+                                if live_price is not None:
+                                    stock_metrics_dict[c]['current_price'] = live_price
+                                if live_day1 is not None:
+                                    stock_metrics_dict[c]['day1'] = live_day1
+                                stock_metrics_dict[c]['update'] = kst_update_str
+                            else:
+                                stock_name = item.get('stockName') or c
+                                stock_metrics_dict[c] = {
+                                    'code': c,
+                                    'name': stock_name,
+                                    'current_price': live_price if live_price is not None else 0,
+                                    'day1': live_day1 if live_day1 is not None else 0,
+                                    'day3': 0,
+                                    'high52': 0,
+                                    'low52': 0,
+                                    'neglect52': 0,
+                                    'high3y': 0,
+                                    'low3y': 0,
+                                    'neglect3y': 0,
+                                    'expReturn': 0,
+                                    'marcap': 0,
+                                    'update': kst_update_str
+                                }
+            except Exception as pe:
+                print(f"Error fetching live batch {i}: {pe}")
+
     print("Aggregating theme metrics...")
     final_themes = []
     theme_details = {}
@@ -257,27 +316,34 @@ async def main():
             'low3y': float(low3y_avg),
             'neglect3y': float(neglect3y_avg),
             'expReturn': float(exp_return_avg),
-            'score': 100 # Placeholder
+            'score': 100, # Placeholder
+            'update': kst_update_str
         })
         
         # Save details
         theme_details[theme['name']] = theme_stock_data
 
-    # 7. Save to JSON
-    if not final_themes:
-        print("⚠️ 테마 데이터가 비어있어 저장을 건너뜁니다 (기존 데이터 유지).")
+    # 7. Save to JSON (안전장치: 빈 데이터 덮어쓰기 방지)
+    all_stocks_list = list(stock_metrics_dict.values())
+    if not final_themes or len(theme_details) == 0 or len(all_stocks_list) == 0:
+        print("⚠️ 테마 또는 종목 상세 데이터가 비어있어(0건) 파일 덮어쓰기를 건너뜁니다 (기존 데이터 100% 보존).")
     else:
         print("Saving to JSON files...")
-        with open('data/theme_cache.json', 'w', encoding='utf-8') as f:
-            json.dump(clean_nan(final_themes), f, ensure_ascii=False, indent=2)
+        target_dirs = []
+        for cand in ['data', '../data', 'dajavata_backend/data', 'dajavata/dist/data', '../dajavata/dist/data']:
+            if os.path.exists(cand) or cand in ['data', 'dajavata_backend/data']:
+                if cand not in target_dirs:
+                    target_dirs.append(cand)
         
-    with open('data/theme_details.json', 'w', encoding='utf-8') as f:
-        json.dump(clean_nan(theme_details), f, ensure_ascii=False, indent=2)
-
-    # Save all unique stocks for condition filters
-    all_stocks_list = list(stock_metrics_dict.values())
-    with open('data/all_stocks.json', 'w', encoding='utf-8') as f:
-        json.dump(clean_nan(all_stocks_list), f, ensure_ascii=False, indent=2)
+        for t_dir in target_dirs:
+            os.makedirs(t_dir, exist_ok=True)
+            with open(os.path.join(t_dir, 'theme_cache.json'), 'w', encoding='utf-8') as f:
+                json.dump(clean_nan(final_themes), f, ensure_ascii=False, indent=2)
+            with open(os.path.join(t_dir, 'theme_details.json'), 'w', encoding='utf-8') as f:
+                json.dump(clean_nan(theme_details), f, ensure_ascii=False, indent=2)
+            with open(os.path.join(t_dir, 'all_stocks.json'), 'w', encoding='utf-8') as f:
+                json.dump(clean_nan(all_stocks_list), f, ensure_ascii=False, indent=2)
+        print(f"Data saved successfully to {target_dirs} ({len(final_themes)} themes, {len(theme_details)} details, {len(all_stocks_list)} stocks).")
         
     print("Update complete! You can run this script daily.")
 

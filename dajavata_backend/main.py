@@ -576,6 +576,11 @@ def sanitize(obj):
 def get_themes():
     cache_file = 'data/theme_cache.json'
     if os.path.exists(cache_file):
+        mtime = os.path.getmtime(cache_file)
+        kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
+        update_str = kst_dt.strftime("%m.%d %H:%M")
+        updated_iso = kst_dt.strftime("%Y-%m-%d %H:%M:%S")
+
         with open(cache_file, 'r', encoding='utf-8') as f:
             raw_themes = json.load(f)
             
@@ -603,44 +608,242 @@ def get_themes():
                 "rsi_d": "-",
                 "rsi_w": "-",
                 "rsi_m": "-",
-                "update": "오늘",
+                "update": t.get("update") or update_str,
                 "score": t.get("score", 100)
             })
-        return {"themes": sanitize(formatted_themes)}
+        return {"themes": sanitize(formatted_themes), "updated_at": updated_iso}
     else:
         themes = calculate_theme_metrics()
-        return {"themes": sanitize(themes)}
+        now_kst = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+        return {"themes": sanitize(themes), "updated_at": now_kst.strftime("%Y-%m-%d %H:%M:%S")}
+
+def resolve_theme_details(theme_name: str):
+    import urllib.parse
+    cleaned_names = [
+        theme_name,
+        urllib.parse.unquote(theme_name),
+        theme_name.strip(),
+        urllib.parse.unquote(theme_name).strip()
+    ]
+    
+    file_candidates = [
+        'data/theme_details.json',
+        '../data/theme_details.json',
+        'dajavata_backend/data/theme_details.json'
+    ]
+    
+    for file_path in file_candidates:
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                if not data or len(data) == 0:
+                    continue
+                
+                # 1. Exact match
+                for name in cleaned_names:
+                    if name in data:
+                        return {"theme": name, "stocks": sanitize(data[name])}
+                
+                # 2. Case-insensitive / whitespace-stripped match
+                for name in cleaned_names:
+                    norm_target = name.replace(' ', '').lower()
+                    for k in data.keys():
+                        if k.replace(' ', '').lower() == norm_target:
+                            return {"theme": k, "stocks": sanitize(data[k])}
+            except Exception as e:
+                print(f"[Theme Detail] Error reading {file_path}:", e)
+                
+    raise HTTPException(status_code=404, detail=f"Theme '{theme_name}' not found")
+
+@app.get("/api/themes/detail")
+def get_theme_detail_query(name: str):
+    return resolve_theme_details(name)
 
 @app.get("/api/themes/{theme_name:path}")
 def get_theme_details(theme_name: str):
-    # theme_name이 path로 들어올 때, url decode는 starlette이 자동으로 해줌.
-    # 만약 encodeURIComponent로 보낸 경우, '/'가 포함된 테마명도 안전하게 받을 수 있음.
-    
-    file_path = 'data/theme_details.json'
-    if os.path.exists(file_path):
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        # Exact match
-        if theme_name in data:
-            return {"theme": theme_name, "stocks": sanitize(data[theme_name])}
-            
-        raise HTTPException(status_code=404, detail=f"Theme '{theme_name}' not found")
-    
-    raise HTTPException(status_code=404, detail="Theme details data not found")
+    return resolve_theme_details(theme_name)
 
 @app.get("/api/stocks")
 def get_stocks():
     return stock_list
 
+_live_fundamentals_cache = None
+_live_fundamentals_time = 0
+
 @app.get("/api/stocks/fundamentals")
 def get_stocks_fundamentals():
-    file_path = 'data/all_stocks.json'
-    if os.path.exists(file_path):
+    global _live_fundamentals_cache, _live_fundamentals_time
+    now = time.time()
+    if _live_fundamentals_cache and (now - _live_fundamentals_time < 30):
+        return _live_fundamentals_cache
+
+    candidate_paths = [
+        'data/all_stocks.json',
+        'dajavata_backend/data/all_stocks.json',
+        '../data/all_stocks.json'
+    ]
+    file_path = None
+    for p in candidate_paths:
+        if os.path.exists(p) and os.path.getsize(p) > 1000:
+            file_path = p
+            break
+
+    if file_path:
+        mtime = os.path.getmtime(file_path)
+        kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
+        update_str = kst_dt.strftime("%m.%d %H:%M")
+        updated_iso = kst_dt.strftime("%Y-%m-%d %H:%M:%S")
+
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        return {"stocks": sanitize(data)}
+        for s in data:
+            if not s.get("update"):
+                s["update"] = update_str
+        
+        result = {"stocks": sanitize(data), "updated_at": updated_iso}
+        _live_fundamentals_cache = result
+        _live_fundamentals_time = now
+        return result
     raise HTTPException(status_code=404, detail="Stock data not found")
+
+@app.get("/api/stocks/realtime")
+def get_stocks_realtime(codes: str):
+    """
+    네이버 실시간 폴링 API 프록시: 종목코드 목록(쉼표 구분)을 받아 현재가 및 당일 등락률을 실시간 반환
+    """
+    clean_codes = ",".join([c.strip().upper() for c in codes.split(",") if c.strip()])
+    if not clean_codes:
+        return {"realtime": {}}
+    
+    url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{clean_codes}"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://finance.naver.com'
+    }
+    try:
+        r = requests.get(url, headers=headers, timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            realtime_map = {}
+            for item in data.get("datas", []):
+                code = item.get("itemCode")
+                if code:
+                    close_raw = item.get("closePriceRaw") or item.get("closePrice")
+                    try:
+                        price = float(str(close_raw).replace(",", ""))
+                    except Exception:
+                        price = None
+                    ratio_raw = item.get("fluctuationsRatioRaw") or item.get("fluctuationsRatio")
+                    try:
+                        ratio = float(str(ratio_raw).replace("%", ""))
+                    except Exception:
+                        ratio = None
+                    realtime_map[code] = {
+                        "code": code,
+                        "name": item.get("stockName"),
+                        "current_price": price,
+                        "day1": ratio,
+                        "market_status": item.get("marketStatus"),
+                        "traded_at": item.get("localTradedAt")
+                    }
+            return {"realtime": realtime_map}
+    except Exception as e:
+        print(f"[Realtime API Error]: {e}")
+    return {"realtime": {}}
+
+@app.get("/api/chart/{code}")
+def get_stock_chart(code: str, periodType: str = "dayCandle"):
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        # 해외 주식 판별 (한국 6자리 종목코드 예: 005930, 0233A0는 국내 주식)
+        clean_code = code.strip().upper()
+        is_korean = (len(clean_code) == 6 and any(ch.isdigit() for ch in clean_code[:3])) or clean_code.isdigit()
+        is_overseas = not is_korean
+        if is_overseas:
+            ticker = clean_code
+            # 네이버 해외 증권 포맷 후보 (.O = 나스닥, .N = 뉴욕, .K = 아르카)
+            candidates = [f"{ticker}.O", f"{ticker}.N", f"{ticker}.K", ticker] if '.' not in ticker else [ticker]
+            for cand in candidates:
+                url = f"https://api.stock.naver.com/chart/foreign/item/{cand}?periodType={periodType}"
+                try:
+                    r = requests.get(url, headers=headers, timeout=5)
+                    if r.status_code == 200:
+                        data = r.json()
+                        if data.get('priceInfos') and len(data['priceInfos']) > 0:
+                            return data
+                except Exception:
+                    pass
+            
+            # 네이버 실패 시 FinanceDataReader 폴백
+            try:
+                import FinanceDataReader as fdr
+                clean_ticker = ticker.split('.')[0]
+                df = fdr.DataReader(clean_ticker)
+                if not df.empty:
+                    df = df.tail(120)
+                    priceInfos = []
+                    for dt, row in df.iterrows():
+                        priceInfos.append({
+                            "localDate": dt.strftime('%Y%m%d'),
+                            "openPrice": float(row['Open']),
+                            "highPrice": float(row['High']),
+                            "lowPrice": float(row['Low']),
+                            "closePrice": float(row['Close']),
+                            "volume": int(row['Volume']) if 'Volume' in row else 0
+                        })
+                    return {"priceInfos": priceInfos}
+            except Exception as fe:
+                print(f"[Chart API] FDR 해외 주식 조회 실패 ({ticker}):", fe)
+        else:
+            # 국내 주식 (코스피 / 코스닥)
+            url = f"https://api.stock.naver.com/chart/domestic/item/{code}?periodType={periodType}"
+            try:
+                r = requests.get(url, headers=headers, timeout=6)
+                if r.status_code == 200:
+                    data = r.json()
+                    if data.get('priceInfos') and len(data['priceInfos']) > 0:
+                        return data
+            except Exception:
+                pass
+
+            # 2차 네이버 fchart XML 폴백 (장애 방지)
+            tf_map = {
+                'dayCandle': 'day',
+                'day': 'day',
+                'weekCandle': 'week',
+                'monthCandle': 'month',
+                'yearCandle': 'month'
+            }
+            tf = tf_map.get(periodType, 'day')
+            count = 120 if tf == 'month' else (250 if tf == 'week' else 300)
+            fchart_url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe={tf}&count={count}&requestType=0"
+            try:
+                fr = requests.get(fchart_url, timeout=5)
+                if fr.status_code == 200:
+                    root = ET.fromstring(fr.text)
+                    items = root.findall('.//item')
+                    if items:
+                        priceInfos = []
+                        for item in items:
+                            parts = item.attrib['data'].split('|')
+                            priceInfos.append({
+                                "localDate": parts[0],
+                                "openPrice": float(parts[1]),
+                                "highPrice": float(parts[2]),
+                                "lowPrice": float(parts[3]),
+                                "closePrice": float(parts[4]),
+                                "accumulatedTradingVolume": int(parts[5])
+                            })
+                        return {"priceInfos": priceInfos}
+            except Exception as fe:
+                print(f"[Chart API] fchart 폴백 실패 ({code}):", fe)
+
+        raise HTTPException(status_code=404, detail="Chart data not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
 def read_root():
