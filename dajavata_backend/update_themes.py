@@ -337,12 +337,19 @@ async def main():
         
         for t_dir in target_dirs:
             os.makedirs(t_dir, exist_ok=True)
-            with open(os.path.join(t_dir, 'theme_cache.json'), 'w', encoding='utf-8') as f:
-                json.dump(clean_nan(final_themes), f, ensure_ascii=False, indent=2)
-            with open(os.path.join(t_dir, 'theme_details.json'), 'w', encoding='utf-8') as f:
-                json.dump(clean_nan(theme_details), f, ensure_ascii=False, indent=2)
-            with open(os.path.join(t_dir, 'all_stocks.json'), 'w', encoding='utf-8') as f:
-                json.dump(clean_nan(all_stocks_list), f, ensure_ascii=False, indent=2)
+            for fname, payload in [
+                ('theme_cache.json', clean_nan(final_themes)),
+                ('theme_details.json', clean_nan(theme_details)),
+                ('all_stocks.json', clean_nan(all_stocks_list))
+            ]:
+                target_path = os.path.join(t_dir, fname)
+                tmp_path = target_path + '.tmp'
+                with open(tmp_path, 'w', encoding='utf-8') as f:
+                    json.dump(payload, f, ensure_ascii=False, indent=2)
+                if os.path.exists(target_path):
+                    os.replace(tmp_path, target_path)
+                else:
+                    os.rename(tmp_path, target_path)
         print(f"Data saved successfully to {target_dirs} ({len(final_themes)} themes, {len(theme_details)} details, {len(all_stocks_list)} stocks).")
         
     print("Update complete! You can run this script daily.")

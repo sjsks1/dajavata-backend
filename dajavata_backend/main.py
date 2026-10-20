@@ -574,48 +574,133 @@ def sanitize(obj):
 
 @app.get("/api/themes")
 def get_themes():
-    cache_file = 'data/theme_cache.json'
-    if os.path.exists(cache_file):
-        mtime = os.path.getmtime(cache_file)
-        kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
-        update_str = kst_dt.strftime("%m.%d %H:%M")
-        updated_iso = kst_dt.strftime("%Y-%m-%d %H:%M:%S")
+    cache_candidates = [
+        'data/theme_cache.json',
+        '../data/theme_cache.json',
+        'dajavata_backend/data/theme_cache.json',
+        os.path.join(os.path.dirname(__file__), 'data', 'theme_cache.json'),
+        os.path.join(os.path.dirname(__file__), '..', 'data', 'theme_cache.json'),
+    ]
+    
+    # 1. theme_cache.json 파일 후보군 순차 검증
+    for cache_file in cache_candidates:
+        if os.path.exists(cache_file) and os.path.getsize(cache_file) > 10:
+            try:
+                mtime = os.path.getmtime(cache_file)
+                kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
+                update_str = kst_dt.strftime("%m.%d %H:%M")
+                updated_iso = kst_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-        with open(cache_file, 'r', encoding='utf-8') as f:
-            raw_themes = json.load(f)
-            
-        formatted_themes = []
-        for t in raw_themes:
-            formatted_themes.append({
-                "name": t["name"],
-                "theme_id": t["theme_id"],
-                "desc": f"{t['name']} 테마 구성종목 평균 데이터입니다.",
-                "day1": f"{t['day1Pos']:+.2f}%" if pd.notna(t['day1Pos']) else "-",
-                "day1Pos": bool(t['day1Pos'] >= 0) if pd.notna(t['day1Pos']) else True,
-                "day3": f"{t['day3Pos']:+.2f}%" if pd.notna(t['day3Pos']) else "-",
-                "day3Pos": bool(t['day3Pos'] >= 0) if pd.notna(t['day3Pos']) else True,
-                "high52": f"{t['high52']:+.1f}%" if pd.notna(t['high52']) else "-",
-                "high52Pos": bool(t['high52'] >= 0) if pd.notna(t['high52']) else True,
-                "low52": f"{t['low52']:+.1f}%" if pd.notna(t['low52']) else "-",
-                "low52Pos": bool(t['low52'] >= 0) if pd.notna(t['low52']) else True,
-                "neglect52": f"{t['neglect52']:.0f}" if pd.notna(t['neglect52']) else "-",
-                "high3y": f"{t['high3y']:+.1f}%" if pd.notna(t['high3y']) else "-",
-                "high3yPos": bool(t['high3y'] >= 0) if pd.notna(t['high3y']) else True,
-                "low3y": f"{t['low3y']:+.1f}%" if pd.notna(t['low3y']) else "-",
-                "low3yPos": bool(t['low3y'] >= 0) if pd.notna(t['low3y']) else True,
-                "neglect3y": f"{t['neglect3y']:.0f}" if pd.notna(t['neglect3y']) else "-",
-                "expReturn": f"{t['expReturn']:.0f}%" if pd.notna(t['expReturn']) else "-",
-                "rsi_d": "-",
-                "rsi_w": "-",
-                "rsi_m": "-",
-                "update": t.get("update") or update_str,
-                "score": t.get("score", 100)
-            })
-        return {"themes": sanitize(formatted_themes), "updated_at": updated_iso}
-    else:
-        themes = calculate_theme_metrics()
-        now_kst = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
-        return {"themes": sanitize(themes), "updated_at": now_kst.strftime("%Y-%m-%d %H:%M:%S")}
+                with open(cache_file, 'r', encoding='utf-8') as f:
+                    raw_themes = json.load(f)
+                    
+                if raw_themes and len(raw_themes) > 0:
+                    formatted_themes = []
+                    for t in raw_themes:
+                        d1 = t.get('day1Pos')
+                        d3 = t.get('day3Pos')
+                        h52 = t.get('high52')
+                        l52 = t.get('low52')
+                        n52 = t.get('neglect52')
+                        h3y = t.get('high3y')
+                        l3y = t.get('low3y')
+                        n3y = t.get('neglect3y')
+                        exp = t.get('expReturn')
+                        formatted_themes.append({
+                            "name": t.get("name", ""),
+                            "theme_id": t.get("theme_id", ""),
+                            "desc": f"{t.get('name', '')} 테마 구성종목 평균 데이터입니다.",
+                            "day1": f"{d1:+.2f}%" if pd.notna(d1) else "-",
+                            "day1Pos": bool(d1 >= 0) if pd.notna(d1) else True,
+                            "day3": f"{d3:+.2f}%" if pd.notna(d3) else "-",
+                            "day3Pos": bool(d3 >= 0) if pd.notna(d3) else True,
+                            "high52": f"{h52:+.1f}%" if pd.notna(h52) else "-",
+                            "high52Pos": bool(h52 >= 0) if pd.notna(h52) else True,
+                            "low52": f"{l52:+.1f}%" if pd.notna(l52) else "-",
+                            "low52Pos": bool(l52 >= 0) if pd.notna(l52) else True,
+                            "neglect52": f"{n52:.0f}" if pd.notna(n52) else "-",
+                            "high3y": f"{h3y:+.1f}%" if pd.notna(h3y) else "-",
+                            "high3yPos": bool(h3y >= 0) if pd.notna(h3y) else True,
+                            "low3y": f"{l3y:+.1f}%" if pd.notna(l3y) else "-",
+                            "low3yPos": bool(l3y >= 0) if pd.notna(l3y) else True,
+                            "neglect3y": f"{n3y:.0f}" if pd.notna(n3y) else "-",
+                            "expReturn": f"{exp:.0f}%" if pd.notna(exp) else "-",
+                            "rsi_d": "-",
+                            "rsi_w": "-",
+                            "rsi_m": "-",
+                            "update": t.get("update") or update_str,
+                            "score": t.get("score", 100)
+                        })
+                    return {"themes": sanitize(formatted_themes), "updated_at": updated_iso}
+            except Exception as e:
+                print(f"[Themes] Error reading {cache_file}:", e)
+                
+    # 2. theme_details.json 기반 실시간 복구 Fallback
+    detail_candidates = [
+        'data/theme_details.json',
+        '../data/theme_details.json',
+        'dajavata_backend/data/theme_details.json',
+        os.path.join(os.path.dirname(__file__), 'data', 'theme_details.json'),
+        os.path.join(os.path.dirname(__file__), '..', 'data', 'theme_details.json'),
+    ]
+    for detail_file in detail_candidates:
+        if os.path.exists(detail_file) and os.path.getsize(detail_file) > 10:
+            try:
+                mtime = os.path.getmtime(detail_file)
+                kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
+                update_str = kst_dt.strftime("%m.%d %H:%M")
+                updated_iso = kst_dt.strftime("%Y-%m-%d %H:%M:%S")
+                with open(detail_file, 'r', encoding='utf-8') as f:
+                    theme_details_map = json.load(f)
+                if theme_details_map and len(theme_details_map) > 0:
+                    formatted_themes = []
+                    for t_name, stocks in theme_details_map.items():
+                        if not stocks:
+                            continue
+                        df_s = pd.DataFrame(stocks)
+                        d1 = df_s['day1'].mean() if 'day1' in df_s else 0
+                        d3 = df_s['day3'].mean() if 'day3' in df_s else 0
+                        h52 = df_s['high52'].mean() if 'high52' in df_s else 0
+                        l52 = df_s['low52'].mean() if 'low52' in df_s else 0
+                        n52 = df_s['neglect52'].mean() if 'neglect52' in df_s else 0
+                        h3y = df_s['high3y'].mean() if 'high3y' in df_s else 0
+                        l3y = df_s['low3y'].mean() if 'low3y' in df_s else 0
+                        n3y = df_s['neglect3y'].mean() if 'neglect3y' in df_s else 0
+                        exp = df_s['expReturn'].mean() if 'expReturn' in df_s else 0
+                        formatted_themes.append({
+                            "name": t_name,
+                            "theme_id": "",
+                            "desc": f"{t_name} 테마 구성종목 평균 데이터입니다.",
+                            "day1": f"{d1:+.2f}%" if pd.notna(d1) else "-",
+                            "day1Pos": bool(d1 >= 0) if pd.notna(d1) else True,
+                            "day3": f"{d3:+.2f}%" if pd.notna(d3) else "-",
+                            "day3Pos": bool(d3 >= 0) if pd.notna(d3) else True,
+                            "high52": f"{h52:+.1f}%" if pd.notna(h52) else "-",
+                            "high52Pos": bool(h52 >= 0) if pd.notna(h52) else True,
+                            "low52": f"{l52:+.1f}%" if pd.notna(l52) else "-",
+                            "low52Pos": bool(l52 >= 0) if pd.notna(l52) else True,
+                            "neglect52": f"{n52:.0f}" if pd.notna(n52) else "-",
+                            "high3y": f"{h3y:+.1f}%" if pd.notna(h3y) else "-",
+                            "high3yPos": bool(h3y >= 0) if pd.notna(h3y) else True,
+                            "low3y": f"{l3y:+.1f}%" if pd.notna(l3y) else "-",
+                            "low3yPos": bool(l3y >= 0) if pd.notna(l3y) else True,
+                            "neglect3y": f"{n3y:.0f}" if pd.notna(n3y) else "-",
+                            "expReturn": f"{exp:.0f}%" if pd.notna(exp) else "-",
+                            "rsi_d": "-",
+                            "rsi_w": "-",
+                            "rsi_m": "-",
+                            "update": update_str,
+                            "score": 100
+                        })
+                    if formatted_themes:
+                        return {"themes": sanitize(formatted_themes), "updated_at": updated_iso}
+            except Exception as e:
+                print(f"[Themes Fallback] Error reading {detail_file}:", e)
+                
+    # 3. 최후 수단: calculate_theme_metrics()
+    themes = calculate_theme_metrics()
+    now_kst = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+    return {"themes": sanitize(themes), "updated_at": now_kst.strftime("%Y-%m-%d %H:%M:%S")}
 
 def resolve_theme_details(theme_name: str):
     import urllib.parse
