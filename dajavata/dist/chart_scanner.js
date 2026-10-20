@@ -653,6 +653,8 @@
         userDrawings: [],
         isDrawingNow: false,
         drawStartPoint: null,
+        multiPoints: [],
+        hoverPoint: null,
         
         // --- 지표 토글 상태 (app3.py 연동) ---
         showICTZones: true,    // 🌐 ICT 8대 구름대 마스터 On/Off
@@ -2212,24 +2214,196 @@
                                 <button class="cs-draw-btn active" data-tool="cursor" data-tip="십자선 커서">
                                     <i class="ph ph-plus"></i>
                                 </button>
-                                <button class="cs-draw-btn" data-tool="ruler" data-tip="측정 도구 (봉수·변동률)">
-                                    <i class="ph ph-ruler"></i>
-                                </button>
-                                <button class="cs-draw-btn" data-tool="zoom" data-tip="돋보기 줌">
-                                    <i class="ph ph-magnifying-glass-plus"></i>
-                                </button>
-                                
-                                <div class="cs-draw-divider"></div>
-                                
                                 <button class="cs-draw-btn" data-tool="trendline" data-tip="추세선 그리기">
                                     <i class="ph ph-trend-up"></i>
                                 </button>
                                 <button class="cs-draw-btn" data-tool="horizontal" data-tip="수평 지지/저항선">
                                     <i class="ph ph-rows"></i>
                                 </button>
-                                <button class="cs-draw-btn" data-tool="fibonacci" data-tip="피보나치 되돌림">
-                                    <i class="ph ph-chart-bar"></i>
-                                </button>
+
+                                <div class="cs-draw-divider"></div>
+
+                                <!-- 1. 피보나치 & 간 그룹 (Alt+F) -->
+                                <div class="cs-draw-group-wrap" id="cs-group-fibonacci">
+                                    <button class="cs-draw-btn has-flyout" data-tool="fibonacci" data-group="fibonacci" data-tip="피보나치 되돌림 (Alt+F)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="3" y1="5" x2="21" y2="5" />
+                                            <line x1="3" y1="10" x2="21" y2="10" />
+                                            <line x1="3" y1="15" x2="21" y2="15" />
+                                            <line x1="3" y1="20" x2="21" y2="20" />
+                                            <line x1="5" y1="20" x2="19" y2="5" stroke-dasharray="2 2" />
+                                            <circle cx="5" cy="20" r="2" fill="currentColor" />
+                                            <circle cx="19" cy="5" r="2" fill="currentColor" />
+                                        </svg>
+                                        <span class="cs-draw-caret"></span>
+                                    </button>
+                                    <div class="cs-draw-flyout" id="cs-flyout-fibonacci">
+                                        <div class="cs-flyout-header">피보나치</div>
+                                        <div class="cs-flyout-item active" data-tool="fibonacci" data-tip="피보나치 되돌림 (Alt+F)">
+                                            <span class="cs-flyout-item-icon">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                    <line x1="3" y1="5" x2="21" y2="5" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="3" y1="20" x2="21" y2="20" />
+                                                    <line x1="5" y1="20" x2="19" y2="5" stroke-dasharray="2 2" /><circle cx="5" cy="20" r="2" fill="currentColor" /><circle cx="19" cy="5" r="2" fill="currentColor" />
+                                                </svg>
+                                            </span>
+                                            <span class="cs-flyout-item-label">피보나치 되돌림</span>
+                                            <span class="cs-flyout-item-shortcut">Alt+F</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="fib_extension" data-tip="추세 기반 피보나치 확장">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-chart-line-up"></i></span>
+                                            <span class="cs-flyout-item-label">추세 기반 피보나치 확장</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="fib_channel" data-tip="피보나치 채널">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-arrows-out-line-vertical"></i></span>
+                                            <span class="cs-flyout-item-label">피보나치 채널</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="fib_timezone" data-tip="피보나치 시간대">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-clock"></i></span>
+                                            <span class="cs-flyout-item-label">피보나치 시간대</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="fib_fan" data-tip="피보나치 속도 저항 부채꼴">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-compass"></i></span>
+                                            <span class="cs-flyout-item-label">피보나치 속도 저항 부채꼴</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="fib_time_trend" data-tip="추세 기반 피보나치 시간">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-hourglass-high"></i></span>
+                                            <span class="cs-flyout-item-label">추세 기반 피보나치 시간</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="fib_circles" data-tip="피보나치 원">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-circle-dashed"></i></span>
+                                            <span class="cs-flyout-item-label">피보나치 원</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="fib_spiral" data-tip="피보나치 나선">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-spiral"></i></span>
+                                            <span class="cs-flyout-item-label">피보나치 나선</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="fib_arcs" data-tip="피보나치 속도 저항 호">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-rainbow"></i></span>
+                                            <span class="cs-flyout-item-label">피보나치 속도 저항 호</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="fib_wedge" data-tip="피보나치 쐐기">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-triangle"></i></span>
+                                            <span class="cs-flyout-item-label">피보나치 쐐기</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="pitchfan" data-tip="피치팬">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-fan"></i></span>
+                                            <span class="cs-flyout-item-label">피치팬</span>
+                                        </div>
+
+                                        <div class="cs-flyout-divider"></div>
+                                        <div class="cs-flyout-header">간</div>
+
+                                        <div class="cs-flyout-item" data-tool="gann_box" data-tip="간 박스">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-grid-four"></i></span>
+                                            <span class="cs-flyout-item-label">간 박스</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="gann_square_fixed" data-tip="간 정사각형(고정)">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-square"></i></span>
+                                            <span class="cs-flyout-item-label">간 정사각형(고정)</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="gann_square" data-tip="간 정사각형">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-bounding-box"></i></span>
+                                            <span class="cs-flyout-item-label">간 정사각형</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="gann_fan" data-tip="간 팬">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-aperture"></i></span>
+                                            <span class="cs-flyout-item-label">간 팬</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 2. 패턴 & 엘리엇 파동 그룹 -->
+                                <div class="cs-draw-group-wrap" id="cs-group-pattern">
+                                    <button class="cs-draw-btn has-flyout" data-tool="xabcd" data-group="pattern" data-tip="XABCD 패턴">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3,19 8,6 12,16 16,7 21,19" />
+                                            <line x1="3" y1="19" x2="12" y2="16" stroke-dasharray="2 2" />
+                                            <line x1="8" y1="6" x2="16" y2="7" stroke-dasharray="2 2" />
+                                            <circle cx="3" cy="19" r="1.5" fill="currentColor" />
+                                            <circle cx="8" cy="6" r="1.5" fill="currentColor" />
+                                            <circle cx="12" cy="16" r="1.5" fill="currentColor" />
+                                            <circle cx="16" cy="7" r="1.5" fill="currentColor" />
+                                            <circle cx="21" cy="19" r="1.5" fill="currentColor" />
+                                        </svg>
+                                        <span class="cs-draw-caret"></span>
+                                    </button>
+                                    <div class="cs-draw-flyout" id="cs-flyout-pattern">
+                                        <div class="cs-flyout-header">차트 패턴</div>
+                                        <div class="cs-flyout-item active" data-tool="xabcd" data-tip="XABCD 패턴">
+                                            <span class="cs-flyout-item-icon">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="3,19 8,6 12,16 16,7 21,19" />
+                                                    <line x1="3" y1="19" x2="12" y2="16" stroke-dasharray="2 2" /><line x1="8" y1="6" x2="16" y2="7" stroke-dasharray="2 2" />
+                                                    <circle cx="3" cy="19" r="1.5" fill="currentColor" /><circle cx="8" cy="6" r="1.5" fill="currentColor" /><circle cx="12" cy="16" r="1.5" fill="currentColor" /><circle cx="16" cy="7" r="1.5" fill="currentColor" /><circle cx="21" cy="19" r="1.5" fill="currentColor" />
+                                                </svg>
+                                            </span>
+                                            <span class="cs-flyout-item-label">XABCD 패턴</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="cypher" data-tip="사이퍼 패턴">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-polygon"></i></span>
+                                            <span class="cs-flyout-item-label">사이퍼 패턴</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="head_shoulders" data-tip="헤드앤숄더">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-user"></i></span>
+                                            <span class="cs-flyout-item-label">헤드앤숄더</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="abcd" data-tip="ABCD 패턴">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-intersect"></i></span>
+                                            <span class="cs-flyout-item-label">ABCD 패턴</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="triangle_pattern" data-tip="삼각형 패턴">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-triangle"></i></span>
+                                            <span class="cs-flyout-item-label">삼각형 패턴</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="three_drives" data-tip="쓰리 드라이브 패턴">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-wave-sine"></i></span>
+                                            <span class="cs-flyout-item-label">쓰리 드라이브 패턴</span>
+                                        </div>
+
+                                        <div class="cs-flyout-divider"></div>
+                                        <div class="cs-flyout-header">엘리엇 파동</div>
+
+                                        <div class="cs-flyout-item" data-tool="elliott_15" data-tip="엘리엇 충격파(1-5)">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-chart-line-up"></i></span>
+                                            <span class="cs-flyout-item-label">엘리엇 충격파(1-5)</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="elliott_abc" data-tip="엘리엇 조정파(A-C)">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-chart-line-down"></i></span>
+                                            <span class="cs-flyout-item-label">엘리엇 조정파(A-C)</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="elliott_triangle" data-tip="엘리엇 삼각 파동(A-E)">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-trend-down"></i></span>
+                                            <span class="cs-flyout-item-label">엘리엇 삼각 파동(A-E)</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="elliott_double" data-tip="엘리엇 이중 조합 파동(W-Y)">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-git-commit"></i></span>
+                                            <span class="cs-flyout-item-label">엘리엇 이중 조합 파동(W-Y)</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="elliott_triple" data-tip="엘리엇 삼중 조합 파동(W-Z)">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-git-merge"></i></span>
+                                            <span class="cs-flyout-item-label">엘리엇 삼중 조합 파동(W-Z)</span>
+                                        </div>
+
+                                        <div class="cs-flyout-divider"></div>
+                                        <div class="cs-flyout-header">주기</div>
+
+                                        <div class="cs-flyout-item" data-tool="cycle_lines" data-tip="주기선">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-lines"></i></span>
+                                            <span class="cs-flyout-item-label">주기선</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="time_cycles" data-tip="시간 주기">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-clock-countdown"></i></span>
+                                            <span class="cs-flyout-item-label">시간 주기</span>
+                                        </div>
+                                        <div class="cs-flyout-item" data-tool="sine_line" data-tip="사인지선">
+                                            <span class="cs-flyout-item-icon"><i class="ph ph-wave-sine"></i></span>
+                                            <span class="cs-flyout-item-label">사인지선</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="cs-draw-divider"></div>
+
                                 <button class="cs-draw-btn" data-tool="box" data-tip="매물대 박스 구간">
                                     <i class="ph ph-selection-plus"></i>
                                 </button>
@@ -2239,9 +2413,15 @@
                                 <button class="cs-draw-btn" data-tool="text" data-tip="텍스트 메모">
                                     <i class="ph ph-text-t"></i>
                                 </button>
-                                
+                                <button class="cs-draw-btn" data-tool="ruler" data-tip="측정 도구 (봉수·변동률)">
+                                    <i class="ph ph-ruler"></i>
+                                </button>
+                                <button class="cs-draw-btn" data-tool="zoom" data-tip="돋보기 줌">
+                                    <i class="ph ph-magnifying-glass-plus"></i>
+                                </button>
+
                                 <div class="cs-draw-divider"></div>
-                                
+
                                 <button class="cs-draw-btn" data-tool="magnet" id="btn-draw-magnet" data-tip="자석 스냅 모드 (고/저가 자동 흡착)">
                                     <i class="ph ph-magnet"></i>
                                 </button>
@@ -2380,6 +2560,34 @@
     // -------------------------------------------------------------
     // 9. 인터랙티브 드로잉 & ICT 구름대 오버레이 렌더링
     // -------------------------------------------------------------
+    const MULTI_POINT_CONFIG = {
+        'xabcd': { count: 5, name: 'XABCD 패턴', labels: ['X', 'A', 'B', 'C', 'D'] },
+        'cypher': { count: 5, name: '사이퍼 패턴', labels: ['X', 'A', 'B', 'C', 'D'] },
+        'head_shoulders': { count: 5, name: '헤드앤숄더', labels: ['좌견', '넥1', '두부', '넥2', '우견'] },
+        'three_drives': { count: 6, name: '쓰리 드라이브', labels: ['D1', 'R1', 'D2', 'R2', 'D3', '완성'] },
+        'elliott_15': { count: 5, name: '엘리엇 충격파', labels: ['(1)', '(2)', '(3)', '(4)', '(5)'] },
+        'abcd': { count: 4, name: 'ABCD 패턴', labels: ['A', 'B', 'C', 'D'] },
+        'triangle_pattern': { count: 4, name: '삼각형 패턴', labels: ['A', 'B', 'C', 'D'] },
+        'elliott_triangle': { count: 5, name: '엘리엇 삼각 파동', labels: ['(A)', '(B)', '(C)', '(D)', '(E)'] },
+        'elliott_abc': { count: 3, name: '엘리엇 조정파', labels: ['(A)', '(B)', '(C)'] },
+        'fib_extension': { count: 3, name: '추세 기반 피보나치 확장', labels: ['시작', '고점', '되돌림'] },
+        'fib_channel': { count: 3, name: '피보나치 채널', labels: ['기저1', '기저2', '채널폭'] },
+        'cycle_lines': { count: 2, name: '주기선', labels: ['시작', '1주기'] },
+        'time_cycles': { count: 2, name: '시간 주기', labels: ['시작', '1주기'] },
+        'sine_line': { count: 2, name: '사인지선', labels: ['시작', '파장'] },
+        'gann_box': { count: 2, name: '간 박스', labels: ['모서리1', '모서리2'] },
+        'gann_square': { count: 2, name: '간 정사각형', labels: ['모서리1', '모서리2'] },
+        'gann_square_fixed': { count: 2, name: '간 정사각형(고정)', labels: ['모서리1', '모서리2'] },
+        'gann_fan': { count: 2, name: '간 팬', labels: ['원점', '1x1각도'] },
+        'fib_timezone': { count: 2, name: '피보나치 시간대', labels: ['기준1', '기준2'] },
+        'fib_fan': { count: 2, name: '피보나치 부채꼴', labels: ['원점', '목표'] },
+        'fib_circles': { count: 2, name: '피보나치 원', labels: ['중심', '반경'] },
+        'fib_spiral': { count: 2, name: '피보나치 나선', labels: ['중심', '방향'] },
+        'fib_arcs': { count: 2, name: '피보나치 호', labels: ['기준1', '기준2'] },
+        'fib_wedge': { count: 2, name: '피보나치 쐐기', labels: ['시작', '끝'] },
+        'pitchfan': { count: 3, name: '피치팬', labels: ['원점', '핸들1', '핸들2'] }
+    };
+
     function initDrawingEngine(container) {
         const toolbar = container.querySelector('#cs-drawing-toolbar');
         const overlay = container.querySelector('#cs-drawing-overlay');
@@ -2387,7 +2595,48 @@
 
         resizeDrawingOverlay();
 
-        toolbar.querySelectorAll('.cs-draw-btn').forEach(btn => {
+        function selectTool(toolName, btnElement) {
+            state.activeTool = toolName;
+            state.multiPoints = [];
+            state.isDrawingNow = false;
+            state.drawStartPoint = null;
+
+            toolbar.querySelectorAll('.cs-draw-btn').forEach(b => {
+                if (b.getAttribute('data-tool') !== 'magnet') b.classList.remove('active');
+            });
+
+            if (btnElement) {
+                btnElement.classList.add('active');
+            } else {
+                const targetBtn = toolbar.querySelector(`.cs-draw-btn[data-tool="${toolName}"]`);
+                if (targetBtn) {
+                    targetBtn.classList.add('active');
+                } else {
+                    const item = toolbar.querySelector(`.cs-flyout-item[data-tool="${toolName}"]`);
+                    if (item) {
+                        const wrap = item.closest('.cs-draw-group-wrap');
+                        if (wrap) {
+                            const groupBtn = wrap.querySelector('.cs-draw-btn');
+                            if (groupBtn) groupBtn.classList.add('active');
+                        }
+                    }
+                }
+            }
+
+            if (toolName === 'cursor') {
+                overlay.classList.remove('drawing-active');
+            } else {
+                overlay.classList.add('drawing-active');
+            }
+
+            // Close all flyouts
+            toolbar.querySelectorAll('.cs-draw-flyout').forEach(fl => fl.classList.remove('show'));
+            toolbar.querySelectorAll('.cs-draw-btn').forEach(b => b.classList.remove('flyout-open'));
+            redrawDrawings();
+        }
+
+        // 일반 툴바 버튼 클릭 바인딩
+        toolbar.querySelectorAll('.cs-draw-btn:not(.has-flyout)').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tool = btn.getAttribute('data-tool');
 
@@ -2398,33 +2647,152 @@
                 }
 
                 if (tool === 'clear') {
-                    if (confirm('내가 그린 모든 작도(선, 박스, 측정값)를 삭제하시겠습니까?')) {
+                    if (confirm('내가 그린 모든 작도(피보나치, 패턴, 선, 박스 등)를 삭제하시겠습니까?')) {
                         state.userDrawings = [];
+                        state.multiPoints = [];
                         redrawDrawings();
                     }
                     return;
                 }
 
-                toolbar.querySelectorAll('.cs-draw-btn').forEach(b => {
-                    if (b.getAttribute('data-tool') !== 'magnet') b.classList.remove('active');
-                });
-                btn.classList.add('active');
-                state.activeTool = tool;
-
-                if (tool === 'cursor') {
-                    overlay.classList.remove('drawing-active');
-                } else {
-                    overlay.classList.add('drawing-active');
-                }
+                selectTool(tool, btn);
             });
         });
 
+        // 서브메뉴(Flyout) 그룹 버튼 & 캐럿 바인딩
+        toolbar.querySelectorAll('.cs-draw-group-wrap').forEach(wrap => {
+            const btn = wrap.querySelector('.cs-draw-btn.has-flyout');
+            const caret = wrap.querySelector('.cs-draw-caret');
+            const flyout = wrap.querySelector('.cs-draw-flyout');
+            if (!btn || !flyout) return;
+
+            function toggleFlyout(e) {
+                if (e) e.stopPropagation();
+                const isShown = flyout.classList.contains('show');
+                toolbar.querySelectorAll('.cs-draw-flyout').forEach(f => f.classList.remove('show'));
+                toolbar.querySelectorAll('.cs-draw-btn').forEach(b => b.classList.remove('flyout-open'));
+
+                if (!isShown) {
+                    flyout.classList.add('show');
+                    btn.classList.add('flyout-open');
+                }
+            }
+
+            if (caret) {
+                caret.style.pointerEvents = 'auto';
+                caret.addEventListener('click', toggleFlyout);
+            }
+
+            btn.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                toggleFlyout(e);
+            });
+
+            btn.addEventListener('click', (e) => {
+                const rect = btn.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const clickY = e.clientY - rect.top;
+                // 우하단 캐럿 부근 클릭 시
+                if (clickX > rect.width - 12 && clickY > rect.height - 12) {
+                    toggleFlyout(e);
+                    return;
+                }
+
+                if (btn.classList.contains('active')) {
+                    toggleFlyout(e);
+                } else {
+                    selectTool(btn.getAttribute('data-tool'), btn);
+                }
+            });
+
+            flyout.querySelectorAll('.cs-flyout-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const chosenTool = item.getAttribute('data-tool');
+                    const chosenTip = item.getAttribute('data-tip') || item.querySelector('.cs-flyout-item-label').textContent;
+                    const chosenIcon = item.querySelector('.cs-flyout-item-icon').innerHTML;
+
+                    btn.setAttribute('data-tool', chosenTool);
+                    btn.setAttribute('data-tip', chosenTip);
+                    btn.innerHTML = chosenIcon + '<span class="cs-draw-caret"></span>';
+
+                    const newCaret = btn.querySelector('.cs-draw-caret');
+                    if (newCaret) {
+                        newCaret.style.pointerEvents = 'auto';
+                        newCaret.addEventListener('click', toggleFlyout);
+                    }
+
+                    flyout.querySelectorAll('.cs-flyout-item').forEach(it => it.classList.remove('active'));
+                    item.classList.add('active');
+
+                    selectTool(chosenTool, btn);
+                });
+            });
+        });
+
+        // 외부 클릭 시 모든 서브메뉴 닫기
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.cs-draw-group-wrap')) {
+                toolbar.querySelectorAll('.cs-draw-flyout').forEach(fl => fl.classList.remove('show'));
+                toolbar.querySelectorAll('.cs-draw-btn').forEach(b => b.classList.remove('flyout-open'));
+            }
+        });
+
+        // 단축키 바인딩 (Alt+F: 피보나치 되돌림, ESC: 작도 취소)
+        window.addEventListener('keydown', (e) => {
+            if (e.altKey && (e.key === 'f' || e.key === 'F' || e.code === 'KeyF')) {
+                e.preventDefault();
+                selectTool('fibonacci');
+                return;
+            }
+            if (e.key === 'Escape') {
+                if (state.multiPoints && state.multiPoints.length > 0) {
+                    state.multiPoints = [];
+                    redrawDrawings();
+                } else if (state.activeTool !== 'cursor') {
+                    selectTool('cursor');
+                }
+                return;
+            }
+            if (e.key === 'Delete' || e.key === 'Backspace') {
+                if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')) return;
+                if (state.userDrawings.length > 0) {
+                    state.userDrawings.pop();
+                    redrawDrawings();
+                }
+            }
+        });
+
+        // 캔버스 마우스 다운 이벤트
         overlay.addEventListener('mousedown', (e) => {
             if (state.activeTool === 'cursor') return;
 
             const rect = overlay.getBoundingClientRect();
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
+
+            const multiCfg = MULTI_POINT_CONFIG[state.activeTool];
+            if (multiCfg) {
+                state.multiPoints.push({ x, y });
+                if (state.multiPoints.length === multiCfg.count) {
+                    state.userDrawings.push({
+                        type: state.activeTool,
+                        points: [...state.multiPoints],
+                        color: '#38bdf8'
+                    });
+                    state.multiPoints = [];
+                    redrawDrawings();
+                } else {
+                    redrawDrawings();
+                    const ctx = overlay.getContext('2d');
+                    drawSingleShape(ctx, {
+                        type: state.activeTool,
+                        points: [...state.multiPoints, { x, y }],
+                        color: '#38bdf8'
+                    }, true);
+                }
+                return;
+            }
 
             state.isDrawingNow = true;
             state.drawStartPoint = { x, y };
@@ -2453,12 +2821,43 @@
             }
         });
 
+        // 캔버스 마우스 이동 (실시간 작도 프리뷰 & 가이드 툴팁)
         overlay.addEventListener('mousemove', (e) => {
-            if (!state.isDrawingNow || !state.drawStartPoint) return;
-
             const rect = overlay.getBoundingClientRect();
             const currentX = e.clientX - rect.left;
             const currentY = e.clientY - rect.top;
+
+            const multiCfg = MULTI_POINT_CONFIG[state.activeTool];
+            if (multiCfg && state.multiPoints.length > 0) {
+                redrawDrawings();
+                const ctx = overlay.getContext('2d');
+                drawSingleShape(ctx, {
+                    type: state.activeTool,
+                    points: [...state.multiPoints, { x: currentX, y: currentY }],
+                    color: '#38bdf8'
+                }, true);
+
+                const stepIdx = state.multiPoints.length;
+                const stepLabel = multiCfg.labels[stepIdx] || `${stepIdx + 1}`;
+                const guideText = `[${multiCfg.name}] Point ${stepLabel} 클릭 (${stepIdx + 1}/${multiCfg.count}) · ESC 취소`;
+
+                ctx.save();
+                ctx.font = 'bold 11px sans-serif';
+                const gw = ctx.measureText(guideText).width + 16;
+                const gx = Math.min(ctx.canvas.width - gw - 10, Math.max(10, currentX + 14));
+                const gy = Math.max(24, Math.min(ctx.canvas.height - 30, currentY + 16));
+                ctx.fillStyle = 'rgba(13, 22, 40, 0.92)';
+                ctx.fillRect(gx, gy - 12, gw, 24);
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(gx, gy - 12, gw, 24);
+                ctx.fillStyle = '#38bdf8';
+                ctx.fillText(guideText, gx + 8, gy + 4);
+                ctx.restore();
+                return;
+            }
+
+            if (!state.isDrawingNow || !state.drawStartPoint) return;
 
             redrawDrawings();
             const ctx = overlay.getContext('2d');
@@ -2472,7 +2871,11 @@
             }, true);
         });
 
+        // 캔버스 마우스 업 (2점 드래그 작도 완료)
         overlay.addEventListener('mouseup', (e) => {
+            const multiCfg = MULTI_POINT_CONFIG[state.activeTool];
+            if (multiCfg) return;
+
             if (!state.isDrawingNow || !state.drawStartPoint) return;
 
             const rect = overlay.getBoundingClientRect();
@@ -2568,7 +2971,6 @@
             ctx.strokeRect(x0, topY, width, Math.max(height, 3));
             ctx.setLineDash([]);
 
-            // 우측/상단 레이블
             ctx.fillStyle = col.stroke;
             ctx.font = 'bold 10px sans-serif';
             const priceText = `${col.label} (${formatPrice(z.top, isOverseas)} ~ ${formatPrice(z.bottom, isOverseas)})`;
@@ -2577,23 +2979,68 @@
         });
     }
 
+    function drawRatioBadge(ctx, text, x, y, color) {
+        ctx.save();
+        ctx.font = 'bold 10px monospace';
+        const w = ctx.measureText(text).width + 8;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.fillRect(x - w / 2, y - 8, w, 16);
+        ctx.strokeStyle = color || '#38bdf8';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - w / 2, y - 8, w, 16);
+        ctx.fillStyle = color || '#38bdf8';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, x, y);
+        ctx.restore();
+    }
+
+    function drawPatternTitlePill(ctx, title, x, y) {
+        ctx.save();
+        ctx.font = 'bold 11px sans-serif';
+        const w = ctx.measureText(title).width + 16;
+        ctx.fillStyle = 'rgba(13, 22, 40, 0.94)';
+        ctx.fillRect(x - w / 2, y - 11, w, 22);
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(x - w / 2, y - 11, w, 22);
+        ctx.fillStyle = '#fbbf24';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(title, x, y);
+        ctx.restore();
+    }
+
+    // -------------------------------------------------------------
+    // 작도 형상 렌더링 엔진 (TradingView / Tadpole Scanner 완벽 구현)
+    // -------------------------------------------------------------
     function drawSingleShape(ctx, shape, isPreview) {
         ctx.save();
         ctx.strokeStyle = shape.color || '#38bdf8';
         ctx.fillStyle = shape.color || '#38bdf8';
         ctx.lineWidth = 2;
 
+        const isOverseas = anyAlphabet(state.selectedStockCode);
+
+        // 1. 추세선 (Trendline)
         if (shape.type === 'trendline') {
+            const x1 = shape.startX !== undefined ? shape.startX : (shape.points ? shape.points[0].x : 0);
+            const y1 = shape.startY !== undefined ? shape.startY : (shape.points ? shape.points[0].y : 0);
+            const x2 = shape.endX !== undefined ? shape.endX : (shape.points ? shape.points[1].x : 0);
+            const y2 = shape.endY !== undefined ? shape.endY : (shape.points ? shape.points[1].y : 0);
+
             ctx.beginPath();
-            ctx.moveTo(shape.startX, shape.startY);
-            ctx.lineTo(shape.endX, shape.endY);
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
             ctx.stroke();
 
             ctx.beginPath();
-            ctx.arc(shape.startX, shape.startY, 4, 0, Math.PI * 2);
-            ctx.arc(shape.endX, shape.endY, 4, 0, Math.PI * 2);
+            ctx.arc(x1, y1, 4, 0, Math.PI * 2);
+            ctx.arc(x2, y2, 4, 0, Math.PI * 2);
             ctx.fill();
-        } else if (shape.type === 'horizontal') {
+        } 
+        // 2. 수평선 (Horizontal Line)
+        else if (shape.type === 'horizontal') {
             ctx.setLineDash([4, 4]);
             ctx.beginPath();
             ctx.moveTo(0, shape.y);
@@ -2601,30 +3048,36 @@
             ctx.stroke();
             ctx.setLineDash([]);
             ctx.font = 'bold 11px sans-serif';
-            ctx.fillText('내 수평선', 10, shape.y - 4);
-        } else if (shape.type === 'box') {
+            ctx.fillText('내 수평 지지/저항선', 10, shape.y - 4);
+        } 
+        // 3. 매물대 박스 (Box)
+        else if (shape.type === 'box') {
             const w = shape.endX - shape.startX;
             const h = shape.endY - shape.startY;
             ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
             ctx.fillRect(shape.startX, shape.startY, w, h);
             ctx.strokeStyle = '#38bdf8';
             ctx.strokeRect(shape.startX, shape.startY, w, h);
-        } else if (shape.type === 'ruler') {
+        } 
+        // 4. 측정 도구 (Ruler)
+        else if (shape.type === 'ruler') {
             const w = Math.abs(shape.endX - shape.startX);
             const h = Math.abs(shape.endY - shape.startY);
             ctx.setLineDash([3, 3]);
             ctx.strokeRect(shape.startX, shape.startY, shape.endX - shape.startX, shape.endY - shape.startY);
             ctx.setLineDash([]);
 
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-            ctx.fillRect(shape.endX + 8, shape.endY - 24, 110, 32);
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            ctx.fillRect(shape.endX + 8, shape.endY - 24, 120, 32);
             ctx.strokeStyle = '#38bdf8';
-            ctx.strokeRect(shape.endX + 8, shape.endY - 24, 110, 32);
+            ctx.strokeRect(shape.endX + 8, shape.endY - 24, 120, 32);
 
             ctx.fillStyle = '#38bdf8';
             ctx.font = 'bold 11px sans-serif';
             ctx.fillText(`폭: ${Math.round(w)}px / 높이: ${Math.round(h)}px`, shape.endX + 14, shape.endY - 4);
-        } else if (shape.type === 'brush') {
+        } 
+        // 5. 자유 브러시 (Brush)
+        else if (shape.type === 'brush') {
             ctx.beginPath();
             ctx.arc(shape.startX, shape.startY, 3, 0, Math.PI * 2);
             ctx.fill();
@@ -2632,30 +3085,483 @@
             ctx.moveTo(shape.startX, shape.startY);
             ctx.lineTo(shape.endX, shape.endY);
             ctx.stroke();
-        } else if (shape.type === 'fibonacci') {
-            const topY = Math.min(shape.startY, shape.endY);
-            const botY = Math.max(shape.startY, shape.endY);
-            const diff = botY - topY;
-            const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
-            const colors = ['#ef4444', '#f59e0b', '#10b981', '#38bdf8', '#6366f1', '#ec4899', '#8b5cf6'];
+        } 
+        // 6. 피보나치 되돌림 (Fibonacci Retracement - Alt+F)
+        else if (shape.type === 'fibonacci') {
+            const x1 = shape.startX !== undefined ? shape.startX : (shape.points ? shape.points[0].x : 0);
+            const y1 = shape.startY !== undefined ? shape.startY : (shape.points ? shape.points[0].y : 0);
+            const x2 = shape.endX !== undefined ? shape.endX : (shape.points ? shape.points[1].x : 0);
+            const y2 = shape.endY !== undefined ? shape.endY : (shape.points ? shape.points[1].y : 0);
 
-            levels.forEach((lvl, idx) => {
-                const y = topY + diff * lvl;
-                ctx.strokeStyle = colors[idx] || '#38bdf8';
+            const levels = [
+                { ratio: 0, color: '#94a3b8', bg: null, label: '0' },
+                { ratio: 0.236, color: '#10b981', bg: 'rgba(16, 185, 129, 0.08)', label: '0.236' },
+                { ratio: 0.382, color: '#14b8a6', bg: 'rgba(20, 184, 166, 0.10)', label: '0.382' },
+                { ratio: 0.5, color: '#0ea5e9', bg: 'rgba(14, 165, 233, 0.12)', label: '0.5' },
+                { ratio: 0.618, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.16)', label: '0.618 ★ 골든포켓' },
+                { ratio: 0.786, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.10)', label: '0.786' },
+                { ratio: 1.0, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.08)', label: '1.0' },
+                { ratio: 1.618, color: '#ec4899', bg: null, label: '1.618' }
+            ];
+
+            const minX = Math.min(x1, x2);
+            const maxX = Math.max(x1, x2);
+            const lineLeft = Math.max(0, minX - 20);
+            const lineRight = Math.max(ctx.canvas.width - 60, maxX + 180);
+
+            // 레벨 사이 영역 투명 색상 밴드 채우기
+            for (let i = 0; i < levels.length - 1; i++) {
+                const l1 = levels[i];
+                const l2 = levels[i + 1];
+                if (l2.bg) {
+                    const yTop = y1 + (y2 - y1) * l1.ratio;
+                    const yBot = y1 + (y2 - y1) * l2.ratio;
+                    ctx.fillStyle = l2.bg;
+                    ctx.fillRect(lineLeft, Math.min(yTop, yBot), lineRight - lineLeft, Math.abs(yBot - yTop));
+                }
+            }
+
+            // 각 레벨 가로선 & 실시간 주가 라벨
+            levels.forEach(lvl => {
+                const y = y1 + (y2 - y1) * lvl.ratio;
+                ctx.strokeStyle = lvl.color;
+                ctx.lineWidth = (lvl.ratio === 0.618 || lvl.ratio === 0.5 || lvl.ratio === 0 || lvl.ratio === 1) ? 1.5 : 1;
+                ctx.setLineDash(lvl.ratio === 0.618 ? [] : [4, 3]);
                 ctx.beginPath();
-                ctx.moveTo(shape.startX, y);
-                ctx.lineTo(shape.endX, y);
+                ctx.moveTo(lineLeft, y);
+                ctx.lineTo(lineRight, y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                let priceText = '';
+                if (state.candlestickSeries && state.candlestickSeries.coordinateToPrice) {
+                    const p = state.candlestickSeries.coordinateToPrice(y);
+                    if (p !== null && !isNaN(p)) {
+                        priceText = ` (${formatPrice(p, isOverseas)})`;
+                    }
+                }
+
+                ctx.fillStyle = lvl.color;
+                ctx.font = lvl.ratio === 0.618 ? 'bold 11px sans-serif' : '10px sans-serif';
+                ctx.fillText(`${lvl.label}${priceText}`, lineLeft + 8, y - 4);
+            });
+
+            // 기준 대각 점선 & 양 끝점 핸들
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            [{ x: x1, y: y1 }, { x: x2, y: y2 }].forEach(pt => {
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            });
+        }
+        // 7. XABCD 패턴 & 사이퍼 패턴 (Harmonic Pattern 5-Points)
+        else if (shape.type === 'xabcd' || shape.type === 'cypher') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) {
+                ctx.restore();
+                return;
+            }
+
+            const labels = ['X', 'A', 'B', 'C', 'D'];
+
+            // 완성된 연결선 그리기
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) {
+                ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.stroke();
+
+            // 삼각형 1: X-A-B 채우기 (3개 점 이상)
+            if (pts.length >= 3) {
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.20)';
+                ctx.beginPath();
+                ctx.moveTo(pts[0].x, pts[0].y);
+                ctx.lineTo(pts[1].x, pts[1].y);
+                ctx.lineTo(pts[2].x, pts[2].y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#38bdf8';
                 ctx.stroke();
 
-                ctx.fillStyle = colors[idx] || '#38bdf8';
-                ctx.font = '10px sans-serif';
-                ctx.fillText(`Fib ${(lvl * 100).toFixed(1)}%`, shape.startX + 6, y - 3);
+                // 대각 점선 X to B
+                ctx.setLineDash([3, 3]);
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+                ctx.beginPath();
+                ctx.moveTo(pts[0].x, pts[0].y);
+                ctx.lineTo(pts[2].x, pts[2].y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const hXA = Math.abs(pts[1].y - pts[0].y);
+                const hAB = Math.abs(pts[2].y - pts[1].y);
+                if (hXA > 2) {
+                    const rB = (hAB / hXA).toFixed(3);
+                    const midXB = { x: (pts[0].x + pts[2].x) / 2, y: (pts[0].y + pts[2].y) / 2 };
+                    drawRatioBadge(ctx, rB, midXB.x, midXB.y, '#38bdf8');
+                }
+            }
+
+            // 점 4 이상: 대각 점선 A to C
+            if (pts.length >= 4) {
+                ctx.setLineDash([3, 3]);
+                ctx.strokeStyle = 'rgba(245, 158, 11, 0.75)';
+                ctx.beginPath();
+                ctx.moveTo(pts[1].x, pts[1].y);
+                ctx.lineTo(pts[3].x, pts[3].y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const hAB = Math.abs(pts[2].y - pts[1].y);
+                const hBC = Math.abs(pts[3].y - pts[2].y);
+                if (hAB > 2) {
+                    const rC = (hBC / hAB).toFixed(3);
+                    const midAC = { x: (pts[1].x + pts[3].x) / 2, y: (pts[1].y + pts[3].y) / 2 };
+                    drawRatioBadge(ctx, rC, midAC.x, midAC.y, '#f59e0b');
+                }
+            }
+
+            // 삼각형 2: B-C-D 채우기 (5개 점 완료 시)
+            if (pts.length >= 5) {
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.20)';
+                ctx.beginPath();
+                ctx.moveTo(pts[2].x, pts[2].y);
+                ctx.lineTo(pts[3].x, pts[3].y);
+                ctx.lineTo(pts[4].x, pts[4].y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#f59e0b';
+                ctx.stroke();
+
+                // 대각 점선 B to D 및 X to D
+                ctx.setLineDash([3, 3]);
+                ctx.strokeStyle = 'rgba(245, 158, 11, 0.75)';
+                ctx.beginPath();
+                ctx.moveTo(pts[2].x, pts[2].y);
+                ctx.lineTo(pts[4].x, pts[4].y);
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(16, 185, 129, 0.75)';
+                ctx.beginPath();
+                ctx.moveTo(pts[0].x, pts[0].y);
+                ctx.lineTo(pts[4].x, pts[4].y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const hBC = Math.abs(pts[3].y - pts[2].y);
+                const hCD = Math.abs(pts[4].y - pts[3].y);
+                const hXA = Math.abs(pts[1].y - pts[0].y);
+                const hXD = Math.abs(pts[4].y - pts[0].y);
+
+                const rD = hBC > 2 ? (hCD / hBC).toFixed(3) : '1.0';
+                const rXD = hXA > 2 ? (hXD / hXA).toFixed(3) : '1.0';
+
+                const midBD = { x: (pts[2].x + pts[4].x) / 2, y: (pts[2].y + pts[4].y) / 2 };
+                drawRatioBadge(ctx, rD, midBD.x, midBD.y, '#f59e0b');
+
+                const midXD = { x: (pts[0].x + pts[4].x) / 2, y: (pts[0].y + pts[4].y) / 2 };
+                drawRatioBadge(ctx, rXD, midXD.x, midXD.y, '#10b981');
+
+                // 하모닉 패턴 명칭 판별
+                let patternName = shape.type === 'cypher' ? 'Cypher 패턴' : 'Harmonic XABCD';
+                const numB = parseFloat((Math.abs(pts[2].y - pts[1].y) / Math.max(1, hXA)).toFixed(2));
+                const numXD = parseFloat(rXD);
+
+                if (shape.type === 'xabcd') {
+                    if (Math.abs(numB - 0.618) < 0.08 && Math.abs(numXD - 0.786) < 0.10) {
+                        patternName = '가틀리 패턴 (Gartley)';
+                    } else if (Math.abs(numB - 0.50) < 0.12 && Math.abs(numXD - 0.886) < 0.10) {
+                        patternName = '박쥐 패턴 (Bat)';
+                    } else if (Math.abs(numB - 0.786) < 0.08 && (numXD > 1.15 && numXD < 1.45)) {
+                        patternName = '나비 패턴 (Butterfly)';
+                    } else if ((numB >= 0.38 && numB <= 0.65) && (numXD > 1.50 && numXD < 1.85)) {
+                        patternName = '게 패턴 (Crab)';
+                    }
+                }
+
+                const pillX = pts[4].x;
+                const pillY = pts[4].y > pts[3].y ? pts[4].y + 24 : pts[4].y - 24;
+                drawPatternTitlePill(ctx, patternName, pillX, pillY);
+            }
+
+            // 꼭짓점 핸들 & X, A, B, C, D 레이블
+            pts.forEach((pt, idx) => {
+                ctx.save();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = idx % 2 === 0 ? '#38bdf8' : '#f59e0b';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const tagY = pt.y < 30 ? pt.y + 16 : pt.y - 14;
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+                ctx.fillRect(pt.x - 9, tagY - 9, 18, 18);
+                ctx.strokeStyle = idx % 2 === 0 ? '#38bdf8' : '#f59e0b';
+                ctx.strokeRect(pt.x - 9, tagY - 9, 18, 18);
+                ctx.fillStyle = '#f8fafc';
+                ctx.fillText(labels[idx] || `${idx + 1}`, pt.x, tagY);
+                ctx.restore();
             });
-        } else if (shape.type === 'text') {
+        }
+        // 8. ABCD 패턴 (ABCD Pattern 4-Points)
+        else if (shape.type === 'abcd') {
+            const pts = shape.points || [{ x: shape.startX, y: shape.startY }, { x: shape.endX, y: shape.endY }];
+            const labels = ['A', 'B', 'C', 'D'];
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) {
+                ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.stroke();
+
+            if (pts.length >= 4) {
+                ctx.setLineDash([3, 3]);
+                ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
+                ctx.beginPath();
+                ctx.moveTo(pts[0].x, pts[0].y);
+                ctx.lineTo(pts[2].x, pts[2].y);
+                ctx.moveTo(pts[1].x, pts[1].y);
+                ctx.lineTo(pts[3].x, pts[3].y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const hAB = Math.abs(pts[1].y - pts[0].y);
+                const hBC = Math.abs(pts[2].y - pts[1].y);
+                const hCD = Math.abs(pts[3].y - pts[2].y);
+                const rBC = hAB > 2 ? (hBC / hAB).toFixed(3) : '0.618';
+                const rCD = hBC > 2 ? (hCD / hBC).toFixed(3) : '1.618';
+
+                drawRatioBadge(ctx, rBC, (pts[0].x + pts[2].x) / 2, (pts[0].y + pts[2].y) / 2, '#38bdf8');
+                drawRatioBadge(ctx, rCD, (pts[1].x + pts[3].x) / 2, (pts[1].y + pts[3].y) / 2, '#f59e0b');
+                drawPatternTitlePill(ctx, 'AB = CD 패턴', pts[3].x, pts[3].y + 24);
+            }
+
+            pts.forEach((pt, idx) => {
+                ctx.save();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#38bdf8';
+                ctx.stroke();
+
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                ctx.fillRect(pt.x - 9, pt.y - 22, 18, 18);
+                ctx.strokeStyle = '#38bdf8';
+                ctx.strokeRect(pt.x - 9, pt.y - 22, 18, 18);
+                ctx.fillStyle = '#f8fafc';
+                ctx.fillText(labels[idx] || `${idx + 1}`, pt.x, pt.y - 13);
+                ctx.restore();
+            });
+        }
+        // 9. 헤드앤숄더 (Head & Shoulders)
+        else if (shape.type === 'head_shoulders') {
+            const pts = shape.points || [{ x: shape.startX, y: shape.startY }, { x: shape.endX, y: shape.endY }];
+            const names = ['LS (좌견)', 'Neckline', 'Head (두부)', 'Neckline', 'RS (우견)'];
+
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) {
+                ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.stroke();
+
+            // 넥라인 연결선
+            if (pts.length >= 4) {
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 1.8;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(pts[1].x - 30, pts[1].y);
+                ctx.lineTo(pts[3].x + 60, pts[3].y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillStyle = '#ef4444';
+                ctx.fillText('넥라인 (Breakout)', pts[3].x + 10, pts[3].y - 6);
+            }
+
+            pts.forEach((pt, idx) => {
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 4.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#f59e0b';
+                ctx.stroke();
+
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillText(names[idx] || `${idx + 1}`, pt.x - 14, pt.y - 10);
+            });
+        }
+        // 10. 엘리엇 충격파 (1-5) & 조정파 (A-C)
+        else if (shape.type === 'elliott_15' || shape.type === 'elliott_abc' || shape.type === 'elliott_triangle') {
+            const pts = shape.points || [{ x: shape.startX, y: shape.startY }, { x: shape.endX, y: shape.endY }];
+            const waveLabels = shape.type === 'elliott_15' ? ['(1)', '(2)', '(3)', '(4)', '(5)'] :
+                               shape.type === 'elliott_triangle' ? ['(A)', '(B)', '(C)', '(D)', '(E)'] : ['(A)', '(B)', '(C)'];
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) {
+                ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.stroke();
+
+            pts.forEach((pt, idx) => {
+                ctx.save();
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.font = 'bold 12px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(waveLabels[idx] || `(${idx + 1})`, pt.x + 6, pt.y - 8);
+                ctx.restore();
+            });
+        }
+        // 11. 간 박스 (Gann Box)
+        else if (shape.type === 'gann_box' || shape.type === 'gann_square' || shape.type === 'gann_square_fixed') {
+            const x1 = shape.startX !== undefined ? shape.startX : (shape.points ? shape.points[0].x : 0);
+            const y1 = shape.startY !== undefined ? shape.startY : (shape.points ? shape.points[0].y : 0);
+            const x2 = shape.endX !== undefined ? shape.endX : (shape.points ? shape.points[1].x : 0);
+            const y2 = shape.endY !== undefined ? shape.endY : (shape.points ? shape.points[1].y : 0);
+
+            const minX = Math.min(x1, x2);
+            const maxX = Math.max(x1, x2);
+            const minY = Math.min(y1, y2);
+            const maxY = Math.max(y1, y2);
+            const w = maxX - minX;
+            const h = maxY - minY;
+
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(minX, minY, w, h);
+
+            // 대각 X선
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(minX, minY);
+            ctx.lineTo(maxX, maxY);
+            ctx.moveTo(minX, maxY);
+            ctx.lineTo(maxX, minY);
+            ctx.stroke();
+
+            // 간 비율 선 (0.25, 0.382, 0.5, 0.618, 0.75)
+            const gannLevels = [0.25, 0.382, 0.5, 0.618, 0.75];
+            gannLevels.forEach(lvl => {
+                const y = minY + h * lvl;
+                const x = minX + w * lvl;
+                ctx.beginPath();
+                ctx.moveTo(minX, y);
+                ctx.lineTo(maxX, y);
+                ctx.moveTo(x, minY);
+                ctx.lineTo(x, maxY);
+                ctx.stroke();
+            });
+            ctx.setLineDash([]);
+            ctx.font = '10px monospace';
+            ctx.fillStyle = '#10b981';
+            ctx.fillText('Gann Box 1x1', minX + 6, minY + 14);
+        }
+        // 12. 추세 기반 피보나치 확장 (Fibonacci Extension)
+        else if (shape.type === 'fib_extension') {
+            const pts = shape.points || [{ x: shape.startX, y: shape.startY }, { x: shape.endX, y: shape.endY }];
+            ctx.strokeStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) {
+                ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.stroke();
+
+            if (pts.length >= 3) {
+                const diff = pts[0].y - pts[1].y;
+                const base = pts[2].y;
+                const extLevels = [0.618, 1.0, 1.272, 1.618, 2.618];
+                const colors = ['#f59e0b', '#38bdf8', '#10b981', '#ec4899', '#8b5cf6'];
+
+                extLevels.forEach((lvl, idx) => {
+                    const y = base - diff * lvl;
+                    ctx.strokeStyle = colors[idx] || '#38bdf8';
+                    ctx.setLineDash([4, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(pts[2].x, y);
+                    ctx.lineTo(ctx.canvas.width - 60, y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    ctx.fillStyle = colors[idx] || '#38bdf8';
+                    ctx.font = '10px sans-serif';
+                    ctx.fillText(`Fib Ext ${lvl}`, pts[2].x + 8, y - 4);
+                });
+            }
+        }
+        // 13. 피보나치 시간대 (Fibonacci Timezone)
+        else if (shape.type === 'fib_timezone') {
+            const x1 = shape.startX !== undefined ? shape.startX : (shape.points ? shape.points[0].x : 0);
+            const x2 = shape.endX !== undefined ? shape.endX : (shape.points ? shape.points[1].x : 0);
+            const dx = Math.max(10, Math.abs(x2 - x1));
+            const seq = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+
+            seq.forEach(n => {
+                const lineX = Math.min(x1, x2) + dx * n;
+                if (lineX < ctx.canvas.width) {
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+                    ctx.setLineDash([3, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(lineX, 0);
+                    ctx.lineTo(lineX, ctx.canvas.height);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.font = '10px monospace';
+                    ctx.fillText(`T${n}`, lineX + 4, 20);
+                }
+            });
+        }
+        // 14. 텍스트 메모 (Text)
+        else if (shape.type === 'text') {
             ctx.fillStyle = shape.color || '#ffffff';
             ctx.font = 'bold 13px sans-serif';
             ctx.fillText(shape.text, shape.x, shape.y);
         }
+
         ctx.restore();
     }
 

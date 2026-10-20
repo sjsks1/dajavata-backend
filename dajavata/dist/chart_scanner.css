@@ -643,7 +643,7 @@
     background-color: #0b0f19;
     border-bottom: 1px solid var(--cs-border);
     display: flex;
-    overflow: hidden;
+    overflow: visible;
 }
 
 /* 차트 좌측 드로잉 툴바 (TradingView 정밀 작도 도구) */
@@ -657,8 +657,15 @@
     padding: 8px 0;
     gap: 3px;
     flex-shrink: 0;
-    z-index: 10;
+    z-index: 50;
     user-select: none;
+    overflow: visible;
+}
+
+.cs-draw-group-wrap {
+    position: relative;
+    width: 34px;
+    height: 34px;
 }
 
 .cs-draw-btn {
@@ -677,6 +684,12 @@
     position: relative;
 }
 
+.cs-draw-btn svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+}
+
 .cs-draw-btn:hover {
     color: #ffffff;
     background-color: rgba(255, 255, 255, 0.08);
@@ -686,6 +699,142 @@
     color: #38bdf8;
     background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(59, 130, 246, 0.25) 100%);
     box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+}
+
+/* 소형 우하단 확장 화살표 캐럿 */
+.cs-draw-caret {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 0 5px 5px;
+    border-color: transparent transparent rgba(255, 255, 255, 0.45) transparent;
+    pointer-events: none;
+    transition: border-color 0.15s ease;
+}
+
+.cs-draw-btn:hover .cs-draw-caret,
+.cs-draw-btn.active .cs-draw-caret {
+    border-color: transparent transparent #38bdf8 transparent;
+}
+
+/* 드로잉 툴 서브메뉴 플라이아웃 */
+.cs-draw-flyout {
+    display: none;
+    position: absolute;
+    left: 42px;
+    top: 0;
+    width: 254px;
+    max-height: 480px;
+    overflow-y: auto;
+    background-color: #0d1527;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
+    padding: 6px 0;
+    z-index: 1000;
+    backdrop-filter: blur(14px);
+}
+
+.cs-draw-flyout.show {
+    display: block;
+    animation: csFlyoutFadeIn 0.15s ease-out;
+}
+
+@keyframes csFlyoutFadeIn {
+    from { opacity: 0; transform: translateX(-6px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+.cs-flyout-header {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    padding: 8px 14px 4px 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.cs-flyout-item {
+    display: flex;
+    align-items: center;
+    padding: 7px 14px;
+    font-size: 12.5px;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    gap: 10px;
+    user-select: none;
+}
+
+.cs-flyout-item:hover {
+    background-color: rgba(56, 189, 248, 0.12);
+    color: #38bdf8;
+}
+
+.cs-flyout-item.active {
+    color: #38bdf8;
+    background-color: rgba(56, 189, 248, 0.18);
+    font-weight: 600;
+}
+
+.cs-flyout-item-icon {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.cs-flyout-item-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.cs-flyout-item:hover .cs-flyout-item-icon,
+.cs-flyout-item.active .cs-flyout-item-icon {
+    color: #38bdf8;
+}
+
+.cs-flyout-item-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cs-flyout-item-shortcut {
+    font-size: 10.5px;
+    color: #64748b;
+    font-family: monospace;
+    padding: 1px 5px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cs-flyout-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.08);
+    margin: 5px 0;
+}
+
+.cs-draw-flyout::-webkit-scrollbar {
+    width: 5px;
+}
+.cs-draw-flyout::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+.cs-draw-flyout::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 4px;
+}
+.cs-draw-flyout::-webkit-scrollbar-thumb:hover {
+    background: #475569;
 }
 
 .cs-draw-divider {
@@ -713,6 +862,10 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     z-index: 100;
     pointer-events: none;
+}
+
+.cs-draw-btn.flyout-open[data-tip]:hover::after {
+    display: none !important;
 }
 
 /* 차트 메인 영역 & 드로잉 오버레이 캔버스 */
