@@ -799,12 +799,123 @@
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Calendar Grid */
+/* Calendar Grid & Interactive Navigation */
 .tw-calendar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
     margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.tw-cal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.tw-cal-nav-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 4px 6px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.tw-cal-nav-btn {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 13px;
+}
+.tw-cal-nav-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+.tw-cal-picker-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.tw-cal-select {
+    background: #181924;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+.tw-cal-select:hover, .tw-cal-select:focus {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: #202232;
+}
+.tw-cal-today-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    color: #cbd5e1;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.tw-cal-today-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+}
+.tw-cal-header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+.tw-cal-month-stat {
+    font-size: 12px;
+}
+.tw-cal-stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+.tw-cal-stat-pill.pos {
+    background: rgba(249, 77, 93, 0.12);
+    border: 1px solid rgba(249, 77, 93, 0.3);
+    color: var(--pos, #f94d5d);
+}
+.tw-cal-stat-pill.neg {
+    background: rgba(46, 138, 246, 0.12);
+    border: 1px solid rgba(46, 138, 246, 0.3);
+    color: var(--neg, #2e8af6);
+}
+.tw-cal-stat-pill.neutral {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted, #8b92a5);
+}
+.tw-cal-subtext {
+    font-size: 11px;
+    color: var(--text-muted, #8b92a5);
 }
 .tw-calendar-grid {
     display: grid;
@@ -818,6 +929,12 @@
     color: var(--text-muted, #8b92a5);
     padding: 8px 0;
 }
+.tw-cal-day-name.sun {
+    color: rgba(249, 77, 93, 0.8);
+}
+.tw-cal-day-name.sat {
+    color: rgba(46, 138, 246, 0.8);
+}
 .tw-cal-cell {
     min-height: 84px;
     background: rgba(255, 255, 255, 0.02);
@@ -830,37 +947,84 @@
     font-size: 11px;
     transition: all 0.2s;
     cursor: pointer;
+    position: relative;
 }
 .tw-cal-cell:hover {
     background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: translateY(-1px);
 }
 .tw-cal-cell.today {
-    border-color: var(--pos, #f94d5d);
-    background: rgba(249, 77, 93, 0.05);
+    border-color: var(--pos, #f94d5d) !important;
+    background: rgba(249, 77, 93, 0.06) !important;
+    box-shadow: 0 0 10px rgba(249, 77, 93, 0.15);
 }
 .tw-cal-cell.other-month {
-    opacity: 0.25;
+    opacity: 0.22;
+    cursor: default;
+    background: rgba(0, 0, 0, 0.1);
+}
+.tw-cal-cell.other-month:hover {
+    background: rgba(0, 0, 0, 0.1);
+    border-color: rgba(255, 255, 255, 0.05);
+    transform: none;
+}
+.tw-cal-cell.has-trades {
+    background: rgba(255, 255, 255, 0.035);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+.tw-cal-cell.has-trades:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.tw-cal-cell-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
 }
 .tw-cal-date-num {
     font-weight: 700;
     color: var(--text-muted, #8b92a5);
 }
+.tw-cal-date-num.weekend {
+    opacity: 0.85;
+}
+.tw-cal-today-badge {
+    font-size: 9px;
+    font-weight: 800;
+    color: #fff;
+    background: var(--pos, #f94d5d);
+    padding: 1px 4px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+}
 .tw-cal-trades-badge {
     margin-top: 4px;
     font-size: 10px;
     font-weight: 700;
-    padding: 2px 5px;
+    padding: 3px 6px;
     border-radius: 4px;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    transition: transform 0.15s;
+}
+.tw-cal-cell:hover .tw-cal-trades-badge {
+    transform: scale(1.03);
 }
 .tw-cal-trades-badge.win {
     background: rgba(249, 77, 93, 0.2);
     color: var(--pos, #f94d5d);
+    border: 1px solid rgba(249, 77, 93, 0.3);
 }
 .tw-cal-trades-badge.loss {
     background: rgba(46, 138, 246, 0.2);
     color: var(--neg, #2e8af6);
+    border: 1px solid rgba(46, 138, 246, 0.3);
 }
 
 /* Analytics Metric Row (6 Cards) */

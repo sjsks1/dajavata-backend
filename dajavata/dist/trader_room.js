@@ -749,6 +749,10 @@
     // VIEW RENDERERS
     // -------------------------------------------------------------
     const Views = {
+        calYear: new Date().getFullYear(),
+        calMonth: new Date().getMonth(),
+        currentJournalTab: 'tab-all-journal',
+
         // 1. 오늘의 매매 (Trading Room Dashboard)
         renderToday(container) {
             const db = Storage.load();
@@ -2599,9 +2603,24 @@
                 <div class="journal-tab-content" id="tab-calendar" style="display:none;">
                     <div class="tw-section-card">
                         <div class="tw-calendar-header">
-                            <h3 id="cal-month-title">${new Date().getFullYear()}년 ${new Date().getMonth() + 1}월</h3>
-                            <div style="font-size:12px; color:var(--text-muted);">
-                                일자별 실현 손익 및 거래 횟수
+                            <div class="tw-cal-header-left">
+                                <div class="tw-cal-nav-group">
+                                    <button class="tw-cal-nav-btn" id="btn-cal-prev" title="이전 달">
+                                        <i class="ph ph-caret-left"></i>
+                                    </button>
+                                    <div class="tw-cal-picker-group">
+                                        <select id="cal-year-select" class="tw-cal-select tw-cal-year-select"></select>
+                                        <select id="cal-month-select" class="tw-cal-select tw-cal-month-select"></select>
+                                    </div>
+                                    <button class="tw-cal-nav-btn" id="btn-cal-next" title="다음 달">
+                                        <i class="ph ph-caret-right"></i>
+                                    </button>
+                                    <button class="tw-cal-today-btn" id="btn-cal-today" title="이번 달로 바로 이동">오늘</button>
+                                </div>
+                            </div>
+                            <div class="tw-cal-header-right">
+                                <div id="cal-month-stat-badge" class="tw-cal-month-stat"></div>
+                                <div class="tw-cal-subtext">일자별 실현 손익 및 거래 횟수 (날짜 클릭 시 상세 복기)</div>
                             </div>
                         </div>
                         <div class="tw-calendar-grid" id="calendar-grid-box">
@@ -2611,21 +2630,43 @@
                 </div>
             `;
 
-            // 탭 이벤트
+            // 탭 상태 동기화 및 탭 이벤트
+            const activeTabId = options.activeTab || this.currentJournalTab || 'tab-all-journal';
+            this.currentJournalTab = activeTabId;
+
             const nav = container.querySelector('#journal-tab-nav');
             nav.querySelectorAll('.tw-tab-item').forEach(tab => {
                 tab.addEventListener('click', () => {
                     nav.querySelectorAll('.tw-tab-item').forEach(t => t.classList.remove('active'));
                     tab.classList.add('active');
                     const targetId = tab.getAttribute('data-tab');
+                    this.currentJournalTab = targetId;
                     container.querySelectorAll('.journal-tab-content').forEach(c => c.style.display = 'none');
                     container.querySelector('#' + targetId).style.display = 'block';
 
                     if (targetId === 'tab-calendar') {
-                        this.renderCalendarGrid(container.querySelector('#calendar-grid-box'), journal);
+                        this.updateCalendarView(container, journal);
                     }
                 });
             });
+
+            // 캘린더 네비게이션 컨트롤러 세팅
+            this.setupCalendarControls(container, journal);
+
+            // 초기 탭 활성화 적용
+            if (activeTabId && activeTabId !== 'tab-all-journal') {
+                const initialTab = nav.querySelector(`.tw-tab-item[data-tab="${activeTabId}"]`);
+                if (initialTab) {
+                    nav.querySelectorAll('.tw-tab-item').forEach(t => t.classList.remove('active'));
+                    initialTab.classList.add('active');
+                    container.querySelectorAll('.journal-tab-content').forEach(c => c.style.display = 'none');
+                    const content = container.querySelector('#' + activeTabId);
+                    if (content) content.style.display = 'block';
+                    if (activeTabId === 'tab-calendar') {
+                        this.updateCalendarView(container, journal);
+                    }
+                }
+            }
 
             const createBtn = container.querySelector('#btn-create-journal');
             if (createBtn) createBtn.addEventListener('click', () => this.renderJournalEditor(container));
@@ -2644,8 +2685,8 @@
         },
 
         // 매매일지 작성기
-        renderJournalEditor(container, plan = null) {
-            const todayStr = new Date().toISOString().split('T')[0];
+        renderJournalEditor(container, plan = null, defaultDate = null) {
+            const todayStr = defaultDate || new Date().toISOString().split('T')[0];
 
             container.innerHTML = `
                 <div class="tw-header">
@@ -2889,18 +2930,164 @@
                     Storage.save(db);
                 }
                 modal.remove();
-                this.renderJournal(container);
+                this.renderJournal(container, { activeTab: this.currentJournalTab });
             });
         },
 
-        // 매매 캘린더 그리드 렌더러
-        renderCalendarGrid(container, journal) {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth(); // 0-indexed
+        // 매매 캘린더 네비게이션 컨트롤러 초기화
+        setupCalendarControls(container, journal) {
+            const calBox = container.querySelector('#tab-calendar');
+            if (!calBox) return;
 
-            const firstDay = new Date(year, month, 1).getDay();
-            const lastDate = new Date(year, month + 1, 0).getDate();
+            const prevBtn = calBox.querySelector('#btn-cal-prev');
+            const nextBtn = calBox.querySelector('#btn-cal-next');
+            const todayBtn = calBox.querySelector('#btn-cal-today');
+            const yearSelect = calBox.querySelector('#cal-year-select');
+            const monthSelect = calBox.querySelector('#cal-month-select');
+
+            // 연도 셀렉트 동적 채우기 (현재 연도 기준 과거 3년 ~ 미래 8년 등 넉넉하게 생성)
+            if (yearSelect) {
+                const currentRealYear = new Date().getFullYear();
+                const startYear = Math.min(2023, currentRealYear - 2);
+                const endYear = Math.max(2035, currentRealYear + 8);
+                let yearHtml = '';
+                for (let y = startYear; y <= endYear; y++) {
+                    yearHtml += `<option value="${y}">${y}년</option>`;
+                }
+                yearSelect.innerHTML = yearHtml;
+                yearSelect.value = this.calYear;
+
+                yearSelect.addEventListener('change', () => {
+                    this.calYear = parseInt(yearSelect.value, 10);
+                    this.updateCalendarView(container, journal);
+                });
+            }
+
+            // 월 셀렉트 동적 채우기 (1월 ~ 12월)
+            if (monthSelect) {
+                let monthHtml = '';
+                for (let m = 0; m < 12; m++) {
+                    monthHtml += `<option value="${m}">${m + 1}월</option>`;
+                }
+                monthSelect.innerHTML = monthHtml;
+                monthSelect.value = this.calMonth;
+
+                monthSelect.addEventListener('change', () => {
+                    this.calMonth = parseInt(monthSelect.value, 10);
+                    this.updateCalendarView(container, journal);
+                });
+            }
+
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    if (this.calMonth === 0) {
+                        this.calMonth = 11;
+                        this.calYear -= 1;
+                    } else {
+                        this.calMonth -= 1;
+                    }
+                    this.updateCalendarView(container, journal);
+                });
+            }
+
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    if (this.calMonth === 11) {
+                        this.calMonth = 0;
+                        this.calYear += 1;
+                    } else {
+                        this.calMonth += 1;
+                    }
+                    this.updateCalendarView(container, journal);
+                });
+            }
+
+            if (todayBtn) {
+                todayBtn.addEventListener('click', () => {
+                    const now = new Date();
+                    this.calYear = now.getFullYear();
+                    this.calMonth = now.getMonth();
+                    this.updateCalendarView(container, journal);
+                });
+            }
+        },
+
+        // 매매 캘린더 뷰 갱신 및 월별 종합 통계 계산
+        updateCalendarView(container, journal) {
+            const calBox = container.querySelector('#tab-calendar');
+            if (!calBox) return;
+
+            const yearSelect = calBox.querySelector('#cal-year-select');
+            const monthSelect = calBox.querySelector('#cal-month-select');
+
+            if (yearSelect) {
+                if (!yearSelect.querySelector(`option[value="${this.calYear}"]`)) {
+                    const opt = document.createElement('option');
+                    opt.value = this.calYear;
+                    opt.textContent = `${this.calYear}년`;
+                    yearSelect.appendChild(opt);
+                }
+                yearSelect.value = this.calYear;
+            }
+            if (monthSelect) {
+                monthSelect.value = this.calMonth;
+            }
+
+            // 당월 매매 종합 집계
+            const statBadge = calBox.querySelector('#cal-month-stat-badge');
+            if (statBadge) {
+                const monthPrefix = `${this.calYear}-${String(this.calMonth + 1).padStart(2, '0')}`;
+                const monthTrades = journal.filter(j => {
+                    const d = j.exitDate || j.entryDate;
+                    return d && d.startsWith(monthPrefix);
+                });
+
+                if (monthTrades.length === 0) {
+                    statBadge.innerHTML = `<span class="tw-cal-stat-pill neutral"><i class="ph ph-calendar"></i> ${this.calYear}년 ${this.calMonth + 1}월 매매 기록 없음</span>`;
+                } else {
+                    let monthPnL = 0;
+                    let monthNetR = 0;
+                    let wins = 0;
+                    monthTrades.forEach(t => {
+                        const pnl = parseFloat(t.pnlAmount) || 0;
+                        const r = parseFloat(t.realizedR) || 0;
+                        monthPnL += pnl;
+                        monthNetR += r;
+                        if (pnl > 0) wins++;
+                    });
+                    const winRate = Math.round((wins / monthTrades.length) * 100);
+                    const isWin = monthNetR >= 0;
+                    statBadge.innerHTML = `
+                        <span class="tw-cal-stat-pill ${isWin ? 'pos' : 'neg'}">
+                            <strong>${this.calYear}년 ${this.calMonth + 1}월 종합</strong>: 
+                            총 ${monthTrades.length}건 | ${wins}승 (${winRate}%) | 
+                            ${isWin ? '+' : ''}${formatKRW(monthPnL)} | 
+                            <strong>${isWin ? '+' : ''}${formatNumber(monthNetR, 2)}R</strong>
+                        </span>
+                    `;
+                }
+            }
+
+            const gridBox = calBox.querySelector('#calendar-grid-box');
+            if (gridBox) {
+                this.renderCalendarGrid(gridBox, journal, this.calYear, this.calMonth, container);
+            }
+        },
+
+        // 매매 캘린더 그리드 렌더러 (연도/월 동적 계산 및 무한 달력 자동 생성)
+        renderCalendarGrid(container, journal, year = null, month = null, rootContainer = null) {
+            const realNow = new Date();
+            const realYear = realNow.getFullYear();
+            const realMonth = realNow.getMonth();
+            const realDate = realNow.getDate();
+
+            const targetYear = (year !== null && year !== undefined) ? year : realYear;
+            const targetMonth = (month !== null && month !== undefined) ? month : realMonth;
+
+            // 자바스크립트 Date 표준 수식: 해당 연/월의 1일 시작 요일 및 해당 월의 마지막 일자 계산
+            const firstDay = new Date(targetYear, targetMonth, 1).getDay(); // 0(일) ~ 6(토)
+            const lastDate = new Date(targetYear, targetMonth + 1, 0).getDate(); // 28 ~ 31일 (윤년 자동 반영)
+            const prevMonthLastDate = new Date(targetYear, targetMonth, 0).getDate();
 
             // 일별 거래 맵 매핑
             const dateMap = {};
@@ -2913,21 +3100,27 @@
             });
 
             const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
-            let html = dayNames.map(d => `<div class="tw-cal-day-name">${d}</div>`).join('');
+            let html = dayNames.map((d, idx) => `<div class="tw-cal-day-name ${idx === 0 ? 'sun' : (idx === 6 ? 'sat' : '')}">${d}</div>`).join('');
 
-            // 이전 달 빈칸
-            for (let i = 0; i < firstDay; i++) {
-                html += `<div class="tw-cal-cell other-month"></div>`;
+            // 1. 이전 달 날짜 채우기 (빈칸 대신 이전 달 말일 표시로 격자 완성)
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const prevD = prevMonthLastDate - i;
+                html += `
+                    <div class="tw-cal-cell other-month">
+                        <div class="tw-cal-cell-header">
+                            <span class="tw-cal-date-num">${prevD}</span>
+                        </div>
+                    </div>
+                `;
             }
 
-            // 이번 달 날짜들
-            const todayDate = now.getDate();
+            // 2. 이번 달 날짜들 동적 렌더링
             for (let d = 1; d <= lastDate; d++) {
-                const monthStr = String(month + 1).padStart(2, '0');
+                const monthStr = String(targetMonth + 1).padStart(2, '0');
                 const dateStr = String(d).padStart(2, '0');
-                const fullKey = `${year}-${monthStr}-${dateStr}`;
+                const fullKey = `${targetYear}-${monthStr}-${dateStr}`;
                 const trades = dateMap[fullKey] || [];
-                const isToday = d === todayDate;
+                const isToday = (targetYear === realYear && targetMonth === realMonth && d === realDate);
 
                 let dayNetR = 0;
                 let dayPnL = 0;
@@ -2936,19 +3129,183 @@
                     dayPnL += (parseFloat(t.pnlAmount) || 0);
                 });
 
+                const dayOfWeek = (firstDay + d - 1) % 7;
+                const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+
                 html += `
-                    <div class="tw-cal-cell ${isToday ? 'today' : ''}">
-                        <div class="tw-cal-date-num">${d}</div>
+                    <div class="tw-cal-cell ${isToday ? 'today' : ''} ${trades.length > 0 ? 'has-trades' : ''}" data-date="${fullKey}">
+                        <div class="tw-cal-cell-header">
+                            <span class="tw-cal-date-num ${isWeekend ? 'weekend' : ''}">${d}</span>
+                            ${isToday ? '<span class="tw-cal-today-badge">TODAY</span>' : ''}
+                        </div>
                         ${trades.length > 0 ? `
-                            <div class="tw-cal-trades-badge ${dayNetR >= 0 ? 'win' : 'loss'}">
-                                ${trades.length}건 (${dayNetR >= 0 ? '+' : ''}${formatNumber(dayNetR, 1)}R)
+                            <div class="tw-cal-trades-badge ${dayNetR >= 0 ? 'win' : 'loss'}" title="${trades.length}건 / ${dayPnL >= 0 ? '+' : ''}${formatKRW(dayPnL)}">
+                                <span>${trades.length}건</span>
+                                <span>(${dayNetR >= 0 ? '+' : ''}${formatNumber(dayNetR, 1)}R)</span>
                             </div>
                         ` : ''}
                     </div>
                 `;
             }
 
+            // 3. 다음 달 날짜 채우기 (전체 7열 배수 맞춰 35 or 42칸 완성)
+            const filledCount = firstDay + lastDate;
+            const totalSlots = Math.ceil(filledCount / 7) * 7;
+            const nextDaysCount = totalSlots - filledCount;
+            for (let d = 1; d <= nextDaysCount; d++) {
+                html += `
+                    <div class="tw-cal-cell other-month">
+                        <div class="tw-cal-cell-header">
+                            <span class="tw-cal-date-num">${d}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
             container.innerHTML = html;
+
+            // 4. 셀 클릭 이벤트 바인딩 (매매 있는 날은 상세 복기 모달, 없는 날은 새 매매 작성 연동)
+            const targetRoot = rootContainer || document.getElementById('trader-workspace-container');
+            container.querySelectorAll('.tw-cal-cell:not(.other-month)').forEach(cell => {
+                cell.addEventListener('click', () => {
+                    const dateKey = cell.getAttribute('data-date');
+                    if (!dateKey) return;
+                    const trades = dateMap[dateKey] || [];
+                    if (trades.length > 0) {
+                        this.showDayTradesModal(targetRoot, dateKey, trades);
+                    } else {
+                        this.showEmptyDayModal(targetRoot, dateKey);
+                    }
+                });
+            });
+        },
+
+        // 일자별 매매 상세 복기 모달
+        showDayTradesModal(container, dateKey, trades) {
+            let dayNetR = 0;
+            let dayPnL = 0;
+            trades.forEach(t => {
+                dayNetR += (parseFloat(t.realizedR) || 0);
+                dayPnL += (parseFloat(t.pnlAmount) || 0);
+            });
+
+            const isWin = dayNetR >= 0;
+            const modal = document.createElement('div');
+            modal.className = 'tw-modal-overlay';
+            modal.innerHTML = `
+                <div class="tw-modal" style="max-width: 640px;">
+                    <div class="tw-modal-header">
+                        <div>
+                            <h3><i class="ph ph-calendar-check" style="color:${isWin ? 'var(--pos, #f94d5d)' : 'var(--neg, #2e8af6)'};"></i> ${dateKey} 매매 복기 상세</h3>
+                            <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+                                당일 총 ${trades.length}건 | 실현 손익: <span class="${isWin ? 'pos' : 'neg'}"><strong>${isWin ? '+' : ''}${formatKRW(dayPnL)}</strong> (${isWin ? '+' : ''}${formatNumber(dayNetR, 2)}R)</span>
+                            </div>
+                        </div>
+                        <button class="tw-icon-btn btn-close-modal"><i class="ph ph-x"></i></button>
+                    </div>
+                    <div class="tw-modal-body" style="max-height:60vh; overflow-y:auto;">
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            ${trades.map(t => `
+                                <div class="tw-section-card" style="margin-bottom:0; padding:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);">
+                                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <strong style="font-size:15px; color:#fff;">${t.stockName}</strong>
+                                            <span class="tw-badge ${t.ruleCompliance === 'Yes' ? 'tw-badge-status-active' : 'tw-badge-status-cancel'}">
+                                                ${t.ruleCompliance === 'Yes' ? '원칙 준수' : '원칙 미준수'}
+                                            </span>
+                                            <span style="font-size:11px; color:var(--text-muted);">${t.setup || '일반 매매'}</span>
+                                        </div>
+                                        <div class="${t.pnlAmount >= 0 ? 'pos' : 'neg'}" style="font-size:14px; font-weight:700;">
+                                            ${t.pnlAmount >= 0 ? '+' : ''}${formatKRW(t.pnlAmount)} (${t.realizedR >= 0 ? '+' : ''}${formatNumber(t.realizedR, 2)}R)
+                                        </div>
+                                    </div>
+                                    <div style="font-size:12px; color:var(--text-muted); display:flex; gap:14px; margin-bottom:8px;">
+                                        <span>매수가: <strong>${formatKRW(t.entryPrice)}</strong></span>
+                                        <span>청산가: <strong>${formatKRW(t.exitPrice)}</strong></span>
+                                        <span>수량: <strong>${(t.shares || 0).toLocaleString()}주</strong></span>
+                                    </div>
+                                    ${(t.mistakes && t.mistakes.length > 0) ? `
+                                        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
+                                            ${t.mistakes.map(m => `<span class="tw-badge" style="background:rgba(249,77,93,0.15); color:var(--pos); font-size:10px;">${m}</span>`).join('')}
+                                        </div>
+                                    ` : ''}
+                                    ${t.notes ? `
+                                        <div style="background:rgba(0,0,0,0.25); border-radius:6px; padding:8px 10px; font-size:12px; color:#e2e8f0; line-height:1.4; margin-bottom:8px;">
+                                            ${t.notes}
+                                        </div>
+                                    ` : ''}
+                                    <div style="display:flex; justify-content:flex-end;">
+                                        <button class="tw-btn tw-btn-secondary tw-btn-sm btn-open-review-detail" data-trade-id="${t.id}">
+                                            <i class="ph ph-note-pencil"></i> 복기 상세 / 실수 수정
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="tw-modal-footer" style="display:flex; justify-content:space-between;">
+                        <button class="tw-btn tw-btn-primary tw-btn-sm" id="btn-add-trade-this-day">
+                            <i class="ph ph-plus"></i> 이 날짜로 새 매매 추가
+                        </button>
+                        <button class="tw-btn tw-btn-secondary btn-close-modal">닫기</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            modal.querySelectorAll('.btn-close-modal').forEach(b => b.addEventListener('click', () => modal.remove()));
+            modal.querySelectorAll('.btn-open-review-detail').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tradeId = btn.getAttribute('data-trade-id');
+                    const target = trades.find(t => t.id === tradeId);
+                    modal.remove();
+                    if (target) {
+                        this.showReviewModal(container, target);
+                    }
+                });
+            });
+            const addBtn = modal.querySelector('#btn-add-trade-this-day');
+            if (addBtn) {
+                addBtn.addEventListener('click', () => {
+                    modal.remove();
+                    this.renderJournalEditor(container, null, dateKey);
+                });
+            }
+        },
+
+        // 거래 없는 날짜 클릭 시 작성 유도 모달
+        showEmptyDayModal(container, dateKey) {
+            const modal = document.createElement('div');
+            modal.className = 'tw-modal-overlay';
+            modal.innerHTML = `
+                <div class="tw-modal" style="max-width: 440px;">
+                    <div class="tw-modal-header">
+                        <h3><i class="ph ph-calendar-plus" style="color:var(--pos);"></i> ${dateKey}</h3>
+                        <button class="tw-icon-btn btn-close-modal"><i class="ph ph-x"></i></button>
+                    </div>
+                    <div class="tw-modal-body" style="text-align:center; padding:24px 16px;">
+                        <p style="color:#cbd5e1; font-size:13px; line-height:1.6; margin-bottom:20px;">
+                            <strong>${dateKey}</strong>에는 아직 등록된 매매 기록이 없습니다.<br>
+                            과거 또는 당일 매매일지를 새로 작성하시겠습니까?
+                        </p>
+                        <button class="tw-btn tw-btn-primary" id="btn-create-for-date" style="width:100%;">
+                            <i class="ph ph-plus-circle"></i> ${dateKey} 매매일지 작성하기
+                        </button>
+                    </div>
+                    <div class="tw-modal-footer">
+                        <button class="tw-btn tw-btn-secondary btn-close-modal" style="width:100%;">닫기</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            modal.querySelectorAll('.btn-close-modal').forEach(b => b.addEventListener('click', () => modal.remove()));
+            const createBtn = modal.querySelector('#btn-create-for-date');
+            if (createBtn) {
+                createBtn.addEventListener('click', () => {
+                    modal.remove();
+                    this.renderJournalEditor(container, null, dateKey);
+                });
+            }
         },
 
         // 5. 성과 분석실 (Performance Analytics View)
