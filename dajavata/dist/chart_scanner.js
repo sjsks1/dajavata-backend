@@ -46,28 +46,48 @@
     };
 
     // -------------------------------------------------------------
-    // 2. 해외 대표 인기 종목 유니버스 (from app3.py)
+    // 2. 해외 대표 인기 종목 유니버스 (실시간 정규 시세 연동)
     // -------------------------------------------------------------
+    const OVERSEAS_NAVER_MAP = {
+        'NVDA': 'NVDA.O',
+        'AAPL': 'AAPL.O',
+        'TSLA': 'TSLA.O',
+        'MSFT': 'MSFT.O',
+        'AMZN': 'AMZN.O',
+        'GOOGL': 'GOOGL.O',
+        'META': 'META.O',
+        'PLTR': 'PLTR.O',
+        'QQQ': 'QQQ.O',
+        'TQQQ': 'TQQQ.O',
+        'SOXL': 'SOXL.K',
+        'SPY': 'SPY',
+        'TSM': 'TSM',
+        'AVGO': 'AVGO.O',
+        'AMD': 'AMD.O',
+        'MU': 'MU.O',
+        'ASML': 'ASML.O'
+    };
+
     const OVERSEAS_STOCKS = [
         {
             code: 'NVDA',
             name: '엔비디아 (NVIDIA)',
             market: 'NASDAQ',
-            price: 214.13,
+            price: 217.09,
             change: 3.89,
             changeRate: 1.85,
-            volume: '48.2M주',
+            volume: '94.5M주',
             tradeAmount: '시총 $3.48T',
             theme: 'AI 가속기 / GPU',
             strategy: 'ict-smc',
             strategyName: 'ICT 스마트 머니',
             signalStatus: 'good',
             signalText: '상승 FVG 구간 안착 · 반등',
-            stopPrice: 206.50,
-            targetPrice: 234.00,
+            stopPrice: 209.40,
+            targetPrice: 236.60,
             briefing: {
-                reason: 'Blackwell GPU 대량 양산 및 빅테크 AI 데이터센터 수주 지속으로 Bullish FVG 구간($208)에서 강력한 기관 순매수가 유입되었습니다.',
-                tradePlan: '현재가($214.13) 진입 시 직전 저점 이탈 $206.50(-3.56%) 손절 기준, 1차 목표가 $234.00(+9.28%) 설정이 유효합니다.',
+                reason: 'Blackwell GPU 대량 양산 및 빅테크 AI 데이터센터 수주 지속으로 Bullish FVG 구간($212)에서 강력한 기관 순매수가 유입되었습니다.',
+                tradePlan: '현재가($217.09) 진입 시 직전 저점 이탈 $209.40(-3.54%) 손절 기준, 1차 목표가 $236.60(+8.99%) 설정이 유효합니다.',
                 supplyFlow: '골드만삭스 및 모건스탠리 창구 매수 우위 지속, 나스닥 100 지수 대비 상대 강도(RS) 최상위권을 유지 중입니다.'
             }
         },
@@ -75,21 +95,21 @@
             code: 'AAPL',
             name: '애플 (Apple)',
             market: 'NASDAQ',
-            price: 232.50,
-            change: 1.50,
-            changeRate: 0.65,
-            volume: '36.8M주',
+            price: 342.94,
+            change: 2.25,
+            changeRate: 0.66,
+            volume: '34.2M주',
             tradeAmount: '시총 $3.55T',
             theme: '애플 인텔리전스 / 빅테크',
             strategy: 'support-bounce',
             strategyName: '추세 지지선 반등',
             signalStatus: 'good',
             signalText: '중기 추세선 지지 반등',
-            stopPrice: 224.20,
-            targetPrice: 253.50,
+            stopPrice: 330.90,
+            targetPrice: 373.80,
             briefing: {
-                reason: '아이폰 신제품 및 애플 인텔리전스 업그레이드 사이클 진입과 함께 20일 이동평균선($228) 지지 확인 후 양봉 반등 중입니다.',
-                tradePlan: '현재가($232.50) 기준 지지선 이탈 $224.20(-3.57%) 손절, 목표 $253.50(+9.03%) 전략입니다.',
+                reason: '아이폰 신제품 및 애플 인텔리전스 업그레이드 사이클 진입과 함께 20일 이동평균선 지지 확인 후 양봉 반등 중입니다.',
+                tradePlan: '현재가($342.94) 기준 지지선 이탈 $330.90(-3.51%) 손절, 목표 $373.80(+9.00%) 전략입니다.',
                 supplyFlow: '워런 버핏의 지분 일부 조정 완료 후 기관 패시브 자금의 재유입이 관측되고 있습니다.'
             }
         },
@@ -97,21 +117,21 @@
             code: 'TSLA',
             name: '테슬라 (Tesla)',
             market: 'NASDAQ',
-            price: 220.70,
-            change: 6.85,
-            changeRate: 3.20,
-            volume: '54.1M주',
+            price: 368.06,
+            change: 11.45,
+            changeRate: 3.21,
+            volume: '38.4M주',
             tradeAmount: '시총 $704.5B',
             theme: '자율주행 FSD / 로보택시',
             strategy: 'breakout-retest',
             strategyName: '전고점 돌파 후 안착',
             signalStatus: 'good',
             signalText: '전고점 돌파 후 리테스트',
-            stopPrice: 212.80,
-            targetPrice: 242.00,
+            stopPrice: 355.10,
+            targetPrice: 401.20,
             briefing: {
-                reason: '로보택시(Cybercab) 상용화 계획 및 FSD v13 배포 모멘텀으로 직전 저항선($215)을 거래량과 함께 강하게 상향 돌파했습니다.',
-                tradePlan: '현재가($220.70) 매수 시 돌파 지지선 이탈 $212.80(-3.58%) 손절, 전고점 $242.00(+9.65%) 1차 목표입니다.',
+                reason: '로보택시(Cybercab) 상용화 계획 및 FSD v13 배포 모멘텀으로 직전 저항선($360)을 거래량과 함께 강하게 상향 돌파했습니다.',
+                tradePlan: '현재가($368.06) 매수 시 돌파 지지선 이탈 $355.10(-3.52%) 손절, 전고점 $401.20(+9.00%) 1차 목표입니다.',
                 supplyFlow: '공매도 숏커버링 물량과 개인/기관의 공격적인 콜옵션 매수가 동반되며 거래대금이 급증하고 있습니다.'
             }
         },
@@ -119,21 +139,21 @@
             code: 'MSFT',
             name: '마이크로소프트 (MSFT)',
             market: 'NASDAQ',
-            price: 418.00,
-            change: 1.75,
+            price: 533.52,
+            change: 2.25,
             changeRate: 0.42,
-            volume: '18.4M주',
+            volume: '17.4M주',
             tradeAmount: '시총 $3.11T',
             theme: '클라우드 / 코파일럿',
             strategy: 'ma-converge',
             strategyName: '이평선 수렴 & 정배열',
             signalStatus: 'good',
             signalText: '이평선 수렴 후 우상향',
-            stopPrice: 403.00,
-            targetPrice: 455.50,
+            stopPrice: 514.80,
+            targetPrice: 581.50,
             briefing: {
                 reason: 'Azure 클라우드의 30%대 고성장과 코파일럿 유료 구독자 확대로 주요 이동평균선이 골든크로스를 그리며 밀집 수렴했습니다.',
-                tradePlan: '418.00달러 진입 시 손절가 403.00달러(-3.59%), 목표가 455.50달러(+8.97%)입니다.',
+                tradePlan: '533.52달러 진입 시 손절가 514.80달러(-3.51%), 목표가 581.50달러(+8.99%)입니다.',
                 supplyFlow: '글로벌 연기금 및 국부펀드의 지속적인 스테디 바잉이 이어지는 방어적 성장주입니다.'
             }
         },
@@ -141,21 +161,21 @@
             code: 'AMZN',
             name: '아마존 (Amazon)',
             market: 'NASDAQ',
-            price: 188.60,
-            change: 2.14,
+            price: 262.45,
+            change: 2.98,
             changeRate: 1.15,
-            volume: '28.9M주',
+            volume: '54.4M주',
             tradeAmount: '시총 $1.96T',
             theme: '이커머스 / AWS',
             strategy: 'support-bounce',
             strategyName: '추세 지지선 반등',
             signalStatus: 'good',
             signalText: '상승 채널 하단 반등',
-            stopPrice: 181.90,
-            targetPrice: 205.50,
+            stopPrice: 253.20,
+            targetPrice: 286.00,
             briefing: {
-                reason: 'AWS 클라우드 마진 개선 및 전자상거래 물류 효율화로 상승 채널 하단 지지선($182)에서 강한 지지 캔들이 형성되었습니다.',
-                tradePlan: '현재가($188.60) 진입 시 $181.90(-3.55%) 손절, 목표가 $205.50(+8.96%) 타점입니다.',
+                reason: 'AWS 클라우드 마진 개선 및 전자상거래 물류 효율화로 상승 채널 하단 지지선($255)에서 강한 지지 캔들이 형성되었습니다.',
+                tradePlan: '현재가($262.45) 진입 시 $253.20(-3.52%) 손절, 목표가 $286.00(+8.97%) 타점입니다.',
                 supplyFlow: '북미 기관 중심의 실적 턴어라운드 베팅 자금이 활발히 유입되고 있습니다.'
             }
         },
@@ -163,21 +183,21 @@
             code: 'GOOGL',
             name: '알파벳 A (Google)',
             market: 'NASDAQ',
-            price: 165.30,
-            change: 1.44,
-            changeRate: 0.88,
-            volume: '22.1M주',
+            price: 344.18,
+            change: 3.02,
+            changeRate: 0.89,
+            volume: '18.4M주',
             tradeAmount: '시총 $2.05T',
             theme: '검색 / 제미나이 AI',
             strategy: 'bb-squeeze',
             strategyName: '볼린저 밴드 스퀴즈',
             signalStatus: 'warn',
             signalText: '볼린저밴드 수축 (방향성 분출)',
-            stopPrice: 159.50,
-            targetPrice: 180.00,
+            stopPrice: 332.10,
+            targetPrice: 375.10,
             briefing: {
                 reason: '제미나이 AI 검색 통합 및 유튜브 광고 수익 확대로 밴드 수축 후 상방 돌파 에너지를 축적하고 있습니다.',
-                tradePlan: '현재가($165.30) 매수 시 지지선 이탈 $159.50(-3.51%) 손절 기준입니다.',
+                tradePlan: '현재가($344.18) 매수 시 지지선 이탈 $332.10(-3.51%) 손절 기준입니다.',
                 supplyFlow: '반독점 소송 리스크가 주가에 상당 부분 선반영되었으며, 밸류에이션 매력이 부각 중입니다.'
             }
         },
@@ -185,21 +205,21 @@
             code: 'META',
             name: '메타 플랫폼스 (Meta)',
             market: 'NASDAQ',
-            price: 585.00,
-            change: 13.98,
+            price: 705.44,
+            change: 16.90,
             changeRate: 2.45,
-            volume: '12.5M주',
+            volume: '15.3M주',
             tradeAmount: '시총 $1.48T',
             theme: '라마3 / 소셜미디어',
             strategy: 'rsi-gold',
             strategyName: 'Wilder RSI 골든크로스',
             signalStatus: 'good',
             signalText: 'RSI(14) 55선 골든크로스',
-            stopPrice: 564.00,
-            targetPrice: 638.00,
+            stopPrice: 680.70,
+            targetPrice: 768.90,
             briefing: {
                 reason: '라마(Llama) 오픈소스 AI 생태계 주도와 AI 추천 기반 릴스 광고 단가 상승으로 모멘텀 지표가 강력히 개선되었습니다.',
-                tradePlan: '현재가($585.00) 매수 시 손절 $564.00(-3.59%), 목표 $638.00(+9.06%)입니다.',
+                tradePlan: '현재가($705.44) 매수 시 손절 $680.70(-3.51%), 목표 $768.90(+9.00%)입니다.',
                 supplyFlow: '외국계 헤지펀드의 적극적인 비중 확대가 확인되고 있습니다.'
             }
         },
@@ -207,21 +227,21 @@
             code: 'PLTR',
             name: '팔란티어 (Palantir)',
             market: 'NYSE',
-            price: 44.50,
-            change: 1.76,
-            changeRate: 4.12,
-            volume: '65.2M주',
+            price: 194.15,
+            change: 7.70,
+            changeRate: 4.13,
+            volume: '23.5M주',
             tradeAmount: '시총 $99.2B',
             theme: 'AIP / 국방 데이터 AI',
             strategy: 'breakout-retest',
             strategyName: '전고점 돌파 후 안착',
             signalStatus: 'good',
             signalText: 'S&P500 편입 후 고점 돌파',
-            stopPrice: 42.90,
-            targetPrice: 48.60,
+            stopPrice: 187.30,
+            targetPrice: 211.60,
             briefing: {
                 reason: 'S&P 500 지수 편입 및 기업용 AIP 플랫폼 부트캠프 계약 폭증으로 역사적 신고가 랠리를 지속하고 있습니다.',
-                tradePlan: '현재가($44.50) 매수 시 돌파 저항선 지지 $42.90(-3.60%) 손절, 목표 $48.60(+9.21%)입니다.',
+                tradePlan: '현재가($194.15) 매수 시 돌파 저항선 지지 $187.30(-3.53%) 손절, 목표 $211.60(+8.99%)입니다.',
                 supplyFlow: '패시브 펀드 인덱스 매수세와 미국 국방부 장기 계약 기대감이 뒷받침하고 있습니다.'
             }
         },
@@ -229,21 +249,21 @@
             code: 'QQQ',
             name: '나스닥 100 ETF (QQQ)',
             market: 'NASDAQ',
-            price: 495.20,
-            change: 4.66,
+            price: 718.36,
+            change: 6.78,
             changeRate: 0.95,
-            volume: '38.5M주',
+            volume: '36.0M주',
             tradeAmount: '순자산 $290B',
             theme: '미국 테크 대표 지수',
             strategy: 'support-bounce',
             strategyName: '추세 지지선 반등',
             signalStatus: 'good',
             signalText: '기술주 지수 우상향 지지',
-            stopPrice: 477.80,
-            targetPrice: 539.50,
+            stopPrice: 693.20,
+            targetPrice: 783.00,
             briefing: {
                 reason: '미국 금리 인하 사이클과 빅테크 실적 호조가 맞물려 주요 추세 지지선을 견고히 방어 중입니다.',
-                tradePlan: '495.20달러 기준 $477.80(-3.51%) 손절선, $539.50(+8.95%) 목표선입니다.',
+                tradePlan: '718.36달러 기준 $693.20(-3.50%) 손절선, $783.00(+9.00%) 목표선입니다.',
                 supplyFlow: '글로벌 기관 ETF 순유입액 1위를 유지하고 있습니다.'
             }
         },
@@ -251,21 +271,21 @@
             code: 'SOXL',
             name: '반도체 3배 롱 ETF (SOXL)',
             market: 'NYSE',
-            price: 38.60,
-            change: 1.94,
+            price: 98.65,
+            change: 4.96,
             changeRate: 5.30,
-            volume: '78.4M주',
+            volume: '93.2M주',
             tradeAmount: '순자산 $11.5B',
             theme: '필라델피아 반도체 3X',
             strategy: 'rsi-gold',
             strategyName: 'Wilder RSI 골든크로스',
             signalStatus: 'good',
             signalText: '단기 RSI 반등 매수 타점',
-            stopPrice: 37.20,
-            targetPrice: 42.10,
+            stopPrice: 95.10,
+            targetPrice: 107.50,
             briefing: {
                 reason: '필라델피아 반도체 지수 반등에 힘입어 과매도권에서 단기 모멘텀 골든크로스가 포착되었습니다.',
-                tradePlan: '38.60달러 진입 시 37.20달러(-3.63%) 타이트한 손절, 1차 목표 42.10달러(+9.07%)입니다.',
+                tradePlan: '98.65달러 진입 시 95.10달러(-3.60%) 타이트한 손절, 1차 목표 107.50달러(+8.97%)입니다.',
                 supplyFlow: '레버리지 특성상 변동성이 크며, 단기 반도체 업황 개선 기대 자금이 쏠리고 있습니다.'
             }
         },
@@ -273,21 +293,21 @@
             code: 'TQQQ',
             name: '나스닥 3배 롱 ETF (TQQQ)',
             market: 'NASDAQ',
-            price: 74.80,
-            change: 2.07,
-            changeRate: 2.85,
-            volume: '56.3M주',
+            price: 70.64,
+            change: 1.95,
+            changeRate: 2.84,
+            volume: '54.6M주',
             tradeAmount: '순자산 $24.8B',
             theme: '나스닥 100 3X 레버리지',
             strategy: 'support-bounce',
             strategyName: '추세 지지선 반등',
             signalStatus: 'good',
             signalText: '3배 레버리지 지지 반등',
-            stopPrice: 72.10,
-            targetPrice: 81.60,
+            stopPrice: 68.10,
+            targetPrice: 77.00,
             briefing: {
                 reason: '나스닥 100 지수의 20일선 지지 확인과 동조화되어 상방 탄력이 급증하고 있습니다.',
-                tradePlan: '현재가($74.80) 기준 $72.10(-3.61%) 손절, 목표 $81.60(+9.09%) 설정입니다.',
+                tradePlan: '현재가($70.64) 기준 $68.10(-3.60%) 손절, 목표 $77.00(+9.00%) 설정입니다.',
                 supplyFlow: '초단기 공격형 매수세가 지수 반등 국면에서 빠르게 유입 중입니다.'
             }
         },
@@ -295,21 +315,21 @@
             code: 'SPY',
             name: 'S&P 500 ETF (SPY)',
             market: 'NYSE',
-            price: 582.40,
-            change: 3.01,
+            price: 766.48,
+            change: 3.98,
             changeRate: 0.52,
-            volume: '45.1M주',
+            volume: '33.6M주',
             tradeAmount: '순자산 $580B',
             theme: '미국 대형주 대표 지수',
             strategy: 'ma-converge',
             strategyName: '이평선 수렴 & 정배열',
             signalStatus: 'good',
             signalText: '정배열 대세 상승 추세',
-            stopPrice: 561.80,
-            targetPrice: 634.50,
+            stopPrice: 739.60,
+            targetPrice: 835.40,
             briefing: {
                 reason: '미국 500대 우량주의 이익 성장과 경기 연착륙 기대감으로 교과서적인 정배열 상승을 이어가고 있습니다.',
-                tradePlan: '현재가($582.40) 기준 $561.80(-3.54%) 손절, $634.50(+8.95%) 목표입니다.',
+                tradePlan: '현재가($766.48) 기준 $739.60(-3.51%) 손절, $835.40(+9.00%) 목표입니다.',
                 supplyFlow: '전 세계 연기금 및 퇴직연금 401(k) 패시브 자금의 확고한 순매수가 유지됩니다.'
             }
         },
@@ -317,21 +337,21 @@
             code: 'AVGO',
             name: '브로드컴 (Broadcom)',
             market: 'NASDAQ',
-            price: 182.00,
-            change: 3.74,
+            price: 334.59,
+            change: 6.89,
             changeRate: 2.10,
-            volume: '24.6M주',
+            volume: '16.6M주',
             tradeAmount: '시총 $848.2B',
             theme: '커스텀 ASIC / AI 네트워킹',
             strategy: 'ict-smc',
             strategyName: 'ICT 스마트 머니',
             signalStatus: 'good',
             signalText: 'Bullish OB 반등 타점',
-            stopPrice: 175.50,
-            targetPrice: 198.50,
+            stopPrice: 322.80,
+            targetPrice: 364.70,
             briefing: {
                 reason: '구글, 메타 등 빅테크의 자체 AI 칩(ASIC) 설계 위탁 증가 및 VMware 클라우드 소프트웨어 시너지로 Bullish Order Block에서 반등했습니다.',
-                tradePlan: '현재가($182.00) 매수 시 $175.50(-3.57%) 손절, $198.50(+9.07%) 목표입니다.',
+                tradePlan: '현재가($334.59) 매수 시 $322.80(-3.52%) 손절, $364.70(+9.00%) 목표입니다.',
                 supplyFlow: 'AI 인프라 필수 네트워킹(Tomahawk 5) 독점력으로 장기 펀드 매수가 탄탄합니다.'
             }
         },
@@ -339,21 +359,21 @@
             code: 'TSM',
             name: 'TSMC ADR (TSM)',
             market: 'NYSE',
-            price: 198.50,
-            change: 3.41,
+            price: 420.22,
+            change: 7.23,
             changeRate: 1.75,
-            volume: '19.8M주',
+            volume: '12.1M주',
             tradeAmount: '시총 $1.03T',
             theme: '글로벌 1위 파운드리',
             strategy: 'support-bounce',
             strategyName: '추세 지지선 반등',
             signalStatus: 'good',
             signalText: '3나노 풀가동 지지 반등',
-            stopPrice: 191.40,
-            targetPrice: 216.50,
+            stopPrice: 405.50,
+            targetPrice: 458.00,
             briefing: {
                 reason: '3나노/2나노 선단 공정 가동률 100% 지속 및 애플, 엔비디아, AMD 전량 위탁에 힘입어 상승 추세 지지선을 강력히 방어 중입니다.',
-                tradePlan: '현재가($198.50) 매수 시 $191.40(-3.58%) 손절, $216.50(+9.07%) 1차 목표입니다.',
+                tradePlan: '현재가($420.22) 매수 시 $405.50(-3.50%) 손절, $458.00(+8.99%) 1차 목표입니다.',
                 supplyFlow: '글로벌 파운드리 시장점유율 60%를 바탕으로 한 외국인 매수세가 지속됩니다.'
             }
         },
@@ -361,21 +381,21 @@
             code: 'AMD',
             name: 'AMD',
             market: 'NASDAQ',
-            price: 156.40,
-            change: 2.92,
+            price: 538.05,
+            change: 10.05,
             changeRate: 1.90,
-            volume: '34.2M주',
+            volume: '20.0M주',
             tradeAmount: '시총 $253.4B',
             theme: 'MI300X AI 칩 / CPU',
             strategy: 'bb-squeeze',
             strategyName: '볼린저 밴드 스퀴즈',
             signalStatus: 'good',
             signalText: '변동성 응축 후 반등',
-            stopPrice: 150.80,
-            targetPrice: 170.50,
+            stopPrice: 519.20,
+            targetPrice: 586.40,
             briefing: {
                 reason: 'MI325X AI 가속기 출시와 서버용 에픽(EPYC) CPU 시장 점유율 확대로 바닥권에서 밴드 스퀴즈 후 우상향 전환했습니다.',
-                tradePlan: '156.40달러 매수 시 $150.80(-3.58%) 손절, $170.50(+9.02%) 목표입니다.',
+                tradePlan: '538.05달러 매수 시 $519.20(-3.50%) 손절, $586.40(+8.99%) 목표입니다.',
                 supplyFlow: 'AI 칩 경쟁 구도 부각에 따른 저평가 메리트로 숏커버링 자금이 유입 중입니다.'
             }
         },
@@ -383,21 +403,21 @@
             code: 'MU',
             name: '마이크론 테크놀로지',
             market: 'NASDAQ',
-            price: 110.20,
-            change: 2.48,
+            price: 904.90,
+            change: 20.35,
             changeRate: 2.30,
-            volume: '29.7M주',
+            volume: '25.5M주',
             tradeAmount: '시총 $122.1B',
             theme: 'HBM3E / D램',
             strategy: 'rsi-gold',
             strategyName: 'Wilder RSI 골든크로스',
             signalStatus: 'good',
             signalText: 'RSI 골든크로스 매수 시그널',
-            stopPrice: 106.30,
-            targetPrice: 120.20,
+            stopPrice: 873.20,
+            targetPrice: 986.30,
             briefing: {
                 reason: '엔비디아 H200 및 B200용 HBM3E 메모리 완판 및 D램/낸드 가격 상승세로 기술적 지표가 일제히 골든크로스로 돌아섰습니다.',
-                tradePlan: '현재가($110.20) 진입 시 $106.30(-3.54%) 손절, $120.20(+9.07%) 목표입니다.',
+                tradePlan: '현재가($904.90) 진입 시 $873.20(-3.50%) 손절, $986.30(+8.99%) 목표입니다.',
                 supplyFlow: '메모리 슈퍼사이클 기대감으로 미국 반도체 전용 펀드의 순매수가 증가하고 있습니다.'
             }
         },
@@ -405,21 +425,21 @@
             code: 'ASML',
             name: 'ASML 홀딩 (ASML)',
             market: 'NASDAQ',
-            price: 720.00,
-            change: -2.89,
+            price: 1647.12,
+            change: -6.60,
             changeRate: -0.40,
-            volume: '8.4M주',
+            volume: '1.25M주',
             tradeAmount: '시총 $284.5B',
             theme: 'EUV 노광장비 독점',
             strategy: 'ict-smc',
             strategyName: 'ICT 스마트 머니',
             signalStatus: 'good',
             signalText: 'SSL Sweep 후 V자 반등',
-            stopPrice: 694.00,
-            targetPrice: 785.00,
+            stopPrice: 1589.40,
+            targetPrice: 1795.30,
             briefing: {
                 reason: 'EUV 및 High-NA 독점 기술력을 기반으로 저점 유동성 스윕(SSL Sweep) 발생 후 강한 저가 매수세로 반등을 시도하고 있습니다.',
-                tradePlan: '현재가($720.00) 매수 시 지지선 이탈 $694.00(-3.61%) 손절, $785.00(+9.03%) 1차 목표입니다.',
+                tradePlan: '현재가($1647.12) 매수 시 지지선 이탈 $1589.40(-3.50%) 손절, $1795.30(+9.00%) 1차 목표입니다.',
                 supplyFlow: '단기 실적 노이즈를 딛고 장기 독점 해자를 주목하는 기관의 저점 분할 매수가 유입되고 있습니다.'
             }
         }
@@ -1243,6 +1263,32 @@
     async function fetchLiveChartDataset(stock, tf) {
         const isOverseas = isOverseasStock(stock.code, stock.market);
 
+        // 0차 엔드포인트: 미국/해외 주식 실시간 정규 110 거래일 캔들 즉시 연동 (data/us_candles.json)
+        if (isOverseas) {
+            try {
+                if (!window._dajavataUsCandles) {
+                    const res = await fetch('data/us_candles.json');
+                    if (res.ok) {
+                        window._dajavataUsCandles = await res.json();
+                    }
+                }
+                const cached = window._dajavataUsCandles && window._dajavataUsCandles[stock.code];
+                if (cached && cached.length > 0) {
+                    const priceInfos = cached.map(c => ({
+                        localDate: c.time.replace(/-/g, ''),
+                        openPrice: c.open,
+                        highPrice: c.high,
+                        lowPrice: c.low,
+                        closePrice: c.close,
+                        accumulatedTradingVolume: c.volume
+                    }));
+                    return parseLivePriceInfos(priceInfos, tf, stock, true);
+                }
+            } catch (err) {
+                console.warn('[ChartScanner] us_candles load failed:', err);
+            }
+        }
+
         let periodType = 'dayCandle';
         if (tf.endsWith('m') || tf.endsWith('h')) periodType = 'day';
         else if (tf === '1D') periodType = 'dayCandle';
@@ -1637,20 +1683,36 @@
                 timeList.push(`2026-${String(m).padStart(2, '0')}-01`);
             }
             const n = timeList.length;
+            const isSkHynix = (stock.code === '000660');
+            let hash = 0;
+            const codeStr = String(stock.code || '');
+            for (let c = 0; c < codeStr.length; c++) {
+                hash = ((hash << 5) - hash) + codeStr.charCodeAt(c);
+                hash |= 0;
+            }
+            const seed = Math.abs(hash) % 100;
+
             for (let i = 0; i < n; i++) {
-                // 2026년 6월(i=65) 역대 최고가 랠리 파동 반영
-                const is2026Rally = (i >= 58 && i <= 65);
-                const is2026Pullback = (i > 65);
                 let targetBase;
-                if (is2026Rally) {
-                    const prog = (i - 58) / 7;
-                    targetBase = currentPrice * (0.65 + 1.64 * prog); // 최대 2.29배 (298만원)
-                } else if (is2026Pullback) {
-                    const prog = (i - 65) / 4;
-                    targetBase = currentPrice * (2.29 - (2.29 - 1.0) * prog); // 현재가로 안착
+                if (isSkHynix) {
+                    // SK하이닉스 2026년 6월(i=65) 역대 최고가 랠리 파동 반영 (298만원)
+                    const is2026Rally = (i >= 58 && i <= 65);
+                    const is2026Pullback = (i > 65);
+                    if (is2026Rally) {
+                        const prog = (i - 58) / 7;
+                        targetBase = currentPrice * (0.65 + 1.64 * prog);
+                    } else if (is2026Pullback) {
+                        const prog = (i - 65) / 4;
+                        targetBase = currentPrice * (2.29 - (2.29 - 1.0) * prog);
+                    } else {
+                        const wave = Math.sin(i / 5.2) * 0.08 + Math.cos(i / 10.5) * 0.05;
+                        targetBase = currentPrice * (0.35 + wave + (i / n) * 0.25);
+                    }
                 } else {
-                    const wave = Math.sin(i / 5.2) * 0.08 + Math.cos(i / 10.5) * 0.05;
-                    targetBase = currentPrice * (0.35 + wave + (i / n) * 0.25);
+                    // 일반 종목: 고유 유기적 장기 파동 (현재가의 65%~115% 범위)
+                    const wave = Math.sin((i + seed) / 5.5) * 0.09 + Math.cos((i + seed * 2) / 11.0) * 0.06;
+                    const growth = (i / n) * 0.35;
+                    targetBase = currentPrice * (0.65 + growth + wave);
                 }
                 if (i === n - 1) targetBase = currentPrice;
                 candlePrices.push(targetBase);
@@ -1667,17 +1729,32 @@
                 curDate.setDate(curDate.getDate() + 7);
             }
             const n = timeList.length;
+            const isSkHynix = (stock.code === '000660');
+            let hash = 0;
+            const codeStr = String(stock.code || '');
+            for (let c = 0; c < codeStr.length; c++) {
+                hash = ((hash << 5) - hash) + codeStr.charCodeAt(c);
+                hash |= 0;
+            }
+            const seed = Math.abs(hash) % 100;
+
             for (let i = 0; i < n; i++) {
                 let targetBase;
-                if (i >= 65 && i <= 78) {
-                    const prog = (i - 65) / 13;
-                    targetBase = currentPrice * (0.68 + 1.61 * prog); // 최대 2.29배
-                } else if (i > 78) {
-                    const prog = (i - 78) / (n - 1 - 78);
-                    targetBase = currentPrice * (2.29 - (2.29 - 1.0) * prog);
+                if (isSkHynix) {
+                    if (i >= 65 && i <= 78) {
+                        const prog = (i - 65) / 13;
+                        targetBase = currentPrice * (0.68 + 1.61 * prog);
+                    } else if (i > 78) {
+                        const prog = (i - 78) / (n - 1 - 78);
+                        targetBase = currentPrice * (2.29 - (2.29 - 1.0) * prog);
+                    } else {
+                        const wave = Math.sin(i / 4.2) * 0.05 + Math.cos(i / 8.5) * 0.03;
+                        targetBase = currentPrice * (0.42 + wave + (i / n) * 0.22);
+                    }
                 } else {
-                    const wave = Math.sin(i / 4.2) * 0.05 + Math.cos(i / 8.5) * 0.03;
-                    targetBase = currentPrice * (0.42 + wave + (i / n) * 0.22);
+                    const wave = Math.sin((i + seed) / 4.8) * 0.05 + Math.cos((i + seed * 2) / 9.2) * 0.03;
+                    const growth = (i / n) * 0.20;
+                    targetBase = currentPrice * (0.80 + growth + wave);
                 }
                 if (i === n - 1) targetBase = currentPrice;
                 candlePrices.push(targetBase);
@@ -1697,20 +1774,37 @@
                 curDate.setDate(curDate.getDate() + 1);
             }
             const n = timeList.length;
+            const isSkHynix = (stock.code === '000660');
+            let hash = 0;
+            const codeStr = String(stock.code || '');
+            for (let c = 0; c < codeStr.length; c++) {
+                hash = ((hash << 5) - hash) + codeStr.charCodeAt(c);
+                hash |= 0;
+            }
+            const seed = Math.abs(hash) % 100;
+
             for (let i = 0; i < n; i++) {
                 let targetBase;
-                if (i <= 20) {
-                    const prog = i / 20;
-                    targetBase = currentPrice * (1.1 + 1.19 * prog); // 6월 25일경 2.29배 (298만원)
-                } else if (i > 20 && i <= 45) {
-                    const prog = (i - 20) / 25;
-                    targetBase = currentPrice * (2.29 - 0.95 * prog); // 7~8월 조정
-                } else if (i > 45 && i <= 70) {
-                    const prog = (i - 45) / 25;
-                    targetBase = currentPrice * (1.34 + 0.15 * prog); // 9월 반등
+                if (isSkHynix) {
+                    if (i <= 20) {
+                        const prog = i / 20;
+                        targetBase = currentPrice * (1.1 + 1.19 * prog); // 6월 25일경 2.29배 (298만원)
+                    } else if (i > 20 && i <= 45) {
+                        const prog = (i - 20) / 25;
+                        targetBase = currentPrice * (2.29 - 0.95 * prog); // 7~8월 조정
+                    } else if (i > 45 && i <= 70) {
+                        const prog = (i - 45) / 25;
+                        targetBase = currentPrice * (1.34 + 0.15 * prog); // 9월 반등
+                    } else {
+                        const prog = (i - 70) / (n - 1 - 70);
+                        targetBase = currentPrice * (1.49 - 0.49 * prog); // 10월 현재가 안착
+                    }
                 } else {
-                    const prog = (i - 70) / (n - 1 - 70);
-                    targetBase = currentPrice * (1.49 - 0.49 * prog); // 10월 현재가 안착
+                    // 일반 종목: 종목 고유의 현실적인 일봉 스윙 파동 (현재가의 ±3~7% 범위 엄수)
+                    const wave1 = Math.sin((i + seed) / (4.5 + (seed % 4) * 0.5)) * (0.025 + (seed % 3) * 0.008);
+                    const wave2 = Math.cos((i + seed * 2) / (8.5 + (seed % 5) * 0.6)) * 0.018;
+                    const trend = (i / n) * 0.03 - 0.015;
+                    targetBase = currentPrice * (0.98 + wave1 + wave2 + trend);
                 }
                 if (i === n - 1) targetBase = currentPrice;
                 candlePrices.push(targetBase);
@@ -2093,6 +2187,17 @@
                         <div class="cs-resizer-v" id="cs-resizer-v">
                             <div class="cs-splitter-tooltip" style="bottom: 14px; left: 50%; transform: translateX(-50%);">
                                 끌어서 차트 높이를 바꿉니다. 두 번 누르면 기본 높이(780px)로 복귀
+                            </div>
+                        </div>
+
+                        <!-- [차트 하단 안내] 자동 수집 & 재배포 금지 바 -->
+                        <div class="cs-anti-scrape-bar">
+                            <div class="cs-as-left">
+                                <span class="cs-as-badge"><i class="ph-bold ph-shield-check"></i> 자동 수집 & 재배포 금지</span>
+                                <span class="cs-as-text">본 다자바타 시그널 랩의 차트 알고리즘 및 분석 데이터는 독자 개발 자산이며, 스크래퍼/봇을 이용한 무단 자동 수집 및 상업적 재배포를 엄격히 금지합니다.</span>
+                            </div>
+                            <div class="cs-as-right">
+                                <span class="cs-as-sub">DAJAVATA QUANT LAB · PROTECTED</span>
                             </div>
                         </div>
 

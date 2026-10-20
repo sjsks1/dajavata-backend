@@ -147,11 +147,171 @@
 
             <!-- 신규: AI 차트 스캐너 전용 뷰 컨테이너 (초기에는 숨김) -->
             <div id="chart-scanner-container" class="chart-scanner-container" style="display: none;"></div>
+
+            <!-- 글로벌 하단 푸터 바 (Image 4 스타일) -->
+            <footer class="dajavata-global-footer">
+                <div class="footer-left">
+                    <span class="footer-copy">© 2026 DAJAVATA · 자동 수집·재배포 금지</span>
+                </div>
+                <div class="footer-right">
+                    <button type="button" class="footer-link-btn" data-legal="terms">이용약관</button>
+                    <span class="footer-dot">·</span>
+                    <button type="button" class="footer-link-btn" data-legal="privacy">개인정보처리방침</button>
+                    <span class="footer-dot">·</span>
+                    <button type="button" class="footer-link-btn" data-legal="disclaimer">면책</button>
+                    <span class="footer-dot">·</span>
+                    <button type="button" class="footer-link-btn" data-legal="support">고객 지원</button>
+                    <span class="footer-dot">·</span>
+                    <button type="button" class="footer-link-btn" data-legal="sources">데이터 출처</button>
+                    
+                    <button type="button" class="footer-theme-toggle" id="footer-theme-toggle" title="화면 테마 전환">
+                        <i class="ph ph-sun"></i>
+                        <span id="footer-theme-label">라이트 테마로</span>
+                    </button>
+                    
+                    <span class="footer-lang-badge" title="지원 언어: 한국어">
+                        <i class="ph ph-globe"></i> KO
+                    </span>
+                </div>
+            </footer>
         </main>
     </div>
+
+    <!-- 다자바타 서비스 정책 및 고객 지원 모달 대화상자 -->
+    <div id="dajavata-legal-modal" class="dajavata-modal-overlay" style="display: none;">
+        <div class="dajavata-modal-box">
+            <div class="dajavata-modal-header">
+                <div class="modal-title-group">
+                    <div class="modal-icon-badge"><i class="ph-bold ph-shield-check"></i></div>
+                    <div>
+                        <h2 id="modal-legal-title">다자바타 서비스 정책</h2>
+                        <p class="modal-sub">DAJAVATA PLATFORM LEGAL & SUPPORT</p>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="닫기">
+                    <i class="ph ph-x"></i>
+                </button>
+            </div>
+            
+            <!-- 5대 탭 버튼 -->
+            <div class="dajavata-modal-tabs">
+                <button type="button" class="modal-tab-btn active" data-tab="terms"><i class="ph ph-scroll"></i> 이용약관</button>
+                <button type="button" class="modal-tab-btn" data-tab="privacy"><i class="ph ph-lock-key"></i> 개인정보처리방침</button>
+                <button type="button" class="modal-tab-btn" data-tab="disclaimer"><i class="ph ph-warning-circle"></i> 면책 고지</button>
+                <button type="button" class="modal-tab-btn" data-tab="support"><i class="ph ph-headset"></i> 고객 지원</button>
+                <button type="button" class="modal-tab-btn" data-tab="sources"><i class="ph ph-database"></i> 데이터 출처</button>
+            </div>
+            
+            <div class="dajavata-modal-body">
+                <!-- 탭 1: 이용약관 -->
+                <div class="modal-tab-pane active" id="pane-terms">
+                    <h3 class="legal-section-title"><i class="ph-bold ph-article"></i> 제1조 (목적 및 서비스 개요)</h3>
+                    <p>본 약관은 <strong>다자바타(DAJAVATA)</strong>가 웹사이트(www.dajavata.com)를 통해 제공하는 국내 코스피·코스닥 4,200+ 전종목 및 미국 대표 주식의 차트 분석, ICT 스마트 머니 시그널, 테마 수급 동향, 트레이더 룸 등의 제반 서비스 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.</p>
+
+                    <h3 class="legal-section-title"><i class="ph-bold ph-shield-warning"></i> 제2조 (데이터 무단 자동 수집 및 재배포 엄격 금지)</h3>
+                    <div class="legal-box-danger">
+                        <strong>[필독] 데이터 스크래핑 및 상업적 무단 도용 방지 규정</strong>
+                        <ul style="margin: 8px 0 0 18px; line-height: 1.8;">
+                            <li>다자바타의 사전 서면 승인 없이 웹 크롤러, 스크래퍼, 봇(Bot), 스파이더 등 어떠한 자동화 소프트웨어를 통해서도 본 서비스의 화면 데이터, 캔들 차트, 알고리즘 연산값(FVG, OB, 지지선, RSI), 시그널 브리핑을 무단 대량 수집(Scraping)하는 행위를 엄격히 금지합니다.</li>
+                            <li>수집된 데이터를 상업적 목적으로 제3자에게 전송·배포·판매하거나 미러링 사이트 운영, 공개 API 제공 또는 2차 데이터베이스 형태로 재가공하는 행위는 일절 허용되지 않습니다.</li>
+                            <li>이를 위반할 경우 「부정경쟁방지 및 영업비밀보호에 관한 법률」 및 「저작권법」에 의거하여 사전 경고 없이 즉각적인 IP 차단, 서비스 영구 이용 제한 조치와 함께 일체의 민·형사상 법적 책임 및 손해배상 청구가 진행됩니다.</li>
+                        </ul>
+                    </div>
+
+                    <h3 class="legal-section-title"><i class="ph-bold ph-cpu"></i> 제3조 (지식재산권)</h3>
+                    <p>다자바타가 개발한 고유 알고리즘(스마트 머니 콘셉트 8대 구름대 엔진, 스윙 로우 지지선 탐색, HTS 4대 급소, Wilder RSI 골든크로스 판별 로직) 및 웹 플랫폼의 모든 UI/UX 디자인, 텍스트, 브리핑 분석 리포트는 다자바타의 고유 지식재산권으로 보호됩니다.</p>
+
+                    <h3 class="legal-section-title"><i class="ph-bold ph-warning"></i> 제4조 (서비스의 제공 및 면책)</h3>
+                    <p>다자바타는 기술적 분석 보조 및 시각화 도구를 무료 또는 유료로 제공하며, 거래소/증권 시세 피드 지연이나 네트워크 장애로 인한 서비스 중단에 대하여 고의 또는 중과실이 없는 한 책임을 부담하지 않습니다.</p>
+                </div>
+
+                <!-- 탭 2: 개인정보처리방침 -->
+                <div class="modal-tab-pane" id="pane-privacy">
+                    <h3 class="legal-section-title"><i class="ph-bold ph-shield-check"></i> 다자바타의 로컬 퍼스트(Local-First) 프라이버시 헌장</h3>
+                    <div class="legal-box-highlight">
+                        <strong>🛡️ 회원의 금융 기밀과 매매 전략은 서버에 저장되지 않습니다.</strong>
+                        <p style="margin-top: 6px;">다자바타(DAJAVATA)는 사용자의 개인정보와 트레이딩 전략의 완전한 자유와 기밀 유지를 최우선 가치로 삼습니다. 불필요한 회원가입 절차 없이 익명으로 안전하게 활용하실 수 있습니다.</p>
+                    </div>
+
+                    <h3 class="legal-section-title"><i class="ph-bold ph-hard-drive"></i> 제1조 (트레이더 룸 데이터의 브라우저 로컬 격리)</h3>
+                    <p>이용자가 트레이더 룸(매매 시나리오, 손익 및 비중 계산기, 매매일지 및 복기, 관심종목 포커스 리스트)에 입력하는 일체의 투자 데이터는 <strong>오직 이용자의 기기 브라우저 로컬 저장소(localStorage: <code>dajavata_trader_db_v1</code>)에만 안전하게 보관</strong>됩니다. 다자바타의 중앙 서버나 제3자 데이터베이스로 결코 전송되지 않으므로, 데이터 유출이나 해킹 위험으로부터 100% 안전합니다.</p>
+
+                    <h3 class="legal-section-title"><i class="ph-bold ph-database"></i> 제2조 (데이터의 보관 및 백업/삭제)</h3>
+                    <p>로컬 데이터는 사용자의 브라우저 캐시 삭제 시 함께 정리될 수 있습니다. 중요한 매매 기록의 영구 보존을 위해 트레이더 룸의 '데이터 보관함' 탭에서 언제든지 JSON 백업 파일을 다운로드하거나 복원하실 수 있습니다.</p>
+
+                    <h3 class="legal-section-title"><i class="ph-bold ph-sliders-horizontal"></i> 제3조 (화면 설정 및 필수 쿠키)</h3>
+                    <p>서비스 이용 편의를 위해 다크/라이트 테마 선택 상태, 마지막 조회 종목, 차트 높이 조절값 등 비식별 편의 정보만이 브라우저 단에서 사용됩니다.</p>
+                </div>
+
+                <!-- 탭 3: 면책 고지 -->
+                <div class="modal-tab-pane" id="pane-disclaimer">
+                    <h3 class="legal-section-title"><i class="ph-bold ph-bank"></i> 자본시장과 금융투자업에 관한 법률 준수 고지</h3>
+                    <div class="legal-box-danger">
+                        <strong>⚠️ 본 서비스는 금융투자상품의 매매 권유나 투자자문이 아닙니다.</strong>
+                        <p style="margin-top: 6px;">다자바타(DAJAVATA)는 「자본시장과 금융투자업에 관한 법률」상의 투자자문업자, 투자일임업자 또는 유사투자자문업자가 아닙니다. 특정 종목의 매수·매도 추천, 투자 일임, 원금 보장 또는 확정 수익률 약정을 일절 제공하지 않습니다.</p>
+                    </div>
+
+                    <h3 class="legal-section-title"><i class="ph-bold ph-chart-line"></i> 기술적 분석 보조 지표의 한계</h3>
+                    <p>본 플랫폼에서 제공하는 차트, ICT 스마트 머니 8대 구름대(FVG, OB, IFVG, BPR), 추세 지지선, RSI 골든크로스 시그널 및 AI 브리핑은 과거 시세 데이터에 기반한 <strong>기술적 분석 학습 및 연구 목적의 시각화 보조 데이터</strong>입니다. 시장의 급격한 변동, 거시 경제 이슈, 유동성 결손에 의해 지표 연산 결과와 실제 주가 흐름 사이에 차이가 발생할 수 있습니다.</p>
+
+                    <h3 class="legal-section-title"><i class="ph-bold ph-user-check"></i> 투자자 자기책임 원칙</h3>
+                    <p>모든 금융투자상품의 매매 판단과 그에 따른 손익의 결과는 <strong>전적으로 투자자 본인의 책임</strong>입니다. 다자바타는 본 서비스의 정보를 신뢰하여 행한 투자 결과에 대해 어떠한 법적 책임도 부담하지 않습니다. 독자적인 판단과 엄격한 리스크 관리 원칙에 따라 투자에 임해주시기 바랍니다.</p>
+                </div>
+
+                <!-- 탭 4: 고객 지원 -->
+                <div class="modal-tab-pane" id="pane-support">
+                    <h3 class="legal-section-title"><i class="ph-bold ph-headset"></i> 트레이더와 함께 성장하는 다자바타 시그널 랩</h3>
+                    <p>다자바타는 현업 트레이더와 투자자 여러분의 소중한 피드백을 바탕으로 매주 알고리즘을 고도화하고 있습니다.</p>
+
+                    <div class="legal-box-highlight">
+                        <strong>📬 공식 문의 및 피드백 접수</strong>
+                        <ul style="margin: 8px 0 0 18px; line-height: 1.8;">
+                            <li><strong>공식 이메일:</strong> <a href="mailto:support@dajavata.com" style="color: #38bdf8; text-decoration: underline;">support@dajavata.com</a></li>
+                            <li><strong>운영 시간:</strong> 평일 09:00 ~ 18:00 (KST 기준)</li>
+                            <li><strong>제보 내용:</strong> 시세 오류 제보, 신규 지표/기능 건의, 기술 제휴 및 파트너십</li>
+                        </ul>
+                    </div>
+
+                    <h3 class="legal-section-title"><i class="ph-bold ph-question"></i> 자주 묻는 질문 (FAQ)</h3>
+                    <div style="margin-top: 10px; line-height: 1.8;">
+                        <p><strong>Q. 차트와 시세는 어떻게 갱신되나요?</strong><br>
+                        A. 국내 코스피·코스닥 4,200+ 종목 및 미국 대표 빅테크·ETF 종목은 실시간 캔들 피드 및 정규장 거래소 API를 통해 정확하게 동기화됩니다.</p>
+                        
+                        <p style="margin-top: 12px;"><strong>Q. 트레이더 룸에 저장한 매매일지가 다른 컴퓨터에서도 유지되나요?</strong><br>
+                        A. 다자바타는 철저한 개인정보 보호를 위한 Local-First 아키텍처를 채택하고 있어 현재 사용 중인 브라우저에만 저장됩니다. 기기 변경 시에는 '데이터 보관함'의 백업/복원 기능을 이용해 주시기 바랍니다.</p>
+                    </div>
+                </div>
+
+                <!-- 탭 5: 데이터 출처 -->
+                <div class="modal-tab-pane" id="pane-sources">
+                    <h3 class="legal-section-title"><i class="ph-bold ph-database"></i> 데이터 출처 및 기술 라이선스</h3>
+                    <p>다자바타는 신뢰할 수 있는 공시 데이터와 글로벌 표준 기술을 기반으로 서비스를 구축하였습니다.</p>
+
+                    <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
+                            <strong style="color: #38bdf8;"><i class="ph-bold ph-chart-bar"></i> 차트 렌더링 엔진</strong>
+                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">TradingView™ Lightweight Charts<br>(공식 오픈소스 Apache 2.0 라이선스)</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
+                            <strong style="color: #10b981;"><i class="ph-bold ph-coins"></i> 국내 증권 시세</strong>
+                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">한국거래소(KRX) 공시 시세 및 네이버 증권 오픈 데이터 피드 연계</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
+                            <strong style="color: #f59e0b;"><i class="ph-bold ph-globe"></i> 해외 주식 시세</strong>
+                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">미국 NASDAQ / NYSE 정규장 공시 및 글로벌 거래소 데이터 피드 연동</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
+                            <strong style="color: #ec4899;"><i class="ph-bold ph-atom"></i> 스마트 머니 시그널 엔진</strong>
+                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">다자바타 퀀트 랩(Dajavata Quant Lab) 독자 개발 ICT Smart Money & HTS 탐지 모델</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     
-    <script src="chart_scanner.js?v=10"></script>
+    <script src="chart_scanner.js?v=11"></script>
     <script src="trader_room.js?v=2"></script>
-    <script src="app.js?v=8"></script>
+    <script src="app.js?v=9"></script>
 </body>
 </html>

@@ -797,4 +797,114 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // =============================================================
+    // [신규] 글로벌 푸터 법적 정책 모달 & 테마 전환 이벤트 핸들러
+    // =============================================================
+    const legalModal = document.getElementById('dajavata-legal-modal');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const footerLinkBtns = document.querySelectorAll('.footer-link-btn');
+    const modalTabBtns = document.querySelectorAll('.modal-tab-btn');
+    const modalPanes = document.querySelectorAll('.modal-tab-pane');
+    const footerThemeToggle = document.getElementById('footer-theme-toggle');
+    const footerThemeLabel = document.getElementById('footer-theme-label');
+
+    function openLegalModal(tabId) {
+        if (!legalModal) return;
+        legalModal.style.display = 'flex';
+        void legalModal.offsetWidth;
+        legalModal.classList.add('active');
+        switchLegalTab(tabId || 'terms');
+    }
+
+    function closeLegalModal() {
+        if (!legalModal) return;
+        legalModal.classList.remove('active');
+        setTimeout(() => {
+            if (!legalModal.classList.contains('active')) {
+                legalModal.style.display = 'none';
+            }
+        }, 250);
+    }
+
+    function switchLegalTab(tabId) {
+        modalTabBtns.forEach(btn => {
+            if (btn.getAttribute('data-tab') === tabId) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        modalPanes.forEach(pane => {
+            if (pane.id === `pane-${tabId}`) {
+                pane.classList.add('active');
+            } else {
+                pane.classList.remove('active');
+            }
+        });
+    }
+
+    footerLinkBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tabId = btn.getAttribute('data-legal');
+            openLegalModal(tabId);
+        });
+    });
+
+    if (modalCloseBtn) {
+        modalCloseBtn.addEventListener('click', closeLegalModal);
+    }
+
+    if (legalModal) {
+        legalModal.addEventListener('click', (e) => {
+            if (e.target === legalModal) {
+                closeLegalModal();
+            }
+        });
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && legalModal && legalModal.classList.contains('active')) {
+            closeLegalModal();
+        }
+    });
+
+    modalTabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabId = btn.getAttribute('data-tab');
+            switchLegalTab(tabId);
+        });
+    });
+
+    // 라이트/다크 테마 토글
+    if (footerThemeToggle) {
+        const savedTheme = localStorage.getItem('dajavata_theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.body.classList.add('light-theme');
+            if (footerThemeLabel) footerThemeLabel.textContent = '다크 테마로';
+            const icon = footerThemeToggle.querySelector('i');
+            if (icon) icon.className = 'ph ph-moon';
+        }
+
+        footerThemeToggle.addEventListener('click', () => {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            if (isLight) {
+                document.documentElement.removeAttribute('data-theme');
+                document.body.classList.remove('light-theme');
+                localStorage.setItem('dajavata_theme', 'dark');
+                if (footerThemeLabel) footerThemeLabel.textContent = '라이트 테마로';
+                const icon = footerThemeToggle.querySelector('i');
+                if (icon) icon.className = 'ph ph-sun';
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                document.body.classList.add('light-theme');
+                localStorage.setItem('dajavata_theme', 'light');
+                if (footerThemeLabel) footerThemeLabel.textContent = '다크 테마로';
+                const icon = footerThemeToggle.querySelector('i');
+                if (icon) icon.className = 'ph ph-moon';
+            }
+        });
+    }
 });
