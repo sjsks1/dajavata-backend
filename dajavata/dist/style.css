@@ -232,6 +232,10 @@ body {
     color: #38bdf8;
 }
 
+.cell-stock-price, .cell-stock-day1 {
+    transition: color 0.25s ease, opacity 0.25s ease;
+}
+
 .header-stats {
     display: flex;
     gap: 24px;

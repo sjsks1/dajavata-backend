@@ -429,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             paginatedList.forEach(stock => {
                 const tr = document.createElement('tr');
+                tr.setAttribute('data-stock-code', stock.code);
                 
                 const price = new Intl.NumberFormat('ko-KR').format(stock.current_price || 0);
                 const day1 = stock.day1 ? stock.day1.toFixed(2) : '0.00';
@@ -465,8 +466,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span style="font-size: 11px; color: var(--text-muted); margin-left: 5px;">${stock.code}</span>
                         </div>
                     </td>
-                    <td class="right"><span class="price-main" style="color: white;">${price}</span></td>
-                    <td class="right"><span class="${day1Class} price-main">${day1Sign}${day1}%</span></td>
+                    <td class="right"><span class="price-main cell-stock-price" style="color: white;">${price}</span></td>
+                    <td class="right"><span class="${day1Class} price-main cell-stock-day1">${day1Sign}${day1}%</span></td>
                     <td class="right"><span class="${day3Class} price-main">${day3Sign}${day3}%</span></td>
                     <td class="right"><span class="price-main"><span class="pos">+${high52}%</span> / <span class="neg">${low52}%</span></span></td>
                     <td class="center"><span class="price-main" style="color: var(--text-main); font-weight: 800;">${neglect52}</span></td>
@@ -480,6 +481,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
                 tbody.appendChild(tr);
             });
+
+            // 네이버 실시간 호가/시세 동기화 (현재 15개 종목)
+            syncRealtimeStockQuotes(paginatedList);
         } else if (displayMode === 'insights') {
             thead.innerHTML = `
                 <tr>
@@ -668,13 +672,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 2단계: 백엔드 실패 또는 Render 데이터 누락 시 글로벌 CDN / Raw GitHub 풀백
+        // 2단계: 백엔드 실패 또는 Render 데이터 누락 시 글로벌 CDN / Raw GitHub 풀백 (dajavata_backend/data 우선)
         if (!stocks) {
             try {
                 if (!window.globalThemeDetailsStore) {
                     const cdnUrls = [
-                        'https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/theme_details.json',
-                        'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/theme_details.json'
+                        'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/dajavata_backend/data/theme_details.json',
+                        'https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/dajavata_backend/data/theme_details.json',
+                        'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/theme_details.json',
+                        'https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/theme_details.json'
                     ];
                     for (const cdnUrl of cdnUrls) {
                         try {
@@ -709,6 +715,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (stocks && stocks.length > 0) {
+            // 전체 종목(allStocks) 최신 데이터와 매핑하여 주가/등락률/지표 즉시 최신화
+            if (!window.allStocks || window.allStocks.length === 0) {
+                try {
+                    window.allStocks = await allStocksPromise;
+                } catch (e) {}
+            }
+            if (window.allStocks && window.allStocks.length > 0) {
+                const stockMap = new Map();
+                window.allStocks.forEach(s => stockMap.set(s.code, s));
+                stocks = stocks.map(item => {
+                    const latest = stockMap.get(item.code);
+                    if (latest) {
+                        return {
+                            ...item,
+                            ...latest,
+                            name: item.name || latest.name,
+                            code: item.code || latest.code,
+                            current_price: latest.current_price !== undefined ? latest.current_price : item.current_price,
+                            day1: latest.day1 !== undefined ? latest.day1 : item.day1,
+                            day3: latest.day3 !== undefined ? latest.day3 : item.day3,
+                            high52: latest.high52 !== undefined ? latest.high52 : item.high52,
+                            low52: latest.low52 !== undefined ? latest.low52 : item.low52,
+                            neglect52: latest.neglect52 !== undefined ? latest.neglect52 : item.neglect52,
+                            high3y: latest.high3y !== undefined ? latest.high3y : item.high3y,
+                            low3y: latest.low3y !== undefined ? latest.low3y : item.low3y,
+                            neglect3y: latest.neglect3y !== undefined ? latest.neglect3y : item.neglect3y,
+                            PBR: latest.PBR !== undefined ? latest.PBR : item.PBR,
+                            PER: latest.PER !== undefined ? latest.PER : item.PER,
+                            EPS: latest.EPS !== undefined ? latest.EPS : item.EPS,
+                            marcap: latest.marcap !== undefined ? latest.marcap : item.marcap,
+                            update: latest.update || item.update
+                        };
+                    }
+                    return item;
+                });
+            }
+
             if (!window.themeDetailsCache) window.themeDetailsCache = {};
             window.themeDetailsCache[themeName] = stocks;
             renderTable(stocks, 'stocks', true);
@@ -723,6 +766,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentPage = previousState.page || 1;
                 renderCurrentPage();
             }, 2500);
+        }
+    }
+
+    // 네이버 실시간 호가/시세 동기화 함수
+    async function syncRealtimeStockQuotes(list) {
+        if (!list || list.length === 0) return;
+        const codes = list.map(s => s.code).filter(Boolean);
+        if (codes.length === 0) return;
+
+        try {
+            const res = await fetch(`${API_BASE}/api/stocks/realtime?codes=${codes.join(',')}`);
+            if (!res.ok) return;
+            const data = await res.json();
+            const realtimeMap = data.realtime || {};
+
+            Object.keys(realtimeMap).forEach(code => {
+                const info = realtimeMap[code];
+                if (!info || info.current_price == null) return;
+
+                // 1. 메모리 데이터 갱신
+                const stock = currentDataList.find(s => s.code === code);
+                if (stock) {
+                    stock.current_price = info.current_price;
+                    if (info.day1 != null) stock.day1 = info.day1;
+                }
+
+                // 2. 화면 행(Row) DOM 갱신
+                const tr = tbody.querySelector(`tr[data-stock-code="${code}"]`);
+                if (tr) {
+                    const priceSpan = tr.querySelector('.cell-stock-price');
+                    const day1Span = tr.querySelector('.cell-stock-day1');
+                    if (priceSpan) {
+                        priceSpan.textContent = new Intl.NumberFormat('ko-KR').format(info.current_price);
+                    }
+                    if (day1Span && info.day1 != null) {
+                        const day1Class = info.day1 >= 0 ? 'pos' : 'neg';
+                        const day1Sign = info.day1 > 0 ? '+' : '';
+                        day1Span.className = `${day1Class} price-main cell-stock-day1`;
+                        day1Span.textContent = `${day1Sign}${info.day1.toFixed(2)}%`;
+                    }
+                }
+            });
+        } catch (err) {
+            // 조용히 통과 (오프라인/에러 시 기존 캐시 가격 유지)
         }
     }
 
