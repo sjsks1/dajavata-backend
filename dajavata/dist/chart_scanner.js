@@ -2581,11 +2581,14 @@
         'gann_fan': { count: 2, name: '간 팬', labels: ['원점', '1x1각도'] },
         'fib_timezone': { count: 2, name: '피보나치 시간대', labels: ['기준1', '기준2'] },
         'fib_fan': { count: 2, name: '피보나치 부채꼴', labels: ['원점', '목표'] },
+        'fib_time_trend': { count: 3, name: '추세 기반 피보나치 시간', labels: ['시작', '추세끝', '되돌림'] },
         'fib_circles': { count: 2, name: '피보나치 원', labels: ['중심', '반경'] },
         'fib_spiral': { count: 2, name: '피보나치 나선', labels: ['중심', '방향'] },
         'fib_arcs': { count: 2, name: '피보나치 호', labels: ['기준1', '기준2'] },
         'fib_wedge': { count: 2, name: '피보나치 쐐기', labels: ['시작', '끝'] },
-        'pitchfan': { count: 3, name: '피치팬', labels: ['원점', '핸들1', '핸들2'] }
+        'pitchfan': { count: 3, name: '피치팬', labels: ['원점', '핸들1', '핸들2'] },
+        'elliott_double': { count: 3, name: '엘리엇 이중 조합 파동', labels: ['(W)', '(X)', '(Y)'] },
+        'elliott_triple': { count: 5, name: '엘리엇 삼중 조합 파동', labels: ['(W)', '(X)', '(Y)', '(X2)', '(Z)'] }
     };
 
     function initDrawingEngine(container) {
@@ -3009,6 +3012,49 @@
         ctx.textBaseline = 'middle';
         ctx.fillText(title, x, y);
         ctx.restore();
+    }
+
+    function drawVertexHandles(ctx, pts, color = '#38bdf8') {
+        if (!pts) return;
+        pts.forEach(pt => {
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.restore();
+        });
+    }
+
+    function drawVertexBadges(ctx, pts, labels, color = '#38bdf8') {
+        if (!pts) return;
+        pts.forEach((pt, idx) => {
+            ctx.save();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            const tagY = pt.y < 30 ? pt.y + 16 : pt.y - 14;
+            const text = (labels && labels[idx]) ? labels[idx] : `${idx + 1}`;
+            const tw = Math.max(18, ctx.measureText(text).width + 8);
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
+            ctx.fillRect(pt.x - tw / 2, tagY - 9, tw, 18);
+            ctx.strokeStyle = color;
+            ctx.strokeRect(pt.x - tw / 2, tagY - 9, tw, 18);
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillText(text, pt.x, tagY);
+            ctx.restore();
+        });
     }
 
     // -------------------------------------------------------------
@@ -3560,6 +3606,743 @@
             ctx.fillStyle = shape.color || '#ffffff';
             ctx.font = 'bold 13px sans-serif';
             ctx.fillText(shape.text, shape.x, shape.y);
+        }
+        // 15. 피보나치 속도 저항 부채꼴 (Fibonacci Speed Resistance Fan)
+        else if (shape.type === 'fib_fan') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+
+            // 기준선 (0 to 1)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // 부채꼴 레벨
+            const fanLevels = [
+                { ratio: 0.236, color: '#10b981', label: '0.236' },
+                { ratio: 0.382, color: '#14b8a6', label: '0.382' },
+                { ratio: 0.5,   color: '#0ea5e9', label: '0.5' },
+                { ratio: 0.618, color: '#f59e0b', label: '0.618 (골든)' },
+                { ratio: 0.786, color: '#8b5cf6', label: '0.786' },
+                { ratio: 1.0,   color: '#ef4444', label: '1.0' }
+            ];
+
+            const rayLen = Math.max(ctx.canvas.width, ctx.canvas.height) * 2;
+            fanLevels.forEach(lvl => {
+                const targetY = p1.y + dy * lvl.ratio;
+                const rdx = dx;
+                const rdy = targetY - p1.y;
+                const dist = Math.hypot(rdx, rdy);
+                if (dist > 0.001) {
+                    const extendX = p1.x + (rdx / dist) * rayLen;
+                    const extendY = p1.y + (rdy / dist) * rayLen;
+
+                    ctx.strokeStyle = lvl.color;
+                    ctx.lineWidth = (lvl.ratio === 0.618 || lvl.ratio === 0.5) ? 1.8 : 1.2;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(extendX, extendY);
+                    ctx.stroke();
+
+                    const labelX = p1.x + rdx * 1.05;
+                    const labelY = p1.y + rdy * 1.05;
+                    drawRatioBadge(ctx, `Fan ${lvl.label}`, labelX, labelY, lvl.color);
+                }
+            });
+
+            drawVertexHandles(ctx, [p1, p2], '#f59e0b');
+        }
+        // 16. 추세기반 피보나치 시간 (Trend-Based Fibonacci Time)
+        else if (shape.type === 'fib_time_trend') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const p3 = pts.length >= 3 ? pts[2] : pts[1];
+            const baseInterval = Math.max(10, Math.abs(p2.x - p1.x));
+
+            // 기준 추세선 P1 -> P2
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+
+            // P2 -> P3 연결선
+            if (pts.length >= 3) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.moveTo(p2.x, p2.y);
+                ctx.lineTo(p3.x, p3.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            const fibRatios = [
+                { r: 0, color: '#94a3b8', label: '0' },
+                { r: 0.382, color: '#14b8a6', label: '0.382' },
+                { r: 0.618, color: '#f59e0b', label: '0.618' },
+                { r: 1.0, color: '#0ea5e9', label: '1.0' },
+                { r: 1.618, color: '#8b5cf6', label: '1.618' },
+                { r: 2.618, color: '#ec4899', label: '2.618' },
+                { r: 4.236, color: '#ef4444', label: '4.236' }
+            ];
+
+            const anchorX = p3.x;
+            fibRatios.forEach(lvl => {
+                const lx = anchorX + baseInterval * lvl.r;
+                if (lx >= 0 && lx <= ctx.canvas.width) {
+                    ctx.strokeStyle = lvl.color;
+                    ctx.setLineDash([4, 3]);
+                    ctx.lineWidth = (lvl.r === 0.618 || lvl.r === 1.0 || lvl.r === 1.618) ? 1.5 : 1;
+                    ctx.beginPath();
+                    ctx.moveTo(lx, 0);
+                    ctx.lineTo(lx, ctx.canvas.height);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    drawRatioBadge(ctx, `Fib T: ${lvl.label}`, lx, 22, lvl.color);
+                }
+            });
+
+            drawVertexBadges(ctx, pts, ['1', '2', '3'], '#38bdf8');
+        }
+        // 17. 피보나치 원 (Fibonacci Circles)
+        else if (shape.type === 'fib_circles') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const baseR = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+            // 중심축 점선
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const circleLevels = [
+                { r: 0.236, color: '#10b981', label: '0.236' },
+                { r: 0.382, color: '#14b8a6', label: '0.382' },
+                { r: 0.5,   color: '#0ea5e9', label: '0.5' },
+                { r: 0.618, color: '#f59e0b', label: '0.618' },
+                { r: 0.786, color: '#8b5cf6', label: '0.786' },
+                { r: 1.0,   color: '#38bdf8', label: '1.0' },
+                { r: 1.618, color: '#ec4899', label: '1.618' },
+                { r: 2.618, color: '#ef4444', label: '2.618' }
+            ];
+
+            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+            circleLevels.forEach(lvl => {
+                const radius = baseR * lvl.r;
+                ctx.strokeStyle = lvl.color;
+                ctx.lineWidth = (lvl.r === 0.618 || lvl.r === 1.0) ? 1.8 : 1;
+                ctx.beginPath();
+                ctx.arc(p1.x, p1.y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                const lx = p1.x + Math.cos(angle) * radius;
+                const ly = p1.y + Math.sin(angle) * radius;
+                drawRatioBadge(ctx, `R ${lvl.label}`, lx, ly, lvl.color);
+            });
+
+            drawVertexHandles(ctx, [p1, p2], '#38bdf8');
+        }
+        // 18. 피보나치 나선 (Fibonacci Golden Spiral)
+        else if (shape.type === 'fib_spiral') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const baseDist = Math.max(5, Math.hypot(p2.x - p1.x, p2.y - p1.y));
+            const startAngle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+            // 황금비 b = ln(phi) / (pi / 2) ≈ 0.30635
+            const b = 0.3063489;
+            const a = baseDist / Math.exp(b * Math.PI * 2);
+
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            const totalSteps = 240;
+            const maxTheta = Math.PI * 4;
+            for (let i = 0; i <= totalSteps; i++) {
+                const theta = (i / totalSteps) * maxTheta;
+                const r = a * Math.exp(b * theta);
+                const currentAngle = startAngle + theta;
+                const x = p1.x + r * Math.cos(currentAngle);
+                const y = p1.y + r * Math.sin(currentAngle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            drawRatioBadge(ctx, 'Golden Spiral (φ 1.618)', p1.x, p1.y - 14, '#f59e0b');
+            drawVertexHandles(ctx, [p1, p2], '#f59e0b');
+        }
+        // 19. 피보나치 속도 저항 호 (Fibonacci Speed Resistance Arcs)
+        else if (shape.type === 'fib_arcs') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const baseDist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            const baseAngle = Math.atan2(p1.y - p2.y, p1.x - p2.x);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const arcLevels = [
+                { r: 0.236, color: '#10b981', label: '0.236' },
+                { r: 0.382, color: '#14b8a6', label: '0.382' },
+                { r: 0.5,   color: '#0ea5e9', label: '0.5' },
+                { r: 0.618, color: '#f59e0b', label: '0.618' },
+                { r: 0.786, color: '#8b5cf6', label: '0.786' },
+                { r: 1.0,   color: '#ef4444', label: '1.0' }
+            ];
+
+            arcLevels.forEach(lvl => {
+                const radius = baseDist * lvl.r;
+                ctx.strokeStyle = lvl.color;
+                ctx.lineWidth = (lvl.r === 0.618 || lvl.r === 0.5) ? 2.0 : 1.2;
+                ctx.beginPath();
+                ctx.arc(p2.x, p2.y, radius, baseAngle - Math.PI * 0.45, baseAngle + Math.PI * 0.45);
+                ctx.stroke();
+
+                const lx = p2.x + Math.cos(baseAngle) * radius;
+                const ly = p2.y + Math.sin(baseAngle) * radius;
+                drawRatioBadge(ctx, `Arc ${lvl.label}`, lx, ly, lvl.color);
+            });
+
+            drawVertexHandles(ctx, [p1, p2], '#0ea5e9');
+        }
+        // 20. 피보나치 쐐기 (Fibonacci Wedge)
+        else if (shape.type === 'fib_wedge') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+            const wedgeLevels = [
+                { r: 0.236, color: '#10b981', label: '0.236' },
+                { r: 0.382, color: '#14b8a6', label: '0.382' },
+                { r: 0.5,   color: '#0ea5e9', label: '0.5' },
+                { r: 0.618, color: '#f59e0b', label: '0.618' },
+                { r: 0.786, color: '#8b5cf6', label: '0.786' },
+                { r: 1.0,   color: '#ef4444', label: '1.0' }
+            ];
+
+            const spread = Math.PI * 0.25;
+            wedgeLevels.forEach(lvl => {
+                const curRadius = dist * lvl.r;
+                ctx.strokeStyle = lvl.color;
+                ctx.lineWidth = lvl.r === 0.618 ? 2 : 1.2;
+
+                ctx.beginPath();
+                ctx.arc(p1.x, p1.y, curRadius, angle - spread, angle + spread);
+                ctx.stroke();
+
+                const wx1 = p1.x + Math.cos(angle - spread) * curRadius;
+                const wy1 = p1.y + Math.sin(angle - spread) * curRadius;
+                const wx2 = p1.x + Math.cos(angle + spread) * curRadius;
+                const wy2 = p1.y + Math.sin(angle + spread) * curRadius;
+
+                ctx.setLineDash([2, 2]);
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(wx1, wy1);
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(wx2, wy2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                drawRatioBadge(ctx, `Wedge ${lvl.label}`, p1.x + Math.cos(angle) * curRadius, p1.y + Math.sin(angle) * curRadius, lvl.color);
+            });
+
+            drawVertexHandles(ctx, [p1, p2], '#8b5cf6');
+        }
+        // 21. 피치팬 (Pitchfan - Andrews Pitchfan)
+        else if (shape.type === 'pitchfan') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const p3 = pts.length >= 3 ? pts[2] : { x: p2.x, y: p2.y + 60 };
+
+            const mx = (p2.x + p3.x) / 2;
+            const my = (p2.y + p3.y) / 2;
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(mx, my);
+            ctx.stroke();
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(p2.x, p2.y);
+            ctx.lineTo(p3.x, p3.y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const fanRatios = [
+                { r: 0.0,   color: '#ef4444', label: 'P2' },
+                { r: 0.236, color: '#10b981', label: '0.236' },
+                { r: 0.382, color: '#14b8a6', label: '0.382' },
+                { r: 0.5,   color: '#38bdf8', label: 'Median' },
+                { r: 0.618, color: '#f59e0b', label: '0.618' },
+                { r: 0.786, color: '#8b5cf6', label: '0.786' },
+                { r: 1.0,   color: '#ef4444', label: 'P3' }
+            ];
+
+            const rayLen = Math.max(ctx.canvas.width, ctx.canvas.height) * 2;
+            fanRatios.forEach(lvl => {
+                const ix = p2.x + (p3.x - p2.x) * lvl.r;
+                const iy = p2.y + (p3.y - p2.y) * lvl.r;
+                const dx = ix - p1.x;
+                const dy = iy - p1.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist > 0.001) {
+                    const ex = p1.x + (dx / dist) * rayLen;
+                    const ey = p1.y + (dy / dist) * rayLen;
+                    ctx.strokeStyle = lvl.color;
+                    ctx.lineWidth = (lvl.r === 0.5 || lvl.r === 0.618) ? 1.8 : 1.2;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(ex, ey);
+                    ctx.stroke();
+
+                    drawRatioBadge(ctx, lvl.label, ix, iy, lvl.color);
+                }
+            });
+
+            drawVertexBadges(ctx, pts, ['P', 'A', 'B'], '#38bdf8');
+        }
+        // 22. 간 팬 (Gann Fan)
+        else if (shape.type === 'gann_fan') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const baseSlope = Math.abs(dx) > 0.001 ? dy / dx : 1;
+
+            const gannLevels = [
+                { mult: 8.0,  label: '1x8', color: '#ec4899' },
+                { mult: 4.0,  label: '1x4', color: '#ef4444' },
+                { mult: 3.0,  label: '1x3', color: '#f97316' },
+                { mult: 2.0,  label: '1x2', color: '#f59e0b' },
+                { mult: 1.0,  label: '1x1 (45°)', color: '#38bdf8' },
+                { mult: 1/2,  label: '2x1', color: '#10b981' },
+                { mult: 1/3,  label: '3x1', color: '#14b8a6' },
+                { mult: 1/4,  label: '4x1', color: '#06b6d4' },
+                { mult: 1/8,  label: '8x1', color: '#8b5cf6' }
+            ];
+
+            const rayDistance = Math.max(ctx.canvas.width, ctx.canvas.height) * 1.5;
+
+            gannLevels.forEach(lvl => {
+                const targetDy = dx * baseSlope * lvl.mult;
+                const dist = Math.hypot(dx, targetDy);
+                if (dist > 0.001) {
+                    const ex = p1.x + (dx / dist) * rayDistance;
+                    const ey = p1.y + (targetDy / dist) * rayDistance;
+
+                    ctx.strokeStyle = lvl.color;
+                    ctx.lineWidth = lvl.mult === 1.0 ? 2.0 : 1.2;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(ex, ey);
+                    ctx.stroke();
+
+                    const badgeX = p1.x + dx;
+                    const badgeY = p1.y + targetDy;
+                    drawRatioBadge(ctx, lvl.label, badgeX, badgeY, lvl.color);
+                }
+            });
+
+            drawVertexHandles(ctx, [p1, p2], '#38bdf8');
+        }
+        // 23. 삼각형 패턴 (Triangle Pattern 4-Points: A-B-C-D)
+        else if (shape.type === 'triangle_pattern') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+
+            const labels = ['A', 'B', 'C', 'D'];
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) {
+                ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.stroke();
+
+            if (pts.length >= 3) {
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+                ctx.beginPath();
+                ctx.moveTo(pts[0].x, pts[0].y);
+                for (let i = 1; i < pts.length; i++) {
+                    ctx.lineTo(pts[i].x, pts[i].y);
+                }
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            if (pts.length >= 4) {
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 3]);
+                ctx.beginPath();
+                ctx.moveTo(pts[0].x, pts[0].y);
+                ctx.lineTo(pts[2].x, pts[2].y);
+                ctx.stroke();
+
+                ctx.strokeStyle = '#10b981';
+                ctx.beginPath();
+                ctx.moveTo(pts[1].x, pts[1].y);
+                ctx.lineTo(pts[3].x, pts[3].y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const midX = (pts[0].x + pts[1].x + pts[2].x + pts[3].x) / 4;
+                const midY = (pts[0].y + pts[1].y + pts[2].y + pts[3].y) / 4;
+                drawPatternTitlePill(ctx, '수렴 삼각 패턴 (Triangle)', midX, midY);
+            }
+
+            drawVertexBadges(ctx, pts, labels, '#38bdf8');
+        }
+        // 24. 쓰리 드라이브 패턴 (Three Drives Pattern 6-Points: 1-A-2-B-3-완성)
+        else if (shape.type === 'three_drives') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+
+            const labels = ['D1', 'A', 'D2', 'B', 'D3', 'Rev'];
+
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) {
+                ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.stroke();
+
+            if (pts.length >= 3) {
+                const leg1 = Math.abs(pts[1].y - pts[0].y);
+                const leg2 = Math.abs(pts[2].y - pts[1].y);
+                if (leg1 > 0) {
+                    const r1 = (leg2 / leg1).toFixed(3);
+                    drawRatioBadge(ctx, `Drive 2: ${r1}`, (pts[1].x + pts[2].x) / 2, pts[2].y - 12, '#f59e0b');
+                }
+            }
+            if (pts.length >= 5) {
+                const leg2 = Math.abs(pts[3].y - pts[2].y);
+                const leg3 = Math.abs(pts[4].y - pts[3].y);
+                if (leg2 > 0) {
+                    const r2 = (leg3 / leg2).toFixed(3);
+                    drawRatioBadge(ctx, `Drive 3: ${r2}`, (pts[3].x + pts[4].x) / 2, pts[4].y - 12, '#f59e0b');
+                }
+                drawPatternTitlePill(ctx, '쓰리 드라이브 (Three Drives Harmonic)', pts[2].x, Math.min(pts[0].y, pts[2].y, pts[4].y) - 24);
+            }
+
+            drawVertexBadges(ctx, pts, labels, '#f59e0b');
+        }
+        // 25. 엘리엇 이중 조합 파동 (Elliott Double Combo W-X-Y 3-Points)
+        else if (shape.type === 'elliott_double') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+
+            const labels = ['(W)', '(X)', '(Y)'];
+
+            ctx.strokeStyle = '#f59e0b';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            ctx.lineTo(pts[1].x, pts[1].y);
+            if (pts.length >= 3) {
+                ctx.lineTo(pts[2].x, pts[2].y);
+            }
+            ctx.stroke();
+
+            if (pts.length >= 3) {
+                const hW = Math.abs(pts[1].y - pts[0].y);
+                const hY = Math.abs(pts[2].y - pts[1].y);
+                if (hW > 0) {
+                    const ratio = (hY / hW).toFixed(3);
+                    drawRatioBadge(ctx, `Y/W = ${ratio}`, (pts[1].x + pts[2].x) / 2, (pts[1].y + pts[2].y) / 2 - 12, '#f59e0b');
+                }
+                drawPatternTitlePill(ctx, '엘리엇 이중 조합 (W-X-Y Double Combo)', pts[1].x, Math.min(pts[0].y, pts[1].y, pts[2].y) - 22);
+            }
+
+            drawVertexBadges(ctx, pts, labels, '#f59e0b');
+        }
+        // 26. 엘리엇 삼중 조합 파동 (Elliott Triple Combo W-X-Y-XX-Z 5-Points)
+        else if (shape.type === 'elliott_triple') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+
+            const labels = ['(W)', '(X)', '(Y)', '(XX)', '(Z)'];
+
+            ctx.strokeStyle = '#ec4899';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < pts.length; i++) {
+                ctx.lineTo(pts[i].x, pts[i].y);
+            }
+            ctx.stroke();
+
+            if (pts.length >= 5) {
+                const minY = Math.min(...pts.map(p => p.y));
+                drawPatternTitlePill(ctx, '엘리엇 삼중 조합 (W-X-Y-XX-Z Triple Combo)', pts[2].x, minY - 22);
+            }
+
+            drawVertexBadges(ctx, pts, labels, '#ec4899');
+        }
+        // 27. 주기선 (Cycle Lines)
+        else if (shape.type === 'cycle_lines') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const dx = Math.max(12, Math.abs(p2.x - p1.x));
+
+            const startX = p1.x;
+            const leftCount = Math.ceil(startX / dx);
+            const rightCount = Math.ceil((ctx.canvas.width - startX) / dx);
+
+            ctx.lineWidth = 1.2;
+            for (let k = -leftCount; k <= rightCount; k++) {
+                const lx = startX + k * dx;
+                if (lx >= 0 && lx <= ctx.canvas.width) {
+                    ctx.strokeStyle = k === 0 ? '#38bdf8' : (k === 1 ? '#f59e0b' : 'rgba(56, 189, 248, 0.45)');
+                    ctx.setLineDash(k === 0 || k === 1 ? [] : [4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(lx, 0);
+                    ctx.lineTo(lx, ctx.canvas.height);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    ctx.fillStyle = k === 0 ? '#38bdf8' : '#94a3b8';
+                    ctx.font = '10px monospace';
+                    ctx.fillText(`C${k >= 0 ? '+' + k : k}`, lx + 4, 18);
+                }
+            }
+
+            drawVertexHandles(ctx, [p1, p2], '#38bdf8');
+        }
+        // 28. 시간주기 (Time Cycles - Semicircular Harmonic Cycle Arcs)
+        else if (shape.type === 'time_cycles') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const diameter = Math.max(14, Math.abs(p2.x - p1.x));
+            const radius = diameter / 2;
+            const baseY = p1.y;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(0, baseY);
+            ctx.lineTo(ctx.canvas.width, baseY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            const leftCount = Math.ceil(p1.x / diameter);
+            const rightCount = Math.ceil((ctx.canvas.width - p1.x) / diameter);
+
+            for (let k = -leftCount; k <= rightCount; k++) {
+                const arcCenterX = p1.x + k * diameter + radius;
+                ctx.strokeStyle = (k === 0) ? '#f59e0b' : '#38bdf8';
+                ctx.lineWidth = (k === 0) ? 2.0 : 1.4;
+                ctx.beginPath();
+                ctx.arc(arcCenterX, baseY, radius, 0, Math.PI, false);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+                ctx.fill();
+
+                drawRatioBadge(ctx, `Cycle ${k >= 0 ? '+' + k : k}`, arcCenterX, baseY + radius + 12, k === 0 ? '#f59e0b' : '#38bdf8');
+            }
+
+            drawVertexHandles(ctx, [p1, p2], '#f59e0b');
+        }
+        // 29. 사인지선 (Sine Wave Line)
+        else if (shape.type === 'sine_line') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+
+            const wavelength = Math.max(16, Math.abs(p2.x - p1.x) * 2);
+            const amplitude = Math.max(8, Math.abs(p2.y - p1.y));
+            const midY = p1.y;
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(0, midY);
+            ctx.lineTo(ctx.canvas.width, midY);
+            ctx.moveTo(0, midY - amplitude);
+            ctx.lineTo(ctx.canvas.width, midY - amplitude);
+            ctx.moveTo(0, midY + amplitude);
+            ctx.lineTo(ctx.canvas.width, midY + amplitude);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            const stepPx = 3;
+            for (let x = 0; x <= ctx.canvas.width; x += stepPx) {
+                const phase = ((x - p1.x) / wavelength) * Math.PI * 2;
+                const y = midY - amplitude * Math.sin(phase);
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            drawPatternTitlePill(ctx, `사인파 (λ: ${Math.round(wavelength)}px, A: ±${Math.round(amplitude)}px)`, p1.x + wavelength / 4, midY - amplitude - 16);
+            drawVertexHandles(ctx, [p1, p2], '#38bdf8');
+        }
+        // 30. 피보나치 채널 (Fibonacci Channel 3-Points)
+        else if (shape.type === 'fib_channel') {
+            const pts = shape.points || [
+                { x: shape.startX, y: shape.startY },
+                { x: shape.endX, y: shape.endY }
+            ];
+            if (pts.length < 2) { ctx.restore(); return; }
+            const p1 = pts[0];
+            const p2 = pts[1];
+            const p3 = pts.length >= 3 ? pts[2] : { x: p1.x, y: p1.y + 50 };
+
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const baseLen = Math.hypot(dx, dy);
+
+            let offX = 0, offY = 0;
+            if (baseLen > 0.001) {
+                const nx = -dy / baseLen;
+                const ny = dx / baseLen;
+                const proj = (p3.x - p1.x) * nx + (p3.y - p1.y) * ny;
+                offX = nx * proj;
+                offY = ny * proj;
+            } else {
+                offY = p3.y - p1.y;
+            }
+
+            const channelLevels = [
+                { r: 0.0,   color: '#38bdf8', label: '0.0 (Base)' },
+                { r: 0.236, color: '#10b981', label: '0.236' },
+                { r: 0.382, color: '#14b8a6', label: '0.382' },
+                { r: 0.5,   color: '#0ea5e9', label: '0.5' },
+                { r: 0.618, color: '#f59e0b', label: '0.618 (골든)' },
+                { r: 0.786, color: '#8b5cf6', label: '0.786' },
+                { r: 1.0,   color: '#ef4444', label: '1.0 (Top)' },
+                { r: 1.618, color: '#ec4899', label: '1.618' }
+            ];
+
+            channelLevels.forEach(lvl => {
+                const oX = offX * lvl.r;
+                const oY = offY * lvl.r;
+                const startPtX = p1.x + oX;
+                const startPtY = p1.y + oY;
+                const endPtX = p2.x + oX;
+                const endPtY = p2.y + oY;
+
+                ctx.strokeStyle = lvl.color;
+                ctx.lineWidth = (lvl.r === 0.0 || lvl.r === 0.618 || lvl.r === 1.0) ? 1.8 : 1.1;
+                ctx.setLineDash(lvl.r === 0.0 || lvl.r === 1.0 ? [] : [4, 3]);
+                ctx.beginPath();
+                ctx.moveTo(startPtX, startPtY);
+                ctx.lineTo(endPtX, endPtY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                drawRatioBadge(ctx, `Fib Ch ${lvl.label}`, endPtX + 6, endPtY, lvl.color);
+            });
+
+            drawVertexBadges(ctx, pts, ['1', '2', '폭'], '#38bdf8');
         }
 
         ctx.restore();

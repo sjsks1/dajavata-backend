@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import FinanceDataReader as fdr
 import datetime
+import time
 import asyncio
 from dotenv import load_dotenv
 
@@ -766,7 +767,9 @@ def get_stocks_fundamentals():
     candidate_paths = [
         'data/all_stocks.json',
         'dajavata_backend/data/all_stocks.json',
-        '../data/all_stocks.json'
+        '../data/all_stocks.json',
+        os.path.join(os.path.dirname(__file__), 'data', 'all_stocks.json'),
+        os.path.join(os.path.dirname(__file__), '..', 'data', 'all_stocks.json')
     ]
     file_path = None
     for p in candidate_paths:
@@ -775,22 +778,63 @@ def get_stocks_fundamentals():
             break
 
     if file_path:
-        mtime = os.path.getmtime(file_path)
-        kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
-        update_str = kst_dt.strftime("%m.%d %H:%M")
-        updated_iso = kst_dt.strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            mtime = os.path.getmtime(file_path)
+            kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
+            update_str = kst_dt.strftime("%m.%d %H:%M")
+            updated_iso = kst_dt.strftime("%Y-%m-%d %H:%M:%S")
 
-        with open(file_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        for s in data:
-            if not s.get("update"):
-                s["update"] = update_str
-        
-        result = {"stocks": sanitize(data), "updated_at": updated_iso}
-        _live_fundamentals_cache = result
-        _live_fundamentals_time = now
-        return result
-    raise HTTPException(status_code=404, detail="Stock data not found")
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            for s in data:
+                if not s.get("update"):
+                    s["update"] = update_str
+            
+            result = {"stocks": sanitize(data), "updated_at": updated_iso}
+            _live_fundamentals_cache = result
+            _live_fundamentals_time = now
+            return result
+        except Exception as e:
+            print(f"[Fundamentals] Error reading {file_path}:", e)
+
+    # Fallback: extract unique stocks from theme_details.json
+    detail_candidates = [
+        'data/theme_details.json',
+        'dajavata_backend/data/theme_details.json',
+        '../data/theme_details.json',
+        os.path.join(os.path.dirname(__file__), 'data', 'theme_details.json')
+    ]
+    for d_path in detail_candidates:
+        if os.path.exists(d_path) and os.path.getsize(d_path) > 1000:
+            try:
+                mtime = os.path.getmtime(d_path)
+                kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
+                update_str = kst_dt.strftime("%m.%d %H:%M")
+                updated_iso = kst_dt.strftime("%Y-%m-%d %H:%M:%S")
+                with open(d_path, 'r', encoding='utf-8') as f:
+                    theme_map = json.load(f)
+                seen_codes = set()
+                stocks_extracted = []
+                for t_name, st_list in theme_map.items():
+                    for s in st_list:
+                        c = s.get('code')
+                        if c and c not in seen_codes:
+                            seen_codes.add(c)
+                            s_copy = dict(s)
+                            if not s_copy.get('update'):
+                                s_copy['update'] = update_str
+                            stocks_extracted.append(s_copy)
+                if stocks_extracted:
+                    result = {"stocks": sanitize(stocks_extracted), "updated_at": updated_iso}
+                    _live_fundamentals_cache = result
+                    _live_fundamentals_time = now
+                    return result
+            except Exception as e:
+                print(f"[Fundamentals Fallback] Error reading {d_path}:", e)
+
+    now_kst = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+    fallback_stocks = [{"code": s.get("code"), "name": s.get("name"), "current_price": 0, "day1": 0, "day3": 0, "marcap": 0, "update": now_kst.strftime("%m.%d %H:%M")} for s in stock_list]
+    return {"stocks": sanitize(fallback_stocks), "updated_at": now_kst.strftime("%Y-%m-%d %H:%M:%S")}
 
 @app.get("/api/stocks/realtime")
 def get_stocks_realtime(codes: str):

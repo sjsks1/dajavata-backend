@@ -944,6 +944,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const action = menu.getAttribute('data-action');
             headerTitle.textContent = menu.textContent.trim();
             themeBadge.textContent = "테마";
+            if (previousState) {
+                previousState.headerTitle = headerTitle.textContent;
+                previousState.themeBadge = themeBadge.textContent;
+            }
 
             if (window.allThemes.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...</td></tr>';
@@ -963,7 +967,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 조건별 종목 메뉴 클릭 이벤트
     const stockMenus = document.querySelectorAll('#stock-menu-list li');
     stockMenus.forEach(menu => {
-        menu.addEventListener('click', (e) => {
+        menu.addEventListener('click', async (e) => {
             e.preventDefault();
             showDefaultView();
             document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
@@ -972,44 +976,43 @@ document.addEventListener('DOMContentLoaded', () => {
             const action = menu.getAttribute('data-action');
             headerTitle.textContent = menu.textContent.trim();
             themeBadge.textContent = "종목";
+            if (previousState) {
+                previousState.headerTitle = headerTitle.textContent;
+                previousState.themeBadge = themeBadge.textContent;
+            }
 
             tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">전 종목 데이터를 불러오는 중입니다...</td></tr>';
 
-            fetch(`${API_BASE}/api/stocks/fundamentals`)
-                .then(response => {
-                    if (!response.ok) throw new Error("Stock data not found");
-                    const serverDate = response.headers.get('date');
-                    return response.json().then(data => ({ data, serverDate }));
-                })
-                .then(({ data, serverDate }) => {
-                    let stocks = data.stocks || [];
-                    if (data.updated_at) {
-                        window._stockUpdatedAt = new Date(data.updated_at);
-                    } else if (serverDate) {
-                        window._stockUpdatedAt = new Date(serverDate);
-                    }
-                    updateHeaderBadge();
-                    
-                    if (action === 'stock-rising') {
-                        stocks = stocks.filter(s => s.day3 > 0).sort((a, b) => b.day3 - a.day3);
-                    } else if (action === 'stock-falling') {
-                        stocks = stocks.filter(s => s.day3 < 0).sort((a, b) => a.day3 - b.day3);
-                    } else if (action === 'stock-low-pbr') {
-                        stocks = stocks.filter(s => s.PBR > 0).sort((a, b) => a.PBR - b.PBR);
-                    } else if (action === 'stock-low-per') {
-                        stocks = stocks.filter(s => s.PER > 0).sort((a, b) => a.PER - b.PER);
-                    } else if (action === 'stock-high-marcap') {
-                        stocks = stocks.sort((a, b) => (b.marcap || 0) - (a.marcap || 0));
-                    } else if (action === 'stock-high52') {
-                        stocks = stocks.filter(s => s.high52 !== null && s.high52 < 5).sort((a, b) => (a.high52 || 0) - (b.high52 || 0));
-                    }
-                    
-                    renderTable(stocks, 'stocks');
-                })
-                .catch(error => {
-                    console.error('Error fetching stock data:', error);
-                    tbody.innerHTML = '<tr><td colspan="12" class="center">종목 데이터를 불러오는 데 실패했습니다.</td></tr>';
-                });
+            try {
+                let stocks = await loadAllStocks();
+                if (!stocks || stocks.length === 0) {
+                    throw new Error("No stocks loaded");
+                }
+                updateHeaderBadge();
+
+                let filtered = [...stocks];
+                if (action === 'stock-rising') {
+                    filtered = filtered.filter(s => s.day3 > 0).sort((a, b) => b.day3 - a.day3);
+                } else if (action === 'stock-falling') {
+                    filtered = filtered.filter(s => s.day3 < 0).sort((a, b) => a.day3 - b.day3);
+                } else if (action === 'stock-low-pbr') {
+                    filtered = filtered.filter(s => s.PBR > 0).sort((a, b) => a.PBR - b.PBR);
+                } else if (action === 'stock-low-per') {
+                    filtered = filtered.filter(s => s.PER > 0).sort((a, b) => a.PER - b.PER);
+                } else if (action === 'stock-high-marcap') {
+                    filtered = filtered.sort((a, b) => (b.marcap || 0) - (a.marcap || 0));
+                } else if (action === 'stock-high52') {
+                    filtered = filtered.filter(s => s.high52 !== null && s.high52 < 5).sort((a, b) => (a.high52 || 0) - (b.high52 || 0));
+                }
+                
+                renderTable(filtered, 'stocks');
+            } catch (error) {
+                console.error('Error fetching stock data:', error);
+                tbody.innerHTML = `<tr><td colspan="12" class="center" style="padding: 40px;">
+                    <div style="color: #ef4444; font-weight: 600; margin-bottom: 8px;">종목 데이터를 불러오는 데 실패했습니다.</div>
+                    <button onclick="window.location.reload()" style="background: var(--primary, #3b82f6); color: #fff; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;">새로고침</button>
+                </td></tr>`;
+            }
         });
     });
 
@@ -1025,6 +1028,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const action = menu.getAttribute('data-action');
             headerTitle.textContent = menu.textContent.trim();
             themeBadge.textContent = "인사이트";
+            if (previousState) {
+                previousState.headerTitle = headerTitle.textContent;
+                previousState.themeBadge = themeBadge.textContent;
+            }
 
             tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">노션에서 데이터를 불러오는 중입니다...</td></tr>';
 
