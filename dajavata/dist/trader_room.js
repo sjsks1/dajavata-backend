@@ -1328,17 +1328,17 @@
                             <!-- STEP 3: 진입 전략 & 무효화(손절) 타점 -->
                             <div class="tw-section-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                                 <h3><i class="ph ph-crosshair"></i> 3단계: 진입 호가 & 원칙 손절 타점</h3>
-                                <!-- 포지션 방향 토글러 및 국내주식 락 뱃지 -->
+                                <!-- 포지션 방향 토글러 및 국내주식 전용 배지 -->
                                 <div id="calc-dir-controls" style="display:flex; align-items:center;">
-                                    <div class="tw-dir-badge-lock" id="calc-dir-lock" style="display:none;">
-                                        <i class="ph ph-shield-check"></i> 현물 롱(매수) 전용 시장
+                                    <div class="tw-dir-badge-lock" id="calc-dir-lock" style="${currentAsset === 'krx' ? 'display:inline-flex;' : 'display:none;'}">
+                                        <i class="ph ph-shield-check"></i> 현물 매수(롱) 전용 시장
                                     </div>
-                                    <div class="tw-pos-direction-toggle" id="calc-dir-toggle">
+                                    <div class="tw-pos-direction-toggle" id="calc-dir-toggle" style="${currentAsset === 'krx' ? 'display:none;' : 'display:inline-flex;'}">
                                         <button type="button" class="tw-dir-btn active" data-dir="Long" id="btn-dir-long">
                                             <i class="ph ph-trend-up"></i> LONG (매수)
                                         </button>
                                         <button type="button" class="tw-dir-btn" data-dir="Short" id="btn-dir-short">
-                                            <i class="ph ph-trend-down"></i> <span id="label-short-btn">SHORT (매도)</span>
+                                            <i class="ph ph-trend-down"></i> <span id="label-short-btn">${currentAsset === 'us' ? 'SHORT (공매도)' : 'SHORT (매도)'}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -1468,9 +1468,13 @@
                 return parseFloat(v.toFixed(2));
             };
 
+            let isTypingStopInput = false; // 수동 손절가 타이핑 여부 플래그
+            let userExplicitDir = null; // 사용자가 버튼으로 명시 선택한 방향
+
             // 스마트 포지션 방향 전환 (LONG <-> SHORT) 함수
             const setDirection = (newDir, flipPrices = true) => {
-                if (currentAsset === 'krx') newDir = 'Long'; // 국내 주식은 롱 고정
+                if (currentAsset === 'krx') newDir = 'Long'; // 국내 주식은 롱 전용 고정
+                userExplicitDir = newDir;
                 const oldDir = currentDirection;
                 currentDirection = newDir;
 
@@ -1483,32 +1487,32 @@
                 updateDirectionGuides();
 
                 const entryVal = parseFloat(entryInput.value) || 0;
-                const stopVal = parseFloat(stopInput.value) || 0;
-                const targetVal = parseFloat(targetInput.value) || 0;
+                let stopVal = parseFloat(stopInput.value) || 0;
+                let targetVal = parseFloat(targetInput.value) || 0;
 
-                // 방향이 반전될 때, 가격이 입력되어 있다면 똑똑하게 상/하방 반전(Flip)
-                if (flipPrices && oldDir !== newDir && entryVal > 0) {
-                    const diff = Math.abs(entryVal - stopVal);
-                    const tDiff = Math.abs(targetVal - entryVal);
+                // 방향이 반전될 때, 가격이 입력되어 있다면 똑똑하게 상/하방 반전(Smart Flip)
+                if (flipPrices && entryVal > 0) {
+                    let diff = Math.abs(entryVal - stopVal);
+                    // 유효하지 않거나 진입가와 동일한 경우 시장 기본 손절폭 자동 산정
+                    if (!diff || diff <= 0 || diff >= entryVal) {
+                        diff = currentAsset === 'futures' ? (entryVal * 0.01) : (entryVal * 0.04);
+                    }
+
+                    let tDiff = Math.abs(targetVal - entryVal);
+                    if (!tDiff || tDiff <= 0) {
+                        tDiff = diff * 2; // 기본 1:2 손익비
+                    }
 
                     if (newDir === 'Short') {
-                        // 숏(매도) 포지션: 손절가는 진입가 위로, 익절가는 진입가 아래로
-                        if (diff > 0) {
-                            stopInput.value = formatAutoDecimals(entryVal + diff);
-                        }
-                        if (tDiff > 0) {
-                            const newT = entryVal - tDiff;
-                            if (newT > 0) targetInput.value = formatAutoDecimals(newT);
-                        }
+                        // 숏(공매도/매도) 포지션: 손절가는 무조건 진입가 상방, 익절가는 진입가 하방
+                        stopInput.value = formatAutoDecimals(entryVal + diff);
+                        const newT = entryVal - tDiff;
+                        if (newT > 0) targetInput.value = formatAutoDecimals(newT);
                     } else {
-                        // 롱(매수) 포지션: 손절가는 진입가 아래로, 익절가는 진입가 위로
-                        if (diff > 0) {
-                            const newS = entryVal - diff;
-                            if (newS > 0) stopInput.value = formatAutoDecimals(newS);
-                        }
-                        if (tDiff > 0) {
-                            targetInput.value = formatAutoDecimals(entryVal + tDiff);
-                        }
+                        // 롱(매수) 포지션: 손절가는 무조건 진입가 하방, 익절가는 진입가 상방
+                        const newS = entryVal - diff;
+                        if (newS > 0) stopInput.value = formatAutoDecimals(newS);
+                        targetInput.value = formatAutoDecimals(entryVal + tDiff);
                     }
                 }
 
@@ -1519,10 +1523,11 @@
             const renderDynamicFields = (asset, forceResetPrices = false) => {
                 // 자산군별 숏 버튼 지원 여부 및 가이드 제어
                 if (asset === 'krx') {
-                    // 1. 국내 주식: 현물 롱(매수) 전용 시장 안내 락 뱃지 표시, 숏 버튼 숨김
+                    // 1. 국내 주식: 숏 버튼 완전 제거, 현물 매수(롱) 전용 시장 락 배지만 단독 표시
                     if (dirLock) dirLock.style.display = 'inline-flex';
                     if (dirToggle) dirToggle.style.display = 'none';
                     currentDirection = 'Long';
+                    userExplicitDir = 'Long';
                 } else {
                     // 2. 해외선물/가상자산/미국주식/사용자정의: 롱/숏 양방향 버튼 활성화
                     if (dirLock) dirLock.style.display = 'none';
@@ -2120,17 +2125,20 @@
                 const stopVal = parseFloat(stopInput.value) || 0;
                 const targetVal = parseFloat(targetInput.value) || 0;
 
-                // 수동 타이핑 시 방향 자동 감지 (국내 주식이 아닐 때만 진입가/손절가 위치로 동기화)
+                // 수동 타이핑 시 방향 자동 감지 (사용자가 직접 손절가를 타이핑 중일 때만 위치에 따라 방향 연동)
                 if (currentAsset !== 'krx' && entryVal > 0 && stopVal > 0) {
-                    const naturalDir = stopVal < entryVal ? 'Long' : 'Short';
-                    if (naturalDir !== currentDirection) {
-                        currentDirection = naturalDir;
-                        if (dirToggle) {
-                            dirToggle.querySelectorAll('.tw-dir-btn').forEach(b => {
-                                b.classList.toggle('active', b.getAttribute('data-dir') === currentDirection);
-                            });
+                    if (isTypingStopInput) {
+                        const naturalDir = stopVal < entryVal ? 'Long' : 'Short';
+                        if (naturalDir !== currentDirection) {
+                            currentDirection = naturalDir;
+                            userExplicitDir = naturalDir;
+                            if (dirToggle) {
+                                dirToggle.querySelectorAll('.tw-dir-btn').forEach(b => {
+                                    b.classList.toggle('active', b.getAttribute('data-dir') === currentDirection);
+                                });
+                            }
+                            updateDirectionGuides();
                         }
-                        updateDirectionGuides();
                     }
                 }
 
@@ -2316,8 +2324,14 @@
             };
 
             // 입력 변경 시 실시간 재계산 이벤트 연결
-            [capitalInput, riskValInput, entryInput, stopInput, targetInput].forEach(inp => {
+            [capitalInput, riskValInput, entryInput, targetInput].forEach(inp => {
                 inp.addEventListener('input', recalc);
+            });
+            // 손절가 직접 타이핑 시에만 방향 자동 감지 허용
+            stopInput.addEventListener('input', () => {
+                isTypingStopInput = true;
+                recalc();
+                isTypingStopInput = false;
             });
             feeCheck.addEventListener('change', recalc);
 
@@ -2327,10 +2341,7 @@
                 dynamicFields.addEventListener('change', recalc);
             }
 
-            // 초기 렌더링
-            renderDynamicFields(currentAsset);
-
-            // AI 차트 스캐너 등 외부에서 전달된 타점 파라미터 자동 적용
+            // AI 차트 스캐너 등 외부에서 전달된 타점 파라미터가 있다면 우선 주입
             if (initialParams.entryPrice) entryInput.value = initialParams.entryPrice;
             else entryInput.value = "";
             if (initialParams.stopPrice) stopInput.value = initialParams.stopPrice;
@@ -2338,11 +2349,15 @@
             if (initialParams.targetPrice) targetInput.value = initialParams.targetPrice;
             else targetInput.value = "";
 
+            // 초기 렌더링 (외부 파라미터가 이미 있으면 가격 리셋 방지)
+            const hasExternalPrices = !!(initialParams.entryPrice && initialParams.stopPrice);
+            renderDynamicFields(currentAsset, !hasExternalPrices);
+
             const itemNameInput = container.querySelector('#calc-item-name');
             if (passedName) {
                 if (itemNameInput) itemNameInput.value = passedName;
             } else {
-                if (itemNameInput) itemNameInput.value = "";
+                if (itemNameInput && !hasExternalPrices) itemNameInput.value = "";
             }
 
             if (passedMarket) {

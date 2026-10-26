@@ -4838,15 +4838,29 @@
         }
 
         const isOverseas = anyAlphabet(stock.code);
+        const price = parseFloat(stock.price) || 0;
+        let stopP = parseFloat(stock.stopPrice) || 0;
+        let targetP = parseFloat(stock.targetPrice) || 0;
+
+        // 타점이 누락된 경우 안전한 1:2 손익비 타점 기본 주입
+        if (price > 0) {
+            if (!stopP || stopP <= 0) {
+                stopP = isOverseas ? parseFloat((price * 0.96).toFixed(2)) : Math.round(price * 0.96);
+            }
+            if (!targetP || targetP <= 0) {
+                targetP = isOverseas ? parseFloat((price * 1.08).toFixed(2)) : Math.round(price * 1.08);
+            }
+        }
+
         window.TraderRoom.navigate('trader-calc', {
             assetType: isOverseas ? 'us' : 'krx',
             stockName: stock.name,
             symbol: stock.name,
             code: stock.code,
             market: stock.market || (isOverseas ? 'NASDAQ' : 'KOSDAQ'),
-            entryPrice: stock.price,
-            stopPrice: stock.stopPrice,
-            targetPrice: stock.targetPrice
+            entryPrice: price,
+            stopPrice: stopP,
+            targetPrice: targetP
         });
     }
 
