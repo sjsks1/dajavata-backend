@@ -1326,16 +1326,21 @@
                             <hr style="border:none; border-top:1px solid rgba(255,255,255,0.06); margin: 22px 0 18px;">
 
                             <!-- STEP 3: 진입 전략 & 무효화(손절) 타점 -->
-                            <div class="tw-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                            <div class="tw-section-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                                 <h3><i class="ph ph-crosshair"></i> 3단계: 진입 호가 & 원칙 손절 타점</h3>
-                                <!-- 포지션 방향 토글러 -->
-                                <div class="tw-pos-direction-toggle" id="calc-dir-toggle">
-                                    <button type="button" class="tw-dir-btn active" data-dir="Long">
-                                        <i class="ph ph-trend-up"></i> LONG (매수)
-                                    </button>
-                                    <button type="button" class="tw-dir-btn" data-dir="Short">
-                                        <i class="ph ph-trend-down"></i> SHORT (매도)
-                                    </button>
+                                <!-- 포지션 방향 토글러 및 국내주식 락 뱃지 -->
+                                <div id="calc-dir-controls" style="display:flex; align-items:center;">
+                                    <div class="tw-dir-badge-lock" id="calc-dir-lock" style="display:none;">
+                                        <i class="ph ph-shield-check"></i> 현물 롱(매수) 전용 시장
+                                    </div>
+                                    <div class="tw-pos-direction-toggle" id="calc-dir-toggle">
+                                        <button type="button" class="tw-dir-btn active" data-dir="Long" id="btn-dir-long">
+                                            <i class="ph ph-trend-up"></i> LONG (매수)
+                                        </button>
+                                        <button type="button" class="tw-dir-btn" data-dir="Short" id="btn-dir-short">
+                                            <i class="ph ph-trend-down"></i> <span id="label-short-btn">SHORT (매도)</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1349,23 +1354,25 @@
                                     <div class="tw-field-sub-note" id="note-entry">계획 진입 목표가</div>
                                 </div>
                                 <div class="tw-form-group">
-                                    <label>원칙 손절가 (무효화선) <span class="req">*</span></label>
+                                    <label id="label-stop-loss">원칙 손절가 (무효화선) <span class="req">*</span></label>
                                     <div class="tw-input-wrapper">
                                         <input type="number" id="calc-stop-loss" placeholder="예: 31800" step="any">
                                         <span class="tw-input-unit" id="unit-stop">원</span>
                                     </div>
-                                    <div class="tw-field-sub-note" id="note-stop">
+                                    <div class="tw-field-sub-note" id="note-stop" style="display:flex; align-items:center; justify-content:space-between;">
                                         <span id="badge-stop-ticks" class="tw-tick-pill">손절폭: 0</span>
+                                        <span id="guide-stop-dir" style="color:var(--text-muted); font-size:11px;">(진입가 하방)</span>
                                     </div>
                                 </div>
                                 <div class="tw-form-group">
-                                    <label>목표 익절가 (1차 TP)</label>
+                                    <label id="label-target-price">목표 익절가 (1차 TP)</label>
                                     <div class="tw-input-wrapper">
                                         <input type="number" id="calc-target-price" placeholder="예: 35500" step="any">
                                         <span class="tw-input-unit" id="unit-target">원</span>
                                     </div>
-                                    <div class="tw-field-sub-note" id="note-target">
+                                    <div class="tw-field-sub-note" id="note-target" style="display:flex; align-items:center; justify-content:space-between;">
                                         <span id="badge-target-ticks" class="tw-tick-pill">기대폭: 0</span>
+                                        <span id="guide-target-dir" style="color:var(--text-muted); font-size:11px;">(진입가 상방)</span>
                                     </div>
                                 </div>
                             </div>
@@ -1430,8 +1437,107 @@
             const btnPct = container.querySelector('#btn-mode-pct');
             const btnFixed = container.querySelector('#btn-mode-fixed');
 
+            // 포지션 방향 제어 및 가이드 뱃지 요소
+            const dirToggle = container.querySelector('#calc-dir-toggle');
+            const dirLock = container.querySelector('#calc-dir-lock');
+            const labelShortBtn = container.querySelector('#label-short-btn');
+            const guideStopDir = container.querySelector('#guide-stop-dir');
+            const guideTargetDir = container.querySelector('#guide-target-dir');
+
+            // 방향 가이드 텍스트 동적 업데이트
+            const updateDirectionGuides = () => {
+                if (guideStopDir) {
+                    guideStopDir.textContent = currentDirection === 'Short' ? "(진입가 상방 무효화)" : "(진입가 하방 무효화)";
+                    guideStopDir.style.color = currentDirection === 'Short' ? "var(--pos, #f94d5d)" : "#00e676";
+                }
+                if (guideTargetDir) {
+                    guideTargetDir.textContent = currentDirection === 'Short' ? "(진입가 하방 TP)" : "(진입가 상방 TP)";
+                    guideTargetDir.style.color = currentDirection === 'Short' ? "#00e676" : "var(--pos, #f94d5d)";
+                }
+            };
+
+            // 소수점 포맷팅 도우미
+            const formatAutoDecimals = (v) => {
+                if (currentAsset === 'krx') return Math.round(v);
+                if (currentAsset === 'futures') {
+                    const fSym = container.querySelector('#calc-futures-symbol')?.value || 'NQ';
+                    const tickSz = FUTURES_SPECS[fSym]?.tickSize || 0.25;
+                    const dec = tickSz < 0.001 ? 5 : (tickSz < 0.01 ? 4 : (tickSz < 0.1 ? 2 : (tickSz < 1 ? 2 : 0)));
+                    return parseFloat(v.toFixed(dec));
+                }
+                return parseFloat(v.toFixed(2));
+            };
+
+            // 스마트 포지션 방향 전환 (LONG <-> SHORT) 함수
+            const setDirection = (newDir, flipPrices = true) => {
+                if (currentAsset === 'krx') newDir = 'Long'; // 국내 주식은 롱 고정
+                const oldDir = currentDirection;
+                currentDirection = newDir;
+
+                if (dirToggle) {
+                    dirToggle.querySelectorAll('.tw-dir-btn').forEach(b => {
+                        b.classList.toggle('active', b.getAttribute('data-dir') === currentDirection);
+                    });
+                }
+
+                updateDirectionGuides();
+
+                const entryVal = parseFloat(entryInput.value) || 0;
+                const stopVal = parseFloat(stopInput.value) || 0;
+                const targetVal = parseFloat(targetInput.value) || 0;
+
+                // 방향이 반전될 때, 가격이 입력되어 있다면 똑똑하게 상/하방 반전(Flip)
+                if (flipPrices && oldDir !== newDir && entryVal > 0) {
+                    const diff = Math.abs(entryVal - stopVal);
+                    const tDiff = Math.abs(targetVal - entryVal);
+
+                    if (newDir === 'Short') {
+                        // 숏(매도) 포지션: 손절가는 진입가 위로, 익절가는 진입가 아래로
+                        if (diff > 0) {
+                            stopInput.value = formatAutoDecimals(entryVal + diff);
+                        }
+                        if (tDiff > 0) {
+                            const newT = entryVal - tDiff;
+                            if (newT > 0) targetInput.value = formatAutoDecimals(newT);
+                        }
+                    } else {
+                        // 롱(매수) 포지션: 손절가는 진입가 아래로, 익절가는 진입가 위로
+                        if (diff > 0) {
+                            const newS = entryVal - diff;
+                            if (newS > 0) stopInput.value = formatAutoDecimals(newS);
+                        }
+                        if (tDiff > 0) {
+                            targetInput.value = formatAutoDecimals(entryVal + tDiff);
+                        }
+                    }
+                }
+
+                recalc();
+            };
+
             // 자산별 기본값 세팅 함수
-            const renderDynamicFields = (asset) => {
+            const renderDynamicFields = (asset, forceResetPrices = false) => {
+                // 자산군별 숏 버튼 지원 여부 및 가이드 제어
+                if (asset === 'krx') {
+                    // 1. 국내 주식: 현물 롱(매수) 전용 시장 안내 락 뱃지 표시, 숏 버튼 숨김
+                    if (dirLock) dirLock.style.display = 'inline-flex';
+                    if (dirToggle) dirToggle.style.display = 'none';
+                    currentDirection = 'Long';
+                } else {
+                    // 2. 해외선물/가상자산/미국주식/사용자정의: 롱/숏 양방향 버튼 활성화
+                    if (dirLock) dirLock.style.display = 'none';
+                    if (dirToggle) dirToggle.style.display = 'inline-flex';
+                    if (labelShortBtn) {
+                        labelShortBtn.textContent = (asset === 'us') ? "SHORT (공매도)" : "SHORT (매도)";
+                    }
+                    if (dirToggle) {
+                        dirToggle.querySelectorAll('.tw-dir-btn').forEach(b => {
+                            b.classList.toggle('active', b.getAttribute('data-dir') === currentDirection);
+                        });
+                    }
+                }
+                updateDirectionGuides();
+
                 if (asset === 'krx') {
                     const isKospi = passedMarket.includes('KOSPI');
                     dynamicFields.innerHTML = `
@@ -1462,12 +1568,18 @@
                     unitEntry.textContent = "원";
                     unitStop.textContent = "원";
                     unitTarget.textContent = "원";
-                    if (capitalInput.value === "10000" || capitalInput.value === "5000") {
+                    if (capitalInput.value === "10000" || capitalInput.value === "5000" || !capitalInput.value) {
                         capitalInput.value = "10000000";
                     }
                     entryInput.placeholder = "종목 선택 시 자동입력 (또는 직접 입력)";
                     stopInput.placeholder = "종목 선택 시 -4% 자동계산";
                     targetInput.placeholder = "종목 선택 시 +8% 자동계산";
+
+                    if (forceResetPrices || !entryInput.value || parseFloat(entryInput.value) < 1000) {
+                        entryInput.value = "72000";
+                        stopInput.value = "69100";
+                        targetInput.value = "77800";
+                    }
                 } else if (asset === 'us') {
                     const isNyse = passedMarket.includes('NYSE');
                     const isEtf = passedMarket.includes('ETF');
@@ -1489,7 +1601,7 @@
                                     <span style="font-size:11px; color:#38bdf8; font-weight:normal;"><i class="ph ph-magnifying-glass"></i> 실시간 검색</span>
                                 </label>
                                 <div class="tw-input-wrapper">
-                                    <input type="text" id="calc-item-name" value="${passedName}" placeholder="티커 또는 기업명 입력 (예: NVDA, AAPL, TSLA)" autocomplete="off">
+                                    <input type="text" id="calc-item-name" value="${passedName || 'NVDA'}" placeholder="티커 또는 기업명 입력 (예: NVDA, AAPL, TSLA)" autocomplete="off">
                                 </div>
                                 <div id="calc-stock-autocomplete" class="tw-stock-autocomplete-dropdown" style="display:none;"></div>
                             </div>
@@ -1515,6 +1627,17 @@
                     entryInput.placeholder = "예: 135.50";
                     stopInput.placeholder = "예: 130.00";
                     targetInput.placeholder = "예: 148.00";
+
+                    if (forceResetPrices || !entryInput.value || parseFloat(entryInput.value) > 2000) {
+                        entryInput.value = "135.50";
+                        if (currentDirection === 'Short') {
+                            stopInput.value = "141.00";
+                            targetInput.value = "123.00";
+                        } else {
+                            stopInput.value = "130.00";
+                            targetInput.value = "148.00";
+                        }
+                    }
                 } else if (asset === 'futures') {
                     // 해외선물 카테고리별 옵션 구성
                     dynamicFields.innerHTML = `
@@ -1569,8 +1692,8 @@
                         capitalInput.value = "10000";
                     }
 
-                    // 선물 스펙 배너 갱신
-                    updateFuturesSpecBanner();
+                    // 선물 스펙 배너 갱신 및 샘플 가격 주입
+                    updateFuturesSpecBanner(forceResetPrices || !entryInput.value || parseFloat(entryInput.value) > 30000 || parseFloat(entryInput.value) === 32800);
                 } else if (asset === 'crypto') {
                     dynamicFields.innerHTML = `
                         <div class="tw-input-grid-2">
@@ -1611,6 +1734,17 @@
                     entryInput.placeholder = "예: 68500";
                     stopInput.placeholder = "예: 67200";
                     targetInput.placeholder = "예: 72000";
+
+                    if (forceResetPrices || !entryInput.value || parseFloat(entryInput.value) < 1000) {
+                        entryInput.value = "68500";
+                        if (currentDirection === 'Short') {
+                            stopInput.value = "69870";
+                            targetInput.value = "65760";
+                        } else {
+                            stopInput.value = "67130";
+                            targetInput.value = "71240";
+                        }
+                    }
                 } else if (asset === 'custom') {
                     dynamicFields.innerHTML = `
                         <div class="tw-input-grid-3">
@@ -1641,6 +1775,17 @@
                     unitEntry.textContent = "pt";
                     unitStop.textContent = "pt";
                     unitTarget.textContent = "pt";
+
+                    if (forceResetPrices || !entryInput.value || parseFloat(entryInput.value) > 5000) {
+                        entryInput.value = "350.00";
+                        if (currentDirection === 'Short') {
+                            stopInput.value = "353.50";
+                            targetInput.value = "343.00";
+                        } else {
+                            stopInput.value = "346.50";
+                            targetInput.value = "357.00";
+                        }
+                    }
                 }
 
                 // 이벤트 재바인딩
@@ -1648,7 +1793,7 @@
                 recalc();
             };
 
-            const updateFuturesSpecBanner = () => {
+            const updateFuturesSpecBanner = (force = false) => {
                 const fSelect = container.querySelector('#calc-futures-symbol');
                 const banner = container.querySelector('#futures-spec-banner');
                 if (!fSelect || !banner) return;
@@ -1678,13 +1823,18 @@
                     </div>
                 `;
 
-                // 입력 예시 가이드
-                if (!entryInput.value || entryInput.value === "32800") {
+                // 입력 예시 가이드 (종목 변경 또는 가격 초기화 시 적정 손절/익절폭 자동 산출)
+                if (force || !entryInput.value || entryInput.value === "32800" || parseFloat(entryInput.value) > 30000) {
                     entryInput.value = spec.samplePrice || "";
                     if (spec.samplePrice) {
                         const defaultStopDiff = spec.samplePrice * 0.01;
-                        stopInput.value = Number(spec.samplePrice - defaultStopDiff).toFixed(2);
-                        targetInput.value = Number(spec.samplePrice + (defaultStopDiff * 2)).toFixed(2);
+                        if (currentDirection === 'Short') {
+                            stopInput.value = formatAutoDecimals(spec.samplePrice + defaultStopDiff);
+                            targetInput.value = formatAutoDecimals(spec.samplePrice - (defaultStopDiff * 2));
+                        } else {
+                            stopInput.value = formatAutoDecimals(spec.samplePrice - defaultStopDiff);
+                            targetInput.value = formatAutoDecimals(spec.samplePrice + (defaultStopDiff * 2));
+                        }
                     }
                 }
             };
@@ -1870,7 +2020,7 @@
                 const fSelect = container.querySelector('#calc-futures-symbol');
                 if (fSelect) {
                     fSelect.addEventListener('change', () => {
-                        updateFuturesSpecBanner();
+                        updateFuturesSpecBanner(true);
                         recalc();
                     });
                 }
@@ -1881,8 +2031,13 @@
                         const spec = CRYPTO_SPECS[sym];
                         if (spec) {
                             entryInput.value = spec.samplePrice;
-                            stopInput.value = (spec.samplePrice * 0.98).toFixed(2);
-                            targetInput.value = (spec.samplePrice * 1.04).toFixed(2);
+                            if (currentDirection === 'Short') {
+                                stopInput.value = (spec.samplePrice * 1.02).toFixed(2);
+                                targetInput.value = (spec.samplePrice * 0.96).toFixed(2);
+                            } else {
+                                stopInput.value = (spec.samplePrice * 0.98).toFixed(2);
+                                targetInput.value = (spec.samplePrice * 1.04).toFixed(2);
+                            }
                         }
                         recalc();
                     });
@@ -1901,25 +2056,24 @@
                 setupStockAutocomplete();
             };
 
-            // 자산 탭 클릭 이벤트
+            // 자산 탭 클릭 이벤트 (자산군 변경 시 해당 시장에 맞는 샘플 가격으로 똑똑하게 갱신)
             container.querySelectorAll('.tw-market-tab-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     container.querySelectorAll('.tw-market-tab-btn').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
+                    const oldAsset = currentAsset;
                     currentAsset = btn.getAttribute('data-asset');
-                    renderDynamicFields(currentAsset);
+                    renderDynamicFields(currentAsset, oldAsset !== currentAsset);
                 });
             });
 
-            // 포지션 방향 토글러 이벤트
-            const dirToggle = container.querySelector('#calc-dir-toggle');
+            // 포지션 방향 토글러 (LONG <-> SHORT) 클릭 이벤트
             if (dirToggle) {
                 dirToggle.querySelectorAll('.tw-dir-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        dirToggle.querySelectorAll('.tw-dir-btn').forEach(b => b.classList.remove('active'));
-                        btn.classList.add('active');
-                        currentDirection = btn.getAttribute('data-dir');
-                        recalc();
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const targetDir = btn.getAttribute('data-dir');
+                        setDirection(targetDir, true);
                     });
                 });
             }
@@ -1966,16 +2120,18 @@
                 const stopVal = parseFloat(stopInput.value) || 0;
                 const targetVal = parseFloat(targetInput.value) || 0;
 
-                // 자동 포지션 방향 감지 (사용자가 명시하지 않았더라도 손절가 비교)
-                if (entryVal > 0 && stopVal > 0) {
-                    const detectedDir = stopVal < entryVal ? 'Long' : 'Short';
-                    // 토글 버튼 상태 동기화
-                    if (dirToggle) {
-                        dirToggle.querySelectorAll('.tw-dir-btn').forEach(b => {
-                            b.classList.toggle('active', b.getAttribute('data-dir') === detectedDir);
-                        });
+                // 수동 타이핑 시 방향 자동 감지 (국내 주식이 아닐 때만 진입가/손절가 위치로 동기화)
+                if (currentAsset !== 'krx' && entryVal > 0 && stopVal > 0) {
+                    const naturalDir = stopVal < entryVal ? 'Long' : 'Short';
+                    if (naturalDir !== currentDirection) {
+                        currentDirection = naturalDir;
+                        if (dirToggle) {
+                            dirToggle.querySelectorAll('.tw-dir-btn').forEach(b => {
+                                b.classList.toggle('active', b.getAttribute('data-dir') === currentDirection);
+                            });
+                        }
+                        updateDirectionGuides();
                     }
-                    currentDirection = detectedDir;
                 }
 
                 // 틱/포인트 차이 뱃지 업데이트
@@ -2076,7 +2232,7 @@
                     <!-- 히어로 카드: 추천 진입 수량 -->
                     <div class="tw-calc-hero-qty-box">
                         <div class="lbl">추천 최적 포지션 규모</div>
-                        <div class="qty-val">${res.qty.toLocaleString()} <span class="unit">${res.unitName}</span></div>
+                        <div class="qty-val">${res.qty.toLocaleString()} <span class="unit">${res.unitName} (${res.direction === 'Long' ? '롱' : '숏'})</span></div>
                         <div class="sub-val">총 포지션 가치: ${formatAssetVal(res.notionalValue, currentAsset)} (${formatNumber(res.portfolioPercent, 1)}%)</div>
                     </div>
 
