@@ -130,7 +130,7 @@ c:\Users\SEC\vibcoding\dajavata\dist\
 1. 로컬 경로: `c:\Users\SEC\vibcoding\dajavata\dist` 폴더 이동
 2. 깃허브 저장소: `https://github.com/sjsks1/dajavata-backend` 접속 ➔ `dajavata` 폴더 ➔ `dist` 폴더 이동
 3. `[Add file]` ➔ `[Upload files]` 클릭
-4. 아래 7개 파일을 드래그 앤 드롭:
+4. 아래 파일들을 드래그 앤 드롭:
    - `index.html`
    - `style.css`
    - `app.js`
@@ -138,4 +138,7 @@ c:\Users\SEC\vibcoding\dajavata\dist\
    - `trader_room.css`
    - `chart_scanner.js` [신규 AI 차트 스캐너 엔진]
    - `chart_scanner.css` [신규 AI 차트 스캐너 스타일]
+   - `sitemap.xml` [검색엔진 SEO 사이트맵]
+   - `robots.txt` [검색 로봇 크롤링 안내 파일]
 5. `[Commit changes]` 클릭 ➔ 1~2분 후 자동 배포 완료 (www.dajavata.com 적용)
+

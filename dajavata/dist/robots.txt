@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dajavata.com/sitemap.xml
+Sitemap: https://www.dajavata.com/sitemap.xml
