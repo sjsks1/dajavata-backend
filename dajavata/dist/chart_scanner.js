@@ -444,6 +444,7 @@
             }
         }
     ];
+    window.OVERSEAS_STOCKS = OVERSEAS_STOCKS;
 
     // 기본 시그널 대표 종목 (국내)
     const INITIAL_FEATURED_STOCKS = [

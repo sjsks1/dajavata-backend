@@ -1321,3 +1321,133 @@
         grid-column: span 2;
     }
 }
+
+/* =============================================================
+   실시간 종목 자동완성 검색 드롭다운 (리스크 계산기)
+   ============================================================= */
+.tw-stock-autocomplete-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 290px;
+    overflow-y: auto;
+    background: #0f172a;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 8px;
+    z-index: 1000;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+}
+.tw-stock-autocomplete-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+.tw-stock-autocomplete-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+.tw-stock-autocomplete-header {
+    padding: 7px 12px;
+    font-size: 11px;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 500;
+}
+.tw-stock-autocomplete-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    transition: background 0.12s ease;
+}
+.tw-stock-autocomplete-item:last-child {
+    border-bottom: none;
+}
+.tw-stock-autocomplete-item:hover,
+.tw-stock-autocomplete-item.active {
+    background: rgba(56, 189, 248, 0.14);
+}
+.tw-stock-autocomplete-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.tw-stock-autocomplete-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tw-stock-autocomplete-code {
+    font-size: 11px;
+    color: #64748b;
+    font-family: monospace;
+}
+.tw-stock-autocomplete-badge {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.08);
+    color: #cbd5e1;
+}
+.tw-stock-autocomplete-badge.kospi {
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+.tw-stock-autocomplete-badge.kosdaq {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.tw-stock-autocomplete-badge.nasdaq {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.tw-stock-autocomplete-badge.nyse {
+    background: rgba(168, 85, 247, 0.18);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+.tw-stock-autocomplete-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: right;
+    flex-shrink: 0;
+}
+.tw-stock-autocomplete-price {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+.tw-stock-autocomplete-chg {
+    font-size: 11px;
+    font-weight: 600;
+    min-width: 52px;
+    text-align: right;
+}
+.tw-stock-autocomplete-chg.up {
+    color: #ef4444;
+}
+.tw-stock-autocomplete-chg.down {
+    color: #3b82f6;
+}
+.tw-stock-autocomplete-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: #64748b;
+    font-size: 12px;
+}
+

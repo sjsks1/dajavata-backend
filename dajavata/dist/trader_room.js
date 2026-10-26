@@ -1445,11 +1445,15 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="tw-form-group">
-                                <label>종목명 (또는 종목코드)</label>
+                            <div class="tw-form-group" style="position:relative;">
+                                <label style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span>종목명 (또는 종목코드)</span>
+                                    <span style="font-size:11px; color:#38bdf8; font-weight:normal;"><i class="ph ph-magnifying-glass"></i> 실시간 자동완성</span>
+                                </label>
                                 <div class="tw-input-wrapper">
-                                    <input type="text" id="calc-item-name" value="${passedName || '원익IPS'}" placeholder="예: 삼성전자, 원익IPS">
+                                    <input type="text" id="calc-item-name" value="${passedName}" placeholder="종목명 또는 코드 검색 (예: 원익, 삼성전자, 005930)" autocomplete="off">
                                 </div>
+                                <div id="calc-stock-autocomplete" class="tw-stock-autocomplete-dropdown" style="display:none;"></div>
                             </div>
                         </div>
                     `;
@@ -1461,9 +1465,9 @@
                     if (capitalInput.value === "10000" || capitalInput.value === "5000") {
                         capitalInput.value = "10000000";
                     }
-                    entryInput.placeholder = "예: 32800";
-                    stopInput.placeholder = "예: 31800";
-                    targetInput.placeholder = "예: 35500";
+                    entryInput.placeholder = "종목 선택 시 자동입력 (또는 직접 입력)";
+                    stopInput.placeholder = "종목 선택 시 -4% 자동계산";
+                    targetInput.placeholder = "종목 선택 시 +8% 자동계산";
                 } else if (asset === 'us') {
                     const isNyse = passedMarket.includes('NYSE');
                     const isEtf = passedMarket.includes('ETF');
@@ -1479,11 +1483,15 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="tw-form-group">
-                                <label>티커 / 종목명</label>
+                            <div class="tw-form-group" style="position:relative;">
+                                <label style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span>티커 / 종목명</span>
+                                    <span style="font-size:11px; color:#38bdf8; font-weight:normal;"><i class="ph ph-magnifying-glass"></i> 실시간 검색</span>
+                                </label>
                                 <div class="tw-input-wrapper">
-                                    <input type="text" id="calc-item-name" value="${passedName || 'NVDA'}" placeholder="예: NVDA, AAPL, TSLA">
+                                    <input type="text" id="calc-item-name" value="${passedName}" placeholder="티커 또는 기업명 입력 (예: NVDA, AAPL, TSLA)" autocomplete="off">
                                 </div>
+                                <div id="calc-stock-autocomplete" class="tw-stock-autocomplete-dropdown" style="display:none;"></div>
                             </div>
                             <div class="tw-form-group">
                                 <label>주수 계산 단위</label>
@@ -1681,6 +1689,183 @@
                 }
             };
 
+            const setupStockAutocomplete = () => {
+                const nameInput = container.querySelector('#calc-item-name');
+                const dropdown = container.querySelector('#calc-stock-autocomplete');
+                if (!nameInput || !dropdown) return;
+
+                let debounceTimer = null;
+                let activeIndex = -1;
+                let currentMatches = [];
+
+                const closeDropdown = () => {
+                    dropdown.style.display = 'none';
+                    dropdown.innerHTML = '';
+                    activeIndex = -1;
+                    currentMatches = [];
+                };
+
+                const selectStock = (stock) => {
+                    nameInput.value = stock.name;
+                    
+                    const isOverseas = /^[A-Za-z]+$/.test(stock.code);
+                    const marketSelect = container.querySelector('#calc-market');
+                    if (marketSelect) {
+                        if (stock.market) {
+                            const mUpper = stock.market.toUpperCase();
+                            if (mUpper.includes('KOSPI')) marketSelect.value = 'KOSPI';
+                            else if (mUpper.includes('KOSDAQ')) marketSelect.value = 'KOSDAQ';
+                            else if (mUpper.includes('NYSE')) marketSelect.value = 'NYSE';
+                            else if (mUpper.includes('NASDAQ')) marketSelect.value = 'NASDAQ';
+                            else if (mUpper.includes('ETF')) marketSelect.value = 'ETF';
+                        } else if (stock.code && /^[0-9]+$/.test(stock.code)) {
+                            marketSelect.value = (stock.code.startsWith('0') && parseInt(stock.code, 10) < 100000) ? 'KOSPI' : 'KOSDAQ';
+                        }
+                    }
+
+                    // 당일 현재가 기준 3단계 가격 자동 주입 (진입가, -4% 손절, +8% 익절)
+                    const livePrice = parseFloat(stock.current_price || stock.price || 0);
+                    if (livePrice > 0) {
+                        entryInput.value = livePrice;
+                        if (isOverseas) {
+                            stopInput.value = parseFloat((livePrice * 0.96).toFixed(2));
+                            targetInput.value = parseFloat((livePrice * 1.08).toFixed(2));
+                        } else {
+                            stopInput.value = Math.round(livePrice * 0.96);
+                            targetInput.value = Math.round(livePrice * 1.08);
+                        }
+                    }
+
+                    closeDropdown();
+                    recalc();
+                };
+
+                nameInput.addEventListener('input', (e) => {
+                    clearTimeout(debounceTimer);
+                    const query = e.target.value.trim().toLowerCase();
+                    if (!query || query.length < 1) {
+                        closeDropdown();
+                        return;
+                    }
+
+                    debounceTimer = setTimeout(async () => {
+                        let pool = [];
+                        if (window.allStocks && window.allStocks.length > 0) {
+                            pool = window.allStocks;
+                        } else if (window.loadAllStocks) {
+                            pool = await window.loadAllStocks();
+                        } else if (window.ChartScanner?.getState()?.universeStocks?.length > 0) {
+                            pool = window.ChartScanner.getState().universeStocks;
+                        }
+
+                        const overseasList = window.OVERSEAS_STOCKS || window.ChartScanner?.getState()?.overseasStocks || [];
+
+                        // 1. 국내 종목 필터링 (코드 일치 및 이름 일치 우선 정렬)
+                        const krxMatches = pool.filter(s => {
+                            const name = (s.name || '').toLowerCase();
+                            const code = (s.code || '').toLowerCase();
+                            return name.includes(query) || code.includes(query);
+                        }).sort((a, b) => {
+                            const aStarts = (a.name || '').toLowerCase().startsWith(query);
+                            const bStarts = (b.name || '').toLowerCase().startsWith(query);
+                            if (aStarts && !bStarts) return -1;
+                            if (!aStarts && bStarts) return 1;
+                            return 0;
+                        }).slice(0, 15);
+
+                        // 2. 해외 종목 필터링
+                        const overseasMatches = overseasList.filter(s => {
+                            const name = (s.name || '').toLowerCase();
+                            const code = (s.code || '').toLowerCase();
+                            return name.includes(query) || code.includes(query);
+                        }).slice(0, 5);
+
+                        currentMatches = currentAsset === 'us' 
+                            ? [...overseasMatches, ...krxMatches].slice(0, 15) 
+                            : [...krxMatches, ...overseasMatches].slice(0, 15);
+
+                        if (currentMatches.length === 0) {
+                            dropdown.innerHTML = `<div class="tw-stock-autocomplete-empty">일치하는 종목이 없습니다.</div>`;
+                            dropdown.style.display = 'block';
+                            return;
+                        }
+
+                        dropdown.innerHTML = `
+                            <div class="tw-stock-autocomplete-header">
+                                <span><i class="ph ph-magnifying-glass"></i> 검색 결과 (${currentMatches.length}건)</span>
+                                <span>클릭 시 현재가·손절가 자동 입력</span>
+                            </div>
+                            ${currentMatches.map((s, idx) => {
+                                const price = parseFloat(s.current_price || s.price || 0);
+                                const chg = s.day1 !== undefined && s.day1 !== null ? parseFloat(s.day1) : (s.changeRate !== undefined ? parseFloat(s.changeRate) : 0);
+                                const isUp = chg >= 0;
+                                const chgClass = isUp ? 'up' : 'down';
+                                const sign = isUp ? '+' : '';
+                                const isOverseas = /^[A-Za-z]+$/.test(s.code);
+                                const mkt = s.market || (isOverseas ? 'NASDAQ' : ((s.code.startsWith('0') && parseInt(s.code, 10) < 100000) ? 'KOSPI' : 'KOSDAQ'));
+                                const mktClass = mkt.toLowerCase();
+                                const formattedPrice = isOverseas ? `$${price.toLocaleString()}` : `${price.toLocaleString()}원`;
+
+                                return `
+                                    <div class="tw-stock-autocomplete-item" data-index="${idx}">
+                                        <div class="tw-stock-autocomplete-left">
+                                            <span class="tw-stock-autocomplete-name">${s.name}</span>
+                                            <span class="tw-stock-autocomplete-code">${s.code}</span>
+                                            <span class="tw-stock-autocomplete-badge ${mktClass}">${mkt}</span>
+                                        </div>
+                                        <div class="tw-stock-autocomplete-right">
+                                            <span class="tw-stock-autocomplete-price">${formattedPrice}</span>
+                                            <span class="tw-stock-autocomplete-chg ${chgClass}">${sign}${chg.toFixed(2)}%</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        `;
+                        dropdown.style.display = 'block';
+
+                        dropdown.querySelectorAll('.tw-stock-autocomplete-item').forEach(itemEl => {
+                            itemEl.addEventListener('click', (ev) => {
+                                ev.stopPropagation();
+                                const idx = parseInt(itemEl.getAttribute('data-index'), 10);
+                                if (currentMatches[idx]) {
+                                    selectStock(currentMatches[idx]);
+                                }
+                            });
+                        });
+                    }, 100);
+                });
+
+                nameInput.addEventListener('keydown', (e) => {
+                    if (dropdown.style.display === 'none' || currentMatches.length === 0) return;
+
+                    const items = dropdown.querySelectorAll('.tw-stock-autocomplete-item');
+                    if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        activeIndex = (activeIndex + 1) % items.length;
+                        items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+                        items[activeIndex]?.scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        activeIndex = (activeIndex - 1 + items.length) % items.length;
+                        items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+                        items[activeIndex]?.scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === 'Enter') {
+                        if (activeIndex >= 0 && currentMatches[activeIndex]) {
+                            e.preventDefault();
+                            selectStock(currentMatches[activeIndex]);
+                        }
+                    } else if (e.key === 'Escape') {
+                        closeDropdown();
+                    }
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!nameInput.contains(e.target) && !dropdown.contains(e.target)) {
+                        closeDropdown();
+                    }
+                });
+            };
+
             const bindDynamicEvents = () => {
                 const fSelect = container.querySelector('#calc-futures-symbol');
                 if (fSelect) {
@@ -1711,6 +1896,9 @@
                 dynamicSelects.forEach(sel => {
                     sel.addEventListener('change', recalc);
                 });
+
+                // 실시간 종목 자동완성 검색 바인딩
+                setupStockAutocomplete();
             };
 
             // 자산 탭 클릭 이벤트
@@ -1988,12 +2176,19 @@
 
             // AI 차트 스캐너 등 외부에서 전달된 타점 파라미터 자동 적용
             if (initialParams.entryPrice) entryInput.value = initialParams.entryPrice;
+            else entryInput.value = "";
             if (initialParams.stopPrice) stopInput.value = initialParams.stopPrice;
+            else stopInput.value = "";
             if (initialParams.targetPrice) targetInput.value = initialParams.targetPrice;
+            else targetInput.value = "";
+
+            const itemNameInput = container.querySelector('#calc-item-name');
             if (passedName) {
-                const itemNameInput = container.querySelector('#calc-item-name');
                 if (itemNameInput) itemNameInput.value = passedName;
+            } else {
+                if (itemNameInput) itemNameInput.value = "";
             }
+
             if (passedMarket) {
                 const marketSelect = container.querySelector('#calc-market');
                 if (marketSelect) {
@@ -2010,9 +2205,13 @@
             const resetBtn = container.querySelector('#btn-reset-calc');
             if (resetBtn) {
                 resetBtn.addEventListener('click', () => {
+                    const itemName = container.querySelector('#calc-item-name');
+                    if (itemName) itemName.value = "";
                     entryInput.value = "";
                     stopInput.value = "";
                     targetInput.value = "";
+                    const dropdown = container.querySelector('#calc-stock-autocomplete');
+                    if (dropdown) dropdown.style.display = 'none';
                     recalc();
                 });
             }
