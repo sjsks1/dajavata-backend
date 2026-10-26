@@ -4836,9 +4836,13 @@
             return;
         }
 
+        const isOverseas = anyAlphabet(stock.code);
         window.TraderRoom.navigate('trader-calc', {
+            assetType: isOverseas ? 'us' : 'krx',
+            stockName: stock.name,
             symbol: stock.name,
             code: stock.code,
+            market: stock.market || (isOverseas ? 'NASDAQ' : 'KOSDAQ'),
             entryPrice: stock.price,
             stopPrice: stock.stopPrice,
             targetPrice: stock.targetPrice

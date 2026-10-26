@@ -1397,6 +1397,19 @@
             let riskMode = 'percent';
             let currentDirection = 'Long';
 
+            // 전달받은 종목명 및 시장 정규화
+            const passedName = initialParams.stockName || initialParams.symbol || '';
+            const passedMarket = (initialParams.market || '').toUpperCase();
+
+            // 자산 탭 활성화 상태 동기화
+            container.querySelectorAll('.tw-market-tab-btn').forEach(btn => {
+                if (btn.getAttribute('data-asset') === currentAsset) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
             const capitalInput = container.querySelector('#calc-capital');
             const capitalUnit = container.querySelector('#unit-calc-capital');
             const riskValInput = container.querySelector('#calc-risk-val');
@@ -1420,21 +1433,22 @@
             // 자산별 기본값 세팅 함수
             const renderDynamicFields = (asset) => {
                 if (asset === 'krx') {
+                    const isKospi = passedMarket.includes('KOSPI');
                     dynamicFields.innerHTML = `
                         <div class="tw-input-grid-2">
                             <div class="tw-form-group">
                                 <label>시장 구분</label>
                                 <div class="tw-input-wrapper">
                                     <select id="calc-market">
-                                        <option value="KOSPI">코스피 (KOSPI)</option>
-                                        <option value="KOSDAQ" selected>코스닥 (KOSDAQ)</option>
+                                        <option value="KOSPI" ${isKospi ? 'selected' : ''}>코스피 (KOSPI)</option>
+                                        <option value="KOSDAQ" ${!isKospi ? 'selected' : ''}>코스닥 (KOSDAQ)</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="tw-form-group">
                                 <label>종목명 (또는 종목코드)</label>
                                 <div class="tw-input-wrapper">
-                                    <input type="text" id="calc-item-name" value="${initialParams.stockName || '원익IPS'}" placeholder="예: 삼성전자, 원익IPS">
+                                    <input type="text" id="calc-item-name" value="${passedName || '원익IPS'}" placeholder="예: 삼성전자, 원익IPS">
                                 </div>
                             </div>
                         </div>
@@ -1451,22 +1465,24 @@
                     stopInput.placeholder = "예: 31800";
                     targetInput.placeholder = "예: 35500";
                 } else if (asset === 'us') {
+                    const isNyse = passedMarket.includes('NYSE');
+                    const isEtf = passedMarket.includes('ETF');
                     dynamicFields.innerHTML = `
                         <div class="tw-input-grid-3">
                             <div class="tw-form-group">
                                 <label>거래소</label>
                                 <div class="tw-input-wrapper">
                                     <select id="calc-market">
-                                        <option value="NASDAQ" selected>나스닥 (NASDAQ)</option>
-                                        <option value="NYSE">뉴욕증권거래소 (NYSE)</option>
-                                        <option value="ETF">미국 ETF</option>
+                                        <option value="NASDAQ" ${!isNyse && !isEtf ? 'selected' : ''}>나스닥 (NASDAQ)</option>
+                                        <option value="NYSE" ${isNyse ? 'selected' : ''}>뉴욕증권거래소 (NYSE)</option>
+                                        <option value="ETF" ${isEtf ? 'selected' : ''}>미국 ETF</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="tw-form-group">
                                 <label>티커 / 종목명</label>
                                 <div class="tw-input-wrapper">
-                                    <input type="text" id="calc-item-name" value="NVDA" placeholder="예: NVDA, AAPL, TSLA">
+                                    <input type="text" id="calc-item-name" value="${passedName || 'NVDA'}" placeholder="예: NVDA, AAPL, TSLA">
                                 </div>
                             </div>
                             <div class="tw-form-group">
@@ -1686,8 +1702,15 @@
                         recalc();
                     });
                 }
-                const customInputs = container.querySelectorAll('#calc-custom-mult, #calc-custom-tick, #calc-us-fractional');
-                customInputs.forEach(inp => inp.addEventListener('input', recalc));
+                const dynamicInputs = container.querySelectorAll('#calc-item-name, #calc-custom-name, #calc-custom-mult, #calc-custom-tick');
+                dynamicInputs.forEach(inp => {
+                    inp.addEventListener('input', recalc);
+                    inp.addEventListener('change', recalc);
+                });
+                const dynamicSelects = container.querySelectorAll('#calc-market, #calc-us-fractional, #calc-crypto-lev');
+                dynamicSelects.forEach(sel => {
+                    sel.addEventListener('change', recalc);
+                });
             };
 
             // 자산 탭 클릭 이벤트
@@ -1835,16 +1858,17 @@
                 // 상품 표시 이름
                 let displayName = "선택 종목";
                 if (currentAsset === 'krx') {
-                    displayName = container.querySelector('#calc-item-name')?.value || '국내주식';
+                    displayName = container.querySelector('#calc-item-name')?.value?.trim() || '국내주식';
                 } else if (currentAsset === 'us') {
-                    displayName = (container.querySelector('#calc-item-name')?.value || 'NVDA') + " (US)";
+                    const uName = container.querySelector('#calc-item-name')?.value?.trim() || 'NVDA';
+                    displayName = uName + " (US)";
                 } else if (currentAsset === 'futures') {
                     const fSym = container.querySelector('#calc-futures-symbol')?.value || 'NQ';
                     displayName = (FUTURES_SPECS[fSym]?.name || fSym) + ` [${fSym}]`;
                 } else if (currentAsset === 'crypto') {
                     displayName = (container.querySelector('#calc-crypto-symbol')?.value || 'BTCUSDT');
                 } else if (currentAsset === 'custom') {
-                    displayName = container.querySelector('#calc-custom-name')?.value || 'Custom Asset';
+                    displayName = container.querySelector('#calc-custom-name')?.value?.trim() || 'Custom Asset';
                 }
 
                 resultBox.innerHTML = `
@@ -1953,6 +1977,12 @@
             });
             feeCheck.addEventListener('change', recalc);
 
+            // 동적 필드 영역 이벤트 위임 (종목명 입력, 시장 선택 등 즉각 재계산 반영)
+            if (dynamicFields) {
+                dynamicFields.addEventListener('input', recalc);
+                dynamicFields.addEventListener('change', recalc);
+            }
+
             // 초기 렌더링
             renderDynamicFields(currentAsset);
 
@@ -1960,9 +1990,19 @@
             if (initialParams.entryPrice) entryInput.value = initialParams.entryPrice;
             if (initialParams.stopPrice) stopInput.value = initialParams.stopPrice;
             if (initialParams.targetPrice) targetInput.value = initialParams.targetPrice;
-            if (initialParams.symbol) {
-                const krxSymbol = container.querySelector('#calc-krx-symbol');
-                if (krxSymbol) krxSymbol.value = initialParams.symbol;
+            if (passedName) {
+                const itemNameInput = container.querySelector('#calc-item-name');
+                if (itemNameInput) itemNameInput.value = passedName;
+            }
+            if (passedMarket) {
+                const marketSelect = container.querySelector('#calc-market');
+                if (marketSelect) {
+                    if (passedMarket.includes('KOSPI')) marketSelect.value = 'KOSPI';
+                    else if (passedMarket.includes('KOSDAQ')) marketSelect.value = 'KOSDAQ';
+                    else if (passedMarket.includes('NYSE')) marketSelect.value = 'NYSE';
+                    else if (passedMarket.includes('NASDAQ')) marketSelect.value = 'NASDAQ';
+                    else if (passedMarket.includes('ETF')) marketSelect.value = 'ETF';
+                }
             }
             recalc();
 
