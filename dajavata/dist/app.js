@@ -45,6 +45,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // KST(한국시간 UTC+9) 변환 및 포맷 헬퍼 함수
     function getKstDate(d) {
+        if (typeof d === 'string') {
+            const m = d.trim().match(/^(\d{2})\.(\d{2})\s+(\d{2}):(\d{2})$/);
+            if (m) {
+                const curYear = new Date().getFullYear();
+                return new Date(curYear, parseInt(m[1], 10) - 1, parseInt(m[2], 10), parseInt(m[3], 10), parseInt(m[4], 10));
+            }
+        }
         const base = d ? (d instanceof Date ? d : new Date(d)) : new Date();
         const valid = !isNaN(base.getTime()) ? base : new Date();
         const utc = valid.getTime() + (valid.getTimezoneOffset() * 60000);

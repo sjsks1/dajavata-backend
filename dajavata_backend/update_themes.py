@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 import json
 import time
 import os
+import re
+import requests
 import pandas as pd
 import FinanceDataReader as fdr
 import numpy as np
@@ -51,20 +53,32 @@ async def fetch_themes_cursor(session, cursor=None):
         return [], None
 
 async def fetch_theme_stocks(session, theme_no, semaphore):
-    url = f"https://stock.naver.com/api/domestic/market/theme/{theme_no}/stocklist?marketType=ALL&orderType=priceTop&startIdx=0&pageSize=100"
     headers = {'User-Agent': 'Mozilla/5.0'}
-    
+    stocks = []
+    cursor = None
     async with semaphore:
-        try:
-            async with session.get(url, headers=headers, timeout=10) as res:
-                data = await res.json()
-                stocks = []
-                for item in data:
-                    stocks.append(str(item.get('itemcode', '')))
-                return [s for s in stocks if s]
-        except Exception as e:
-            print(f"Failed to fetch theme stocks for {theme_no}: {e}")
-            return []
+        for _ in range(5):
+            url = f"https://stock.naver.com/api/domestic/market/theme/{theme_no}/stocklist?size=100"
+            if cursor:
+                url += f"&cursor={cursor}"
+            try:
+                async with session.get(url, headers=headers, timeout=10) as res:
+                    if res.status != 200:
+                        break
+                    data = await res.json()
+                    items = data.get('items', []) if isinstance(data, dict) else (data if isinstance(data, list) else [])
+                    for item in items:
+                        c = item.get('itemCode') or item.get('itemcode')
+                        if c:
+                            stocks.append(str(c))
+                    if isinstance(data, dict) and data.get('hasNext') and data.get('cursor'):
+                        cursor = data.get('cursor')
+                    else:
+                        break
+            except Exception as e:
+                print(f"Failed to fetch theme stocks for {theme_no}: {e}")
+                break
+    return [s for s in stocks if s]
 
 async def fetch_stock_integration(session, code, semaphore):
     url = f"https://m.stock.naver.com/api/stock/{code}/integration"
@@ -77,19 +91,62 @@ async def fetch_stock_integration(session, code, semaphore):
                 result = {'code': code, 'PER': np.nan, 'PBR': np.nan, 'EPS': np.nan}
                 if 'totalInfos' in data:
                     for info in data['totalInfos']:
-                        key = info.get('key')
-                        if key in ['PER', 'PBR', 'EPS']:
-                            result[key] = safe_float(info.get('value').replace('배', '').replace('원', ''))
+                        info_code = (info.get('code') or '').lower()
+                        info_key = (info.get('key') or '').upper()
+                        val_str = str(info.get('value', '')).replace('배', '').replace('원', '').replace(',', '').strip()
+                        if info_code == 'per' or info_key == 'PER':
+                            result['PER'] = safe_float(val_str)
+                        elif info_code == 'pbr' or info_key == 'PBR':
+                            result['PBR'] = safe_float(val_str)
+                        elif info_code == 'eps' or info_key == 'EPS':
+                            result['EPS'] = safe_float(val_str)
                 return result
         except Exception as e:
             return {'code': code, 'PER': np.nan, 'PBR': np.nan, 'EPS': np.nan}
 
+def fetch_daily_candles(code):
+    try:
+        url = f"https://fchart.stock.naver.com/sise.nhn?symbol={code}&timeframe=day&count=750&requestType=0"
+        res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=4)
+        if res.status_code != 200 or not res.text:
+            return pd.DataFrame()
+        raw_items = re.findall(r'<item data=[\'"](.*?)[\'"]', res.text)
+        if not raw_items:
+            return pd.DataFrame()
+        records = []
+        for it in raw_items:
+            parts = it.split('|')
+            if len(parts) >= 6:
+                records.append({
+                    'Date': parts[0],
+                    'Open': float(parts[1]),
+                    'High': float(parts[2]),
+                    'Low': float(parts[3]),
+                    'Close': float(parts[4]),
+                    'Volume': float(parts[5])
+                })
+        if not records:
+            return pd.DataFrame()
+        df = pd.DataFrame(records)
+        df['Date'] = pd.to_datetime(df['Date'], format='%Y%m%d', errors='coerce')
+        df.set_index('Date', inplace=True)
+        return df
+    except Exception:
+        return pd.DataFrame()
+
 def calculate_stock_metrics(code, df_krx):
     try:
-        # Fetch 3 years of daily data
-        end_date = pd.Timestamp.today()
-        start_date = end_date - pd.DateOffset(years=3)
-        df = fdr.DataReader(code, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+        # Fast direct fetch with 4s timeout (avoid hanging)
+        df = fetch_daily_candles(code)
+        
+        # Fallback to fdr if direct fails
+        if df.empty or len(df) < 5:
+            try:
+                end_date = pd.Timestamp.today()
+                start_date = end_date - pd.DateOffset(years=3)
+                df = fdr.DataReader(code, start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+            except Exception:
+                pass
         
         if df.empty or len(df) < 5:
             return None
@@ -104,7 +161,7 @@ def calculate_stock_metrics(code, df_krx):
         
         # 52주
         if len(df) > 250:
-            cutoff = df.index.max() - pd.Timedelta(weeks=52)
+            cutoff = df.index.max() - pd.DateOffset(weeks=52)
             df_52w = df[df.index >= cutoff]
         else:
             df_52w = df
@@ -149,7 +206,6 @@ def calculate_stock_metrics(code, df_krx):
             'marcap': float(marcap)
         }
     except Exception as e:
-        print(f"Error calculating metrics for {code}: {e}")
         return None
 
 async def main():
@@ -206,24 +262,29 @@ async def main():
     integration_dict = {r['code']: r for r in integration_results}
     
     # 5. Calculate historical metrics for unique stocks (Run in ThreadPool to avoid blocking)
-    print("Calculating historical metrics (this may take a while)...")
+    print("Calculating historical metrics with thread pool...")
     stock_metrics_dict = {}
-    
-    loop = asyncio.get_running_loop()
     
     # Get current Korean Standard Time (KST)
     kst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
     kst_update_str = kst_now.strftime("%m.%d %H:%M")
 
-    # Process sequentially to avoid FDR rate limits
-    for i, code in enumerate(unique_codes):
-        if i % 10 == 0:
-            print(f"Processed {i}/{len(unique_codes)} stocks...")
-        metrics = await loop.run_in_executor(None, calculate_stock_metrics, code, df_krx)
-        if metrics:
-            metrics.update(integration_dict.get(code, {})) # merge PBR/PER
-            metrics['update'] = kst_update_str
-            stock_metrics_dict[code] = metrics
+    from concurrent.futures import ThreadPoolExecutor
+    loop = asyncio.get_running_loop()
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        batch_size = 50
+        for i in range(0, len(unique_codes), batch_size):
+            batch = unique_codes[i:i+batch_size]
+            tasks = [loop.run_in_executor(executor, calculate_stock_metrics, code, df_krx) for code in batch]
+            results = await asyncio.gather(*tasks)
+            for code, metrics in zip(batch, results):
+                if metrics:
+                    metrics.update(integration_dict.get(code, {})) # merge PBR/PER
+                    metrics['update'] = kst_update_str
+                    stock_metrics_dict[code] = metrics
+            if (i // batch_size) % 5 == 0 or (i + batch_size) >= len(unique_codes):
+                print(f"Processed {min(i + batch_size, len(unique_codes))}/{len(unique_codes)} stocks...")
 
     print(f"Successfully calculated metrics for {len(stock_metrics_dict)}/{len(unique_codes)} stocks.")
 

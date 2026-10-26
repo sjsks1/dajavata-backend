@@ -583,9 +583,10 @@ def get_themes():
         os.path.join(os.path.dirname(__file__), '..', 'data', 'theme_cache.json'),
     ]
     
-    # 1. theme_cache.json 파일 후보군 순차 검증
-    for cache_file in cache_candidates:
-        if os.path.exists(cache_file) and os.path.getsize(cache_file) > 10:
+    # 1. theme_cache.json 파일 후보군 중 가장 최신 파일 우선 검증
+    existing_caches = [f for f in cache_candidates if os.path.exists(f) and os.path.getsize(f) > 10]
+    existing_caches.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    for cache_file in existing_caches:
             try:
                 mtime = os.path.getmtime(cache_file)
                 kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
@@ -644,8 +645,9 @@ def get_themes():
         os.path.join(os.path.dirname(__file__), 'data', 'theme_details.json'),
         os.path.join(os.path.dirname(__file__), '..', 'data', 'theme_details.json'),
     ]
-    for detail_file in detail_candidates:
-        if os.path.exists(detail_file) and os.path.getsize(detail_file) > 10:
+    existing_details = [f for f in detail_candidates if os.path.exists(f) and os.path.getsize(f) > 10]
+    existing_details.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    for detail_file in existing_details:
             try:
                 mtime = os.path.getmtime(detail_file)
                 kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
@@ -771,11 +773,9 @@ def get_stocks_fundamentals():
         os.path.join(os.path.dirname(__file__), 'data', 'all_stocks.json'),
         os.path.join(os.path.dirname(__file__), '..', 'data', 'all_stocks.json')
     ]
-    file_path = None
-    for p in candidate_paths:
-        if os.path.exists(p) and os.path.getsize(p) > 1000:
-            file_path = p
-            break
+    existing_stock_files = [p for p in candidate_paths if os.path.exists(p) and os.path.getsize(p) > 1000]
+    existing_stock_files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    file_path = existing_stock_files[0] if existing_stock_files else None
 
     if file_path:
         try:
