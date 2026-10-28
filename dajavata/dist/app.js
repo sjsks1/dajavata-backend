@@ -43,6 +43,76 @@ document.addEventListener('DOMContentLoaded', () => {
     window.allStocks = [];
     window.allInsights = [];
 
+    // =========================================================================
+    // [SEO & Deep-Linking] URL 라우터 및 동적 메타태그 관리
+    // =========================================================================
+    const DEFAULT_SITE_TITLE = "DAJAVATA(다자바타) - 주식 테마 수급 분석 & AI 차트 스캐너";
+    const DEFAULT_SITE_DESC = "실시간 국내외 주식 테마 수급 분석, AI 차트 스캐너, ICT 스마트 머니 시그널 및 심층 기업 분석 칼럼 제공";
+
+    function setPageSeo(title, desc, canonicalUrl) {
+        try {
+            document.title = title ? `${title} | DAJAVATA(다자바타)` : DEFAULT_SITE_TITLE;
+            
+            let metaDesc = document.querySelector('meta[name="description"]');
+            if (!metaDesc) {
+                metaDesc = document.createElement('meta');
+                metaDesc.name = 'description';
+                document.head.appendChild(metaDesc);
+            }
+            metaDesc.content = desc || DEFAULT_SITE_DESC;
+
+            let ogTitle = document.querySelector('meta[property="og:title"]');
+            if (ogTitle) ogTitle.content = document.title;
+            
+            let ogDesc = document.querySelector('meta[property="og:description"]');
+            if (ogDesc) ogDesc.content = desc || DEFAULT_SITE_DESC;
+
+            let ogUrl = document.querySelector('meta[property="og:url"]');
+            if (ogUrl) ogUrl.content = canonicalUrl || window.location.href;
+
+            let linkCanon = document.querySelector('link[rel="canonical"]');
+            if (linkCanon) linkCanon.href = canonicalUrl || window.location.href;
+        } catch (e) {
+            console.warn('setPageSeo failed:', e);
+        }
+    }
+
+    function updateUrlState(params, replace = false) {
+        try {
+            const url = new URL(window.location.href);
+            Object.keys(params).forEach(k => {
+                if (params[k] === null || params[k] === undefined || params[k] === '') {
+                    url.searchParams.delete(k);
+                } else {
+                    url.searchParams.set(k, params[k]);
+                }
+            });
+            if (replace) {
+                window.history.replaceState({ ...params }, '', url.toString());
+            } else {
+                window.history.pushState({ ...params }, '', url.toString());
+            }
+        } catch (e) {
+            console.warn('updateUrlState failed:', e);
+        }
+    }
+
+    // 간단한 토스트 알림 헬퍼
+    function showToast(message) {
+        let toast = document.getElementById('dajavata-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'dajavata-toast';
+            toast.style.cssText = 'position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.95); color:#fff; border:1px solid #3b82f6; padding:10px 22px; border-radius:8px; font-size:13px; font-weight:600; z-index:99999; box-shadow:0 8px 24px rgba(0,0,0,0.5); opacity:0; transition:opacity 0.2s ease; pointer-events:none;';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.style.opacity = '1';
+        setTimeout(() => {
+            toast.style.opacity = '0';
+        }, 2200);
+    }
+
     // KST(한국시간 UTC+9) 변환 및 포맷 헬퍼 함수
     function getKstDate(d) {
         if (typeof d === 'string') {
@@ -229,6 +299,95 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const searchInput = document.querySelector('.search-box input');
 
+    // =========================================================================
+    // [Deep-Linking Router] URL 파라미터 기반 뷰 디스패처 & 브라우저 히스토리 연동
+    // =========================================================================
+    async function dispatchRouteFromUrl(isInitial = false) {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const view = params.get('view');
+            const id = params.get('id');
+            const name = params.get('name');
+            const tab = params.get('tab');
+            const action = params.get('action');
+
+            // 1. 특정 인사이트 글 단독 조회 (?view=insight&id=xxx)
+            if (view === 'insight' && id) {
+                showDefaultView();
+                document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
+                const insightLi = document.querySelector('#insight-menu-list li[data-action="insights"]');
+                if (insightLi) insightLi.classList.add('active');
+
+                tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">칼럼 본문을 불러오는 중입니다...</td></tr>';
+                const insights = (window.allInsights && window.allInsights.length > 0) ? window.allInsights : await loadInsights();
+                
+                // ID 또는 종목코드/제목으로 일치하는 글 탐색
+                const targetPost = insights.find(p => String(p.id) === String(id) || (p.title && p.title.includes(id)));
+                if (targetPost) {
+                    renderSingleInsight(targetPost, false);
+                    return true;
+                } else {
+                    renderTable(insights, 'insights');
+                    return true;
+                }
+            }
+
+            // 2. 인사이트 목록 (?view=insights)
+            if (view === 'insights') {
+                showDefaultView();
+                document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
+                const insightLi = document.querySelector('#insight-menu-list li[data-action="insights"]');
+                if (insightLi) insightLi.classList.add('active');
+
+                headerTitle.textContent = "기업 개요 및 차트 분석";
+                themeBadge.textContent = "인사이트";
+                setPageSeo("기업 개요 및 차트 분석", "다자바타 종목 소개 및 시장 분석 칼럼");
+                tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">노션에서 데이터를 불러오는 중입니다...</td></tr>';
+                const insights = (window.allInsights && window.allInsights.length > 0) ? window.allInsights : await loadInsights();
+                const thead = document.querySelector('#theme-table thead');
+                if (thead) {
+                    thead.innerHTML = `<tr><th style="width: 15%">작성일</th><th style="width: 85%">기업 개요 및 차트 분석</th></tr>`;
+                }
+                renderTable(insights, 'insights');
+                return true;
+            }
+
+            // 3. 특정 테마 상세 (?view=theme&name=xxx)
+            if (view === 'theme' && name) {
+                showDefaultView();
+                loadThemeDetails(decodeURIComponent(name));
+                return true;
+            }
+
+            // 4. AI 차트 스캐너 (?view=scanner)
+            if (view === 'scanner') {
+                if (window.ChartScanner) {
+                    window.ChartScanner.show();
+                    setPageSeo("AI 차트 스캐너", "다자바타 AI 실시간 차트 분석 및 시그널 랩");
+                    return true;
+                }
+            }
+
+            // 5. 트레이더 룸 (?view=trader&tab=xxx)
+            if (view === 'trader') {
+                if (window.ChartScanner) window.ChartScanner.hide();
+                if (window.TraderRoom) {
+                    window.TraderRoom.navigate(tab || 'today');
+                    setPageSeo("트레이더 룸", "다자바타 트레이더 맞춤형 매매 시나리오 및 리스크 관리 도구");
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn('dispatchRouteFromUrl error:', e);
+        }
+        return false;
+    }
+
+    // 브라우저 뒤로가기 / 앞으로가기 이벤트 연동
+    window.addEventListener('popstate', () => {
+        dispatchRouteFromUrl(false);
+    });
+
     tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...<br><span style="font-size: 13px;">(무료 서버 특성상 첫 접속 시 최대 1분 정도 소요될 수 있습니다)</span></td></tr>';
     
     // Fetch data
@@ -237,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const serverDate = response.headers.get('date');
             return response.json().then(data => ({ data, serverDate }));
         })
-        .then(({ data, serverDate }) => {
+        .then(async ({ data, serverDate }) => {
             window.allThemes = data.themes || [];
             if (data.updated_at) {
                 window._themeUpdatedAt = new Date(data.updated_at);
@@ -249,8 +408,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.innerHTML = '<tr><td colspan="15" class="center">데이터를 불러올 수 없습니다. API 연결을 확인해주세요.</td></tr>';
                 return;
             }
-            // 최초 접속 시 전체 테마 렌더링
-            renderTable(window.allThemes, 'themes');
+
+            // URL 딥링크가 있는 경우 해당 화면 먼저 실행, 없으면 기본 전체 테마 렌더링
+            const dispatched = await dispatchRouteFromUrl(true);
+            if (!dispatched) {
+                renderTable(window.allThemes, 'themes');
+            }
         })
         .catch(error => {
             console.error('Error fetching themes:', error);
@@ -682,6 +845,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const backBtn = document.getElementById('back-to-themes');
             if (backBtn) {
                 backBtn.addEventListener('click', () => {
+                    updateUrlState({ view: null, name: null, id: null, tab: null, action: null });
+                    setPageSeo();
                     headerTitle.textContent = previousState.headerTitle || "전체 테마";
                     themeBadge.textContent = previousState.themeBadge || "테마";
                     renderTable(previousState.dataList || window.allThemes, previousState.mode || 'themes', false);
@@ -712,7 +877,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderSingleInsight(post) {
+    function renderSingleInsight(post, updateHistory = true) {
+        if (!post) return;
+        
         headerTitle.textContent = post.title;
         themeBadge.textContent = "칼럼 전문";
         const thead = document.querySelector('#theme-table thead');
@@ -722,21 +889,95 @@ document.addEventListener('DOMContentLoaded', () => {
         const tr = document.createElement('tr');
         const formattedContent = blocksToHtml(post.blocks);
         
+        // SEO 메타태그 및 딥링크 URL 갱신
+        const summaryText = getBlocksText(post.blocks).substring(0, 140).replace(/\s+/g, ' ');
+        setPageSeo(post.title, summaryText || `${post.title} - 다자바타 기업 분석 칼럼`);
+        if (updateHistory) {
+            updateUrlState({ view: 'insight', id: post.id });
+        }
+
         tr.innerHTML = `
-            <td colspan="10" style="padding: 30px;">
-                <div style="max-width: 800px; margin: 0 auto; line-height: 1.8; color: var(--text-main); font-size: 1.05rem;">
-                    <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">작성일: ${post.date}</div>
-                    ${formattedContent}
+            <td colspan="10" style="padding: 24px 20px;">
+                <div class="insight-article-container">
+                    <!-- Google AdSense Top Slot (상단 배너 광고 공간) -->
+                    <div class="dajavata-ad-slot ad-slot-top" id="ad-insight-top">
+                        <!-- 구글 애드센스 승인 후 아래 주석 해제 및 코드 활성화 -->
+                        <!--
+                        <ins class="adsbygoogle"
+                             style="display:block"
+                             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                             data-ad-slot="XXXXXXXXXX"
+                             data-ad-format="auto"
+                             data-full-width-responsive="true"></ins>
+                        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+                        -->
+                    </div>
+
+                    <div class="insight-meta-bar">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <i class="ph ph-calendar"></i>
+                            <span>작성일: ${post.date || '-'}</span>
+                        </div>
+                        <button id="copy-insight-link-btn" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:4px 12px; border-radius:6px; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s ease;">
+                            <i class="ph ph-share-network"></i> 링크 복사
+                        </button>
+                    </div>
+
+                    <div class="insight-body-content">
+                        ${formattedContent}
+                    </div>
+
+                    <!-- Google AdSense Bottom Slot (하단 피드 광고 공간) -->
+                    <div class="dajavata-ad-slot ad-slot-bottom" id="ad-insight-bottom">
+                        <!-- 구글 애드센스 승인 후 아래 주석 해제 및 코드 활성화 -->
+                        <!--
+                        <ins class="adsbygoogle"
+                             style="display:block"
+                             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+                             data-ad-slot="YYYYYYYYYY"
+                             data-ad-format="auto"
+                             data-full-width-responsive="true"></ins>
+                        <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+                        -->
+                    </div>
+
+                    <!-- 법적 면책 고지 카드 (Google YMYL & 애드센스 필수 충족) -->
+                    <div class="insight-disclaimer-card">
+                        <div class="insight-disclaimer-header">
+                            <i class="ph-bold ph-warning-circle"></i> 투자 유의사항 및 법적 면책 고지 (Disclaimer)
+                        </div>
+                        <p class="insight-disclaimer-text">
+                            본 기업 분석 및 투자 인사이트는 금융감독원 전자공시시스템(DART), 한국IR협의회, 한국거래소(KRX) 공시 등 신뢰할 수 있는 공개 자료를 바탕으로 작성되었으나, 데이터의 완전성과 정확성을 100% 보장할 수는 없습니다.<br>
+                            본 칼럼은 <strong>정보 제공 및 기술적 연구 목적으로만 제공</strong>되며, 특정 증권 또는 금융투자상품의 매수·매도를 추천하거나 투자 수익을 보장하지 않습니다. 모든 매매 판단과 그에 따른 투자 결과의 법적 책임은 <strong>투자자 본인</strong>에게 귀속됩니다.
+                        </p>
+                    </div>
                 </div>
             </td>
         `;
         tbody.appendChild(tr);
 
+        // 링크 복사 이벤트 바인딩
+        const copyBtn = document.getElementById('copy-insight-link-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const currentUrl = window.location.href;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(currentUrl).then(() => {
+                        showToast('칼럼 고유 링크가 클립보드에 복사되었습니다.');
+                    }).catch(() => {
+                        showToast('링크 복사에 실패했습니다.');
+                    });
+                } else {
+                    showToast('링크 복사 기능이 지원되지 않는 브라우저입니다.');
+                }
+            });
+        }
+
         // Add back button
         const footerTr = document.createElement('tr');
         footerTr.innerHTML = `
-            <td colspan="10" class="center" style="padding: 20px;">
-                <button id="back-to-insights" style="padding: 10px 20px; background: var(--bg-card); color: white; border: 1px solid var(--border); border-radius: 5px; cursor: pointer;">
+            <td colspan="10" class="center" style="padding: 24px 10px 40px;">
+                <button id="back-to-insights" style="padding: 10px 22px; background: var(--bg-card); color: white; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
                     <i class="ph ph-arrow-left"></i> 목록으로 돌아가기
                 </button>
             </td>
@@ -744,8 +985,10 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.appendChild(footerTr);
 
         document.getElementById('back-to-insights').addEventListener('click', () => {
-            headerTitle.textContent = "시장 인사이트 (칼럼)";
+            headerTitle.textContent = "기업 개요 및 차트 분석";
             themeBadge.textContent = "인사이트";
+            updateUrlState({ view: 'insights', id: null });
+            setPageSeo("기업 개요 및 차트 분석", "다자바타 종목 소개 및 시장 분석 칼럼");
             renderTable(window.allInsights, 'insights');
         });
     }
@@ -756,6 +999,10 @@ document.addEventListener('DOMContentLoaded', () => {
         headerTitle.textContent = themeName + " 테마주";
         themeBadge.textContent = "테마상세";
         tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">해당 테마의 종목 데이터를 불러오는 중입니다...</td></tr>';
+
+        // URL 및 SEO 갱신
+        updateUrlState({ view: 'theme', name: themeName, id: null, tab: null, action: null });
+        setPageSeo(`${themeName} 테마주 분석`, `${themeName} 관련 종목 실시간 수급 및 시세 지표`);
 
         // 0단계: 메모리 캐시 확인 (0ms 즉시 렌더링)
         if (window.themeDetailsCache && window.themeDetailsCache[themeName]) {
@@ -956,6 +1203,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 previousState.themeBadge = themeBadge.textContent;
             }
 
+            // URL 및 SEO 갱신
+            updateUrlState({ view: null, id: null, name: null, tab: null, action: action === 'all' ? null : action });
+            setPageSeo();
+
             if (window.allThemes.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...</td></tr>';
                 return;
@@ -987,6 +1238,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 previousState.headerTitle = headerTitle.textContent;
                 previousState.themeBadge = themeBadge.textContent;
             }
+
+            // URL 및 SEO 갱신
+            updateUrlState({ view: 'stocks', action: action, id: null, name: null, tab: null });
+            setPageSeo(headerTitle.textContent, `다자바타 조건별 종목 분석 - ${headerTitle.textContent}`);
 
             tbody.innerHTML = '<tr><td colspan="12" class="center" style="padding: 40px; color: var(--text-muted);">전 종목 데이터를 불러오는 중입니다...</td></tr>';
 
@@ -1040,6 +1295,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 previousState.themeBadge = themeBadge.textContent;
             }
 
+            // URL 및 SEO 갱신
+            updateUrlState({ view: 'insights', id: null, name: null, tab: null, action: null });
+            setPageSeo("기업 개요 및 차트 분석", "다자바타 종목 소개 및 시장 분석 칼럼");
+
             tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">노션에서 데이터를 불러오는 중입니다...</td></tr>';
 
             const insights = await loadInsights();
@@ -1066,6 +1325,8 @@ document.addEventListener('DOMContentLoaded', () => {
     scannerMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
             e.preventDefault();
+            updateUrlState({ view: 'scanner', id: null, name: null, tab: null, action: null });
+            setPageSeo("AI 차트 스캐너", "다자바타 AI 실시간 차트 분석 및 시그널 랩");
             if (window.ChartScanner) {
                 window.ChartScanner.show();
             }
@@ -1078,6 +1339,8 @@ document.addEventListener('DOMContentLoaded', () => {
         menu.addEventListener('click', (e) => {
             e.preventDefault();
             const action = menu.getAttribute('data-action');
+            updateUrlState({ view: 'trader', tab: action, id: null, name: null, action: null });
+            setPageSeo("트레이더 룸", "다자바타 트레이더 맞춤형 매매 시나리오 및 리스크 관리 도구");
             if (window.ChartScanner) {
                 window.ChartScanner.hide();
             }
