@@ -54,7 +54,7 @@
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <a href="/" style="text-decoration: none; color: inherit;">
-                    <div class="logo">
+                    <div class="logo" id="dajavata-brand-logo" title="DAJAVATA" style="cursor: pointer;">
                         <i class="ph-fill ph-trend-up"></i>
                         <span style="font-weight: 900; letter-spacing: 1px;">DAJAVATA</span>
                     </div>
@@ -194,8 +194,8 @@
                     <button type="button" class="footer-link-btn" data-legal="support">고객 지원</button>
                     <span class="footer-dot">·</span>
                     <button type="button" class="footer-link-btn" data-legal="sources">데이터 출처</button>
-                    <span class="footer-dot">·</span>
-                    <button type="button" class="footer-link-btn" id="footer-admin-btn" title="관리자 모드 전환"><i class="ph ph-lock-key"></i> 관리자</button>
+                    <span class="footer-dot" id="footer-admin-dot" style="display: none;">·</span>
+                    <button type="button" class="footer-admin-logout-btn" id="footer-admin-btn" style="display: none; background: transparent; border: none; color: #f87171; font-size: 11px; cursor: pointer; align-items: center; gap: 4px;" title="관리자 모드 종료"><i class="ph ph-sign-out"></i> 관리자 로그아웃</button>
                     
                     <button type="button" class="footer-theme-toggle" id="footer-theme-toggle" title="화면 테마 전환">
                         <i class="ph ph-sun"></i>
@@ -340,7 +340,7 @@
     </div>
 
     <!-- 1. 관리자 인증 모달 -->
-    <div id="dajavata-admin-auth-modal" class="dajavata-modal-overlay" style="display: none;">
+    <div id="dajavata-admin-auth-modal" class="dajavata-modal-overlay" style="display: none; z-index: 12000;">
         <div class="dajavata-modal-box" style="max-width: 380px;">
             <div class="dajavata-modal-header">
                 <div class="modal-title-group">
@@ -355,6 +355,7 @@
             <div class="dajavata-modal-body" style="padding: 24px;">
                 <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">칼럼 작성·수정·삭제 권한을 위한 관리자 PIN 번호 4자리를 입력하세요.</p>
                 <input type="password" id="admin-pin-input" maxlength="10" placeholder="PIN 입력" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 12px; border-radius: 8px; color: white; font-size: 18px; text-align: center; letter-spacing: 6px; outline: none;">
+                <div id="admin-pin-error" style="display: none; color: #ef4444; font-size: 12px; margin-top: 10px; text-align: center; line-height: 1.4;">PIN 번호가 일치하지 않습니다.</div>
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
                     <button id="admin-auth-cancel-btn" style="flex: 1; padding: 10px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; cursor: pointer; font-family: inherit;">취소</button>
                     <button id="admin-auth-submit-btn" style="flex: 1; padding: 10px; background: #2563eb; border: none; color: white; border-radius: 6px; font-weight: 700; cursor: pointer; font-family: inherit;">인증하기</button>
@@ -364,7 +365,7 @@
     </div>
 
     <!-- 2. 다자바타 자체 관리자 웹 에디터 모달 (풀스크린 다크 테마) -->
-    <div id="dajavata-editor-modal" class="dajavata-modal-overlay" style="display: none;">
+    <div id="dajavata-editor-modal" class="dajavata-modal-overlay" style="display: none; z-index: 12500;">
         <div class="dajavata-modal-box" style="max-width: 980px; width: 95vw; height: 90vh; display: flex; flex-direction: column;">
             <div class="dajavata-modal-header" style="flex-shrink: 0;">
                 <div class="modal-title-group">
@@ -441,6 +442,6 @@
     
     <script src="chart_scanner.js?v=17"></script>
     <script src="trader_room.js?v=7"></script>
-    <script src="app.js?v=17"></script>
+    <script src="app.js?v=19"></script>
 </body>
 </html>

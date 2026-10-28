@@ -724,7 +724,7 @@ def get_themes():
                             "rsi_d": "-",
                             "rsi_w": "-",
                             "rsi_m": "-",
-                            "update": t.get("update") or update_str,
+                            "update": update_str,
                             "score": t.get("score", 100)
                         })
                     return {"themes": sanitize(formatted_themes), "updated_at": updated_iso}

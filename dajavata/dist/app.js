@@ -129,19 +129,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function formatKstTime(rawVal, fallbackDate) {
-        if (rawVal && rawVal !== '오늘' && rawVal !== '-') {
-            if (/^\d{2}\.\d{2} \d{2}:\d{2}$/.test(rawVal)) return rawVal;
-            const parsed = new Date(rawVal);
-            if (!isNaN(parsed.getTime())) {
-                const kst = getKstDate(parsed);
-                const mm = String(kst.getMonth() + 1).padStart(2, '0');
-                const dd = String(kst.getDate()).padStart(2, '0');
-                const hh = String(kst.getHours()).padStart(2, '0');
-                const mi = String(kst.getMinutes()).padStart(2, '0');
-                return `${mm}.${dd} ${hh}:${mi}`;
-            }
+        const activeDate = fallbackDate || window._themeUpdatedAt || window._stockUpdatedAt;
+        if (!rawVal || rawVal === '오늘' || rawVal === '-') {
+            const kst = getKstDate(activeDate);
+            const mm = String(kst.getMonth() + 1).padStart(2, '0');
+            const dd = String(kst.getDate()).padStart(2, '0');
+            const hh = String(kst.getHours()).padStart(2, '0');
+            const mi = String(kst.getMinutes()).padStart(2, '0');
+            return `${mm}.${dd} ${hh}:${mi}`;
         }
-        const kst = getKstDate(fallbackDate || window._themeUpdatedAt || window._stockUpdatedAt);
+        if (/^\d{2}\.\d{2} \d{2}:\d{2}$/.test(rawVal)) {
+            if (activeDate) {
+                const kstActive = getKstDate(activeDate);
+                const rawParsed = getKstDate(rawVal);
+                if (kstActive.getTime() > rawParsed.getTime()) {
+                    const mm = String(kstActive.getMonth() + 1).padStart(2, '0');
+                    const dd = String(kstActive.getDate()).padStart(2, '0');
+                    const hh = String(kstActive.getHours()).padStart(2, '0');
+                    const mi = String(kstActive.getMinutes()).padStart(2, '0');
+                    return `${mm}.${dd} ${hh}:${mi}`;
+                }
+            }
+            return rawVal;
+        }
+        const parsed = new Date(rawVal);
+        if (!isNaN(parsed.getTime())) {
+            const kst = getKstDate(parsed);
+            if (activeDate) {
+                const kstActive = getKstDate(activeDate);
+                if (kstActive.getTime() > kst.getTime()) {
+                    const mm = String(kstActive.getMonth() + 1).padStart(2, '0');
+                    const dd = String(kstActive.getDate()).padStart(2, '0');
+                    const hh = String(kstActive.getHours()).padStart(2, '0');
+                    const mi = String(kstActive.getMinutes()).padStart(2, '0');
+                    return `${mm}.${dd} ${hh}:${mi}`;
+                }
+            }
+            const mm = String(kst.getMonth() + 1).padStart(2, '0');
+            const dd = String(kst.getDate()).padStart(2, '0');
+            const hh = String(kst.getHours()).padStart(2, '0');
+            const mi = String(kst.getMinutes()).padStart(2, '0');
+            return `${mm}.${dd} ${hh}:${mi}`;
+        }
+        const kst = getKstDate(activeDate);
         const mm = String(kst.getMonth() + 1).padStart(2, '0');
         const dd = String(kst.getDate()).padStart(2, '0');
         const hh = String(kst.getHours()).padStart(2, '0');
@@ -1675,26 +1705,59 @@ document.addEventListener('DOMContentLoaded', () => {
             window.isDajavataAdmin = isAdmin;
             if (adminNewPostBtn) adminNewPostBtn.style.display = isAdmin ? 'inline-flex' : 'none';
             if (adminActiveBadge) adminActiveBadge.style.display = isAdmin ? 'inline-flex' : 'none';
+            if (footerAdminBtn) footerAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+            const footerAdminDot = document.getElementById('footer-admin-dot');
+            if (footerAdminDot) footerAdminDot.style.display = isAdmin ? 'inline-block' : 'none';
         }
         updateAdminUI();
 
-        // 1. PIN 인증 모달
+        // 1. PIN 인증 모달 (보안 및 무차별 대입 방지)
         function openAuthModal() {
             if (!adminAuthModal) return;
             if (adminPinInput) adminPinInput.value = '';
-            if (adminPinError) adminPinError.style.display = 'none';
+            if (adminPinError) {
+                adminPinError.style.display = 'none';
+                adminPinError.textContent = 'PIN 번호가 일치하지 않습니다.';
+            }
+
+            // 5회 연속 실패 락아웃 검사
+            const lockoutUntil = parseInt(sessionStorage.getItem('dajavata_admin_lockout') || '0', 10);
+            const now = Date.now();
+            if (now < lockoutUntil) {
+                const remainSec = Math.ceil((lockoutUntil - now) / 1000);
+                if (adminPinError) {
+                    adminPinError.textContent = `연속 5회 실패로 입력이 일시 제한되었습니다. (${remainSec}초 후 재시도)`;
+                    adminPinError.style.display = 'block';
+                }
+            }
+
             adminAuthModal.style.display = 'flex';
-            setTimeout(() => { if (adminPinInput) adminPinInput.focus(); }, 100);
+            adminAuthModal.classList.add('active');
+            setTimeout(() => { if (adminPinInput) adminPinInput.focus(); }, 120);
         }
 
         function closeAuthModal() {
             if (!adminAuthModal) return;
+            adminAuthModal.classList.remove('active');
             adminAuthModal.style.display = 'none';
         }
 
         async function handleAuthSubmit() {
+            const lockoutUntil = parseInt(sessionStorage.getItem('dajavata_admin_lockout') || '0', 10);
+            const now = Date.now();
+            if (now < lockoutUntil) {
+                const remainSec = Math.ceil((lockoutUntil - now) / 1000);
+                if (adminPinError) {
+                    adminPinError.textContent = `비밀번호 5회 연속 오류로 입력이 차단되었습니다. (${remainSec}초 남음)`;
+                    adminPinError.style.display = 'block';
+                }
+                return;
+            }
+
             const pin = (adminPinInput ? adminPinInput.value : '').trim();
             if (pin === '4537') {
+                sessionStorage.removeItem('dajavata_admin_fails');
+                sessionStorage.removeItem('dajavata_admin_lockout');
                 sessionStorage.setItem('dajavata_admin', '1');
                 updateAdminUI();
                 closeAuthModal();
@@ -1705,7 +1768,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 백엔드 API 보조 검증
+            // 백엔드 API 보조 검증 (PIN 4537)
             try {
                 const res = await fetch(`${API_BASE}/api/insights/verify-admin`, {
                     method: 'POST',
@@ -1714,6 +1777,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 const data = await res.json();
                 if (data.valid) {
+                    sessionStorage.removeItem('dajavata_admin_fails');
+                    sessionStorage.removeItem('dajavata_admin_lockout');
                     sessionStorage.setItem('dajavata_admin', '1');
                     updateAdminUI();
                     closeAuthModal();
@@ -1725,8 +1790,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) {}
 
-            if (adminPinError) adminPinError.style.display = 'block';
-            if (adminPinInput) adminPinInput.focus();
+            // 실패 카운트 증가 및 5회 실패 시 5분 차단
+            let fails = parseInt(sessionStorage.getItem('dajavata_admin_fails') || '0', 10) + 1;
+            if (fails >= 5) {
+                sessionStorage.setItem('dajavata_admin_lockout', String(Date.now() + 5 * 60 * 1000));
+                sessionStorage.setItem('dajavata_admin_fails', '0');
+                if (adminPinError) {
+                    adminPinError.textContent = '비밀번호를 5회 연속 잘못 입력하여 5분간 입력이 제한됩니다.';
+                    adminPinError.style.display = 'block';
+                }
+            } else {
+                sessionStorage.setItem('dajavata_admin_fails', String(fails));
+                if (adminPinError) {
+                    adminPinError.textContent = `PIN 번호가 일치하지 않습니다. (실패 ${fails}/5회)`;
+                    adminPinError.style.display = 'block';
+                }
+                if (adminPinInput) adminPinInput.focus();
+            }
         }
 
         if (adminAuthSubmitBtn) adminAuthSubmitBtn.addEventListener('click', handleAuthSubmit);
@@ -1743,7 +1823,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // 푸터 관리자 링크
+        // 푸터 관리자 버튼 (로그인 상태에서만 로그아웃 버튼으로 작동)
         if (footerAdminBtn) {
             footerAdminBtn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -1762,7 +1842,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // URL ?admin=1 자동 감지
+        // 비밀 진입 방법 1: 키보드 단축키 Ctrl+Shift+A (또는 Mac Cmd+Shift+A)
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a' || e.code === 'KeyA')) {
+                e.preventDefault();
+                openAuthModal();
+            }
+        });
+
+        // 비밀 진입 방법 2: URL ?admin=1 자동 감지
         try {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('admin') === '1' && !window.isDajavataAdmin) {
@@ -1819,6 +1907,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             editorModal.style.display = 'flex';
+            editorModal.classList.add('active');
             setTimeout(() => {
                 if (editorContentCanvas) editorContentCanvas.focus();
             }, 100);
@@ -1826,6 +1915,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function closeEditorModal() {
             if (!editorModal) return;
+            editorModal.classList.remove('active');
             editorModal.style.display = 'none';
         }
 
