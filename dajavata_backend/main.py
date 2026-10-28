@@ -159,10 +159,39 @@ def get_page_blocks(page_id: str) -> list:
         print(f"Error fetching page blocks for {page_id}: {e}")
         return []
 
+INSIGHTS_DB_PATH = os.path.join(os.path.dirname(__file__), "data", "insights_db.json")
+ADMIN_PIN = os.getenv("ADMIN_PIN", "4537")
+
+def load_local_insights_db():
+    """로컬 insights_db.json에서 칼럼 목록을 즉각 로드 (0ms 초고속 캐시)"""
+    if os.path.exists(INSIGHTS_DB_PATH):
+        try:
+            with open(INSIGHTS_DB_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data and isinstance(data.get("posts"), list) and len(data["posts"]) > 0:
+                    return data
+        except Exception as e:
+            print(f"Error loading insights_db.json: {e}")
+    return None
+
+def save_local_insights_db(data):
+    """insights_db.json에 칼럼 데이터를 안전하게 원자적 저장"""
+    os.makedirs(os.path.dirname(INSIGHTS_DB_PATH), exist_ok=True)
+    temp_path = INSIGHTS_DB_PATH + ".tmp"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    shutil.move(temp_path, INSIGHTS_DB_PATH)
+
 @app.get("/api/insights")
 def get_insights():
+    # 1. 자체 관리자 DB(insights_db.json)가 존재하면 0ms 즉시 반환!
+    cached = load_local_insights_db()
+    if cached:
+        return cached
+
+    # 2. 로컬 DB가 아직 없을 경우 노션 API Fallback
     if not NOTION_TOKEN or not NOTION_DATABASE_ID:
-        raise HTTPException(status_code=500, detail="Notion integration not configured.")
+        return {"posts": []}
     
     try:
         url = f"https://api.notion.com/v1/databases/{NOTION_DATABASE_ID}/query"
@@ -179,7 +208,7 @@ def get_insights():
                 }
             ]
         }
-        r = requests.post(url, headers=headers, json=data)
+        r = requests.post(url, headers=headers, json=data, timeout=8)
         r.raise_for_status()
         response = r.json()
         
@@ -211,10 +240,74 @@ def get_insights():
                 "date": created_at
             })
             
-        return {"posts": posts}
+        result = {"posts": posts}
+        save_local_insights_db(result)
+        return result
     except Exception as e:
         print(f"Notion API Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"posts": []}
+
+class AdminVerifyRequest(BaseModel):
+    pin: str
+
+class AdminSavePostRequest(BaseModel):
+    pin: str
+    post: dict
+
+class AdminDeletePostRequest(BaseModel):
+    pin: str
+    id: str
+
+@app.post("/api/insights/verify-admin")
+def verify_admin(req: AdminVerifyRequest):
+    if req.pin == ADMIN_PIN:
+        return {"success": True, "message": "Admin authenticated"}
+    return {"success": False, "message": "Invalid PIN"}
+
+@app.post("/api/insights/save")
+def save_insight_post(req: AdminSavePostRequest):
+    if req.pin != ADMIN_PIN:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    post = req.post
+    if not post or not post.get("title"):
+        raise HTTPException(status_code=400, detail="Title is required")
+
+    db = load_local_insights_db() or {"posts": []}
+    posts = db.get("posts", [])
+
+    # 기존 글 수정 여부 확인 (id 기준)
+    post_id = post.get("id")
+    if not post_id:
+        post_id = f"post_{int(time.time())}"
+        post["id"] = post_id
+
+    existing_idx = next((i for i, p in enumerate(posts) if str(p.get("id")) == str(post_id)), -1)
+    if existing_idx >= 0:
+        posts[existing_idx] = post
+    else:
+        posts.insert(0, post) # 최신 글을 맨 위에 추가
+
+    db["posts"] = posts
+    db["updated_at"] = datetime.now().isoformat()
+    save_local_insights_db(db)
+
+    return {"success": True, "post": post, "total": len(posts)}
+
+@app.post("/api/insights/delete")
+def delete_insight_post(req: AdminDeletePostRequest):
+    if req.pin != ADMIN_PIN:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    db = load_local_insights_db() or {"posts": []}
+    posts = db.get("posts", [])
+    posts = [p for p in posts if str(p.get("id")) != str(req.id)]
+
+    db["posts"] = posts
+    db["updated_at"] = datetime.now().isoformat()
+    save_local_insights_db(db)
+
+    return {"success": True, "deleted_id": req.id, "total": len(posts)}
 
 def setup_korean_font():
     font_names = ['Malgun Gothic', '맑은 고딕', 'NanumGothic', '나눔고딕', 'AppleGothic', 'DejaVu Sans']

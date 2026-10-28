@@ -225,20 +225,60 @@ document.addEventListener('DOMContentLoaded', () => {
         return window.allStocks || [];
     }
 
-    function loadInsights() {
-        return fetch(INSIGHTS_API_URL)
-            .then(response => {
-                if (!response.ok) throw new Error('insights fetch failed');
-                return response.json();
-            })
-            .then(data => {
-                window.allInsights = data.posts || [];
-                return window.allInsights;
-            })
-            .catch(error => {
-                console.error('Error fetching insights:', error);
-                return [];
-            });
+    async function loadInsights() {
+        // 0. 메모리 캐시 확인
+        if (window.allInsights && window.allInsights.length > 0) {
+            return window.allInsights;
+        }
+
+        // 1. 브라우저 로컬 저장소 우선 확인 (오프라인/즉시 렌더링)
+        try {
+            const localSaved = localStorage.getItem('dajavata_local_insights_db');
+            if (localSaved) {
+                const parsed = JSON.parse(localSaved);
+                if (parsed && Array.isArray(parsed.posts) && parsed.posts.length > 0) {
+                    window.allInsights = parsed.posts;
+                }
+            }
+        } catch (e) {}
+
+        // 2. 정적 JSON (data/insights_db.json) 다단계 캐시 로드 (0ms 초고속)
+        const staticUrls = [
+            'data/insights_db.json',
+            '/data/insights_db.json',
+            'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/insights_db.json'
+        ];
+        for (const url of staticUrls) {
+            try {
+                const res = await fetch(url, { cache: 'no-cache' });
+                if (res.ok) {
+                    const text = await res.text();
+                    if (!text.trim().startsWith('<')) {
+                        const data = JSON.parse(text);
+                        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+                            window.allInsights = data.posts;
+                            return window.allInsights;
+                        }
+                    }
+                }
+            } catch (err) {}
+        }
+
+        // 3. 백엔드 API 시도
+        try {
+            const response = await fetch(INSIGHTS_API_URL, { cache: 'no-cache' });
+            if (response.ok) {
+                const data = await response.json();
+                if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+                    window.allInsights = data.posts;
+                    return window.allInsights;
+                }
+            }
+        } catch (error) {
+            console.warn('API insights fetch failed:', error);
+        }
+
+        return window.allInsights || [];
     }
 
     let allStocksPromise = loadAllStocks();
@@ -509,6 +549,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     html += '</tr>';
                 });
                 html += '</table>';
+            } else if (block.type === 'callout') {
+                html += `<div class="editor-callout-box" style="background: rgba(59,130,246,0.08); border-left: 4px solid var(--primary); padding: 14px 16px; border-radius: 6px; margin: 18px 0; font-size: 14px; line-height: 1.6; color: var(--text-main);">${escapeHtml(block.text).replace(/\n/g, '<br>')}</div>`;
+            } else if (block.type === 'quote') {
+                html += `<blockquote style="border-left: 3px solid var(--accent); padding: 8px 16px; margin: 16px 0; color: var(--text-muted); background: rgba(255,255,255,0.02); border-radius: 0 4px 4px 0;">${escapeHtml(block.text).replace(/\n/g, '<br>')}</blockquote>`;
             } else if (block.type === 'divider') {
                 html += '<hr style="border:none; border-top:1px solid var(--border); margin:24px 0;">';
             }
@@ -775,12 +819,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const textPreview = rawText.length > 200 ? rawText.substring(0, 200) + '...' : rawText;
                 const formattedContent = escapeHtml(textPreview).replace(/\n/g, '<br>');
                 
+                const adminBtnsHtml = window.isDajavataAdmin ? `
+                    <button class="admin-edit-btn" data-id="${post.id}" style="margin-left: 8px; background: rgba(59,130,246,0.15); border: 1px solid #3b82f6; color: #60a5fa; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="ph ph-pencil-simple"></i> 수정</button>
+                    <button class="admin-delete-btn" data-id="${post.id}" style="margin-left: 6px; background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #f87171; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="ph ph-trash"></i> 삭제</button>
+                ` : '';
+
                 tr.innerHTML = `
                     <td style="vertical-align: top; padding-top: 20px; color: var(--text-muted);">${post.date}</td>
                     <td style="padding: 20px 10px;">
                         <h3 style="margin-top: 0; margin-bottom: 10px; color: var(--text-main); font-size: 1.2rem;">${post.title}</h3>
                         <div style="line-height: 1.6; color: var(--text-muted); font-size: 0.95rem;">${formattedContent}</div>
-                        <button class="read-more-btn" data-id="${post.id}" style="margin-top: 15px; background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 5px 15px; border-radius: 4px; cursor: pointer;">자세히 읽기</button>
+                        <div style="display: flex; align-items: center; margin-top: 15px;">
+                            <button class="read-more-btn" data-id="${post.id}" style="background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 5px 15px; border-radius: 4px; cursor: pointer;">자세히 읽기</button>
+                            ${adminBtnsHtml}
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -789,10 +841,31 @@ document.addEventListener('DOMContentLoaded', () => {
             // Bind read more buttons
             document.querySelectorAll('.read-more-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const id = e.target.getAttribute('data-id');
+                    const id = e.currentTarget.getAttribute('data-id');
                     const post = window.allInsights.find(p => p.id === id);
                     if (post) {
                         renderSingleInsight(post);
+                    }
+                });
+            });
+
+            // Bind admin edit buttons
+            document.querySelectorAll('.admin-edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    const post = (window.allInsights || []).find(p => String(p.id) === String(id));
+                    if (post && window.openEditorModal) {
+                        window.openEditorModal(post);
+                    }
+                });
+            });
+
+            // Bind admin delete buttons
+            document.querySelectorAll('.admin-delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    if (window.deleteInsightPost) {
+                        window.deleteInsightPost(id);
                     }
                 });
             });
@@ -918,9 +991,19 @@ document.addEventListener('DOMContentLoaded', () => {
                             <i class="ph ph-calendar"></i>
                             <span>작성일: ${post.date || '-'}</span>
                         </div>
-                        <button id="copy-insight-link-btn" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:4px 12px; border-radius:6px; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s ease;">
-                            <i class="ph ph-share-network"></i> 링크 복사
-                        </button>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button id="copy-insight-link-btn" style="background:rgba(255,255,255,0.06); border:1px solid var(--border); color:var(--text-main); padding:4px 12px; border-radius:6px; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s ease;">
+                                <i class="ph ph-share-network"></i> 링크 복사
+                            </button>
+                            ${window.isDajavataAdmin ? `
+                                <button id="single-admin-edit-btn" data-id="${post.id}" style="background:rgba(59,130,246,0.18); border:1px solid #3b82f6; color:#93c5fd; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s ease;">
+                                    <i class="ph ph-pencil-simple"></i> 칼럼 수정
+                                </button>
+                                <button id="single-admin-delete-btn" data-id="${post.id}" style="background:rgba(239,68,68,0.18); border:1px solid #ef4444; color:#fca5a5; padding:4px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px; transition:all 0.2s ease;">
+                                    <i class="ph ph-trash"></i> 삭제
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
 
                     <div class="insight-body-content">
@@ -969,6 +1052,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 } else {
                     showToast('링크 복사 기능이 지원되지 않는 브라우저입니다.');
+                }
+            });
+        }
+
+        // 관리자 전용 수정/삭제 버튼 이벤트 바인딩
+        const singleEditBtn = document.getElementById('single-admin-edit-btn');
+        if (singleEditBtn) {
+            singleEditBtn.addEventListener('click', () => {
+                if (window.openEditorModal) {
+                    window.openEditorModal(post);
+                }
+            });
+        }
+        const singleDeleteBtn = document.getElementById('single-admin-delete-btn');
+        if (singleDeleteBtn) {
+            singleDeleteBtn.addEventListener('click', () => {
+                if (window.deleteInsightPost) {
+                    window.deleteInsightPost(post.id);
                 }
             });
         }
@@ -1459,4 +1560,599 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // =========================================================================
+    // [다자바타 자체 관리자 웹 에디터 (CMS)] 통합 컨트롤러
+    // =========================================================================
+    function canvasToBlocks(canvasEl) {
+        const blocks = [];
+        const children = Array.from(canvasEl.children);
+        
+        if (children.length === 0) {
+            const raw = canvasEl.innerText.trim();
+            if (raw.length > 0) {
+                blocks.push({ type: 'paragraph', text: raw });
+            }
+            return blocks;
+        }
+
+        children.forEach(child => {
+            const tag = child.tagName ? child.tagName.toLowerCase() : '';
+
+            if (tag === 'h1') {
+                blocks.push({ type: 'heading', level: 1, text: child.innerText.trim() });
+            } else if (tag === 'h2') {
+                blocks.push({ type: 'heading', level: 2, text: child.innerText.trim() });
+            } else if (tag === 'h3') {
+                blocks.push({ type: 'heading', level: 3, text: child.innerText.trim() });
+            } else if (tag === 'hr') {
+                blocks.push({ type: 'divider' });
+            } else if (tag === 'ul') {
+                child.querySelectorAll('li').forEach(li => {
+                    const txt = li.innerText.trim();
+                    if (txt) blocks.push({ type: 'bulleted_list_item', text: txt });
+                });
+            } else if (tag === 'ol') {
+                child.querySelectorAll('li').forEach(li => {
+                    const txt = li.innerText.trim();
+                    if (txt) blocks.push({ type: 'numbered_list_item', text: txt });
+                });
+            } else if (tag === 'blockquote') {
+                blocks.push({ type: 'quote', text: child.innerText.trim() });
+            } else if (child.classList && child.classList.contains('editor-callout-box')) {
+                blocks.push({ type: 'callout', text: child.innerText.trim() });
+            } else if (tag === 'table') {
+                const rows = [];
+                let hasHeader = false;
+                child.querySelectorAll('tr').forEach(tr => {
+                    const rowCells = [];
+                    tr.querySelectorAll('th, td').forEach(c => {
+                        if (c.tagName.toLowerCase() === 'th') hasHeader = true;
+                        rowCells.push(c.innerText.trim());
+                    });
+                    if (rowCells.length > 0) rows.push(rowCells);
+                });
+                if (rows.length > 0) {
+                    blocks.push({ type: 'table', has_header: hasHeader || true, rows: rows });
+                }
+            } else if (tag === 'figure' || child.querySelector('img')) {
+                const img = tag === 'img' ? child : child.querySelector('img');
+                const figcaption = child.querySelector('figcaption');
+                if (img && img.src) {
+                    blocks.push({
+                        type: 'image',
+                        url: img.src,
+                        caption: figcaption ? figcaption.innerText.trim() : ''
+                    });
+                }
+            } else if (tag === 'img') {
+                blocks.push({ type: 'image', url: child.src, caption: '' });
+            } else {
+                const txt = child.innerText.trim();
+                if (txt.length > 0) {
+                    blocks.push({ type: 'paragraph', text: txt });
+                }
+            }
+        });
+
+        return blocks;
+    }
+
+    function initAdminCMS() {
+        const adminAuthModal = document.getElementById('dajavata-admin-auth-modal');
+        const adminPinInput = document.getElementById('admin-pin-input');
+        const adminAuthSubmitBtn = document.getElementById('admin-auth-submit-btn');
+        const adminAuthCloseBtn = document.getElementById('admin-auth-close-btn');
+        const adminAuthCancelBtn = document.getElementById('admin-auth-cancel-btn');
+        const adminPinError = document.getElementById('admin-pin-error');
+
+        const adminNewPostBtn = document.getElementById('admin-new-post-btn');
+        const adminActiveBadge = document.getElementById('admin-active-badge');
+        const footerAdminBtn = document.getElementById('footer-admin-btn');
+
+        const editorModal = document.getElementById('dajavata-editor-modal');
+        const editorModalCloseBtn = document.getElementById('editor-modal-close-btn');
+        const editorModalTitle = document.getElementById('editor-modal-title');
+        const editorDraftStatus = document.getElementById('editor-draft-status');
+        const editorPostTitle = document.getElementById('editor-post-title');
+        const editorPostDate = document.getElementById('editor-post-date');
+        const editorPostTicker = document.getElementById('editor-post-ticker');
+        const editorContentCanvas = document.getElementById('editor-content-canvas');
+        const editorPreviewContainer = document.getElementById('editor-preview-container');
+        const btnTogglePreview = document.getElementById('btn-toggle-preview');
+        const btnDraftSave = document.getElementById('btn-draft-save');
+        const btnEditorCancel = document.getElementById('btn-editor-cancel');
+        const btnPublishPost = document.getElementById('btn-publish-post');
+        const btnInsertTable = document.getElementById('btn-insert-table');
+        const btnInsertCallout = document.getElementById('btn-insert-callout');
+        const editorImageFileInput = document.getElementById('editor-image-file-input');
+
+        let currentEditingPostId = null;
+        let draftTimer = null;
+
+        function updateAdminUI() {
+            const isAdmin = (sessionStorage.getItem('dajavata_admin') === '1');
+            window.isDajavataAdmin = isAdmin;
+            if (adminNewPostBtn) adminNewPostBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+            if (adminActiveBadge) adminActiveBadge.style.display = isAdmin ? 'inline-flex' : 'none';
+        }
+        updateAdminUI();
+
+        // 1. PIN 인증 모달
+        function openAuthModal() {
+            if (!adminAuthModal) return;
+            if (adminPinInput) adminPinInput.value = '';
+            if (adminPinError) adminPinError.style.display = 'none';
+            adminAuthModal.style.display = 'flex';
+            setTimeout(() => { if (adminPinInput) adminPinInput.focus(); }, 100);
+        }
+
+        function closeAuthModal() {
+            if (!adminAuthModal) return;
+            adminAuthModal.style.display = 'none';
+        }
+
+        async function handleAuthSubmit() {
+            const pin = (adminPinInput ? adminPinInput.value : '').trim();
+            if (pin === '4537') {
+                sessionStorage.setItem('dajavata_admin', '1');
+                updateAdminUI();
+                closeAuthModal();
+                showToast('관리자 인증이 완료되었습니다.');
+                if (currentMode === 'insights') {
+                    renderTable(window.allInsights, 'insights');
+                }
+                return;
+            }
+
+            // 백엔드 API 보조 검증
+            try {
+                const res = await fetch(`${API_BASE}/api/insights/verify-admin`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: pin })
+                });
+                const data = await res.json();
+                if (data.valid) {
+                    sessionStorage.setItem('dajavata_admin', '1');
+                    updateAdminUI();
+                    closeAuthModal();
+                    showToast('관리자 인증이 완료되었습니다.');
+                    if (currentMode === 'insights') {
+                        renderTable(window.allInsights, 'insights');
+                    }
+                    return;
+                }
+            } catch (e) {}
+
+            if (adminPinError) adminPinError.style.display = 'block';
+            if (adminPinInput) adminPinInput.focus();
+        }
+
+        if (adminAuthSubmitBtn) adminAuthSubmitBtn.addEventListener('click', handleAuthSubmit);
+        if (adminPinInput) {
+            adminPinInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleAuthSubmit();
+            });
+        }
+        if (adminAuthCloseBtn) adminAuthCloseBtn.addEventListener('click', closeAuthModal);
+        if (adminAuthCancelBtn) adminAuthCancelBtn.addEventListener('click', closeAuthModal);
+        if (adminAuthModal) {
+            adminAuthModal.addEventListener('click', (e) => {
+                if (e.target === adminAuthModal) closeAuthModal();
+            });
+        }
+
+        // 푸터 관리자 링크
+        if (footerAdminBtn) {
+            footerAdminBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (window.isDajavataAdmin) {
+                    if (confirm('현재 관리자 모드입니다.\n관리자 모드를 종료(로그아웃)하시겠습니까?')) {
+                        sessionStorage.removeItem('dajavata_admin');
+                        updateAdminUI();
+                        showToast('관리자 모드가 종료되었습니다.');
+                        if (currentMode === 'insights') {
+                            renderTable(window.allInsights, 'insights');
+                        }
+                    }
+                } else {
+                    openAuthModal();
+                }
+            });
+        }
+
+        // URL ?admin=1 자동 감지
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('admin') === '1' && !window.isDajavataAdmin) {
+                openAuthModal();
+            }
+        } catch (e) {}
+
+        // 2. 에디터 열기/닫기
+        window.openEditorModal = function(post = null) {
+            if (!editorModal) return;
+
+            // 미리보기 모드 리셋
+            if (editorPreviewContainer) editorPreviewContainer.style.display = 'none';
+            if (editorContentCanvas) editorContentCanvas.style.display = 'block';
+            if (btnTogglePreview) btnTogglePreview.innerHTML = '<i class="ph ph-eye"></i> 미리보기';
+
+            if (post) {
+                currentEditingPostId = post.id;
+                if (editorModalTitle) editorModalTitle.textContent = '칼럼 수정';
+                if (editorPostTitle) editorPostTitle.value = post.title || '';
+                if (editorPostDate) editorPostDate.value = post.date || new Date().toISOString().slice(0, 10);
+                
+                const tickerMatch = (post.title || '').match(/\((\d{6})\)/);
+                if (editorPostTicker) editorPostTicker.value = tickerMatch ? tickerMatch[1] : '';
+
+                if (editorContentCanvas) {
+                    editorContentCanvas.innerHTML = blocksToHtml(post.blocks);
+                }
+                if (editorDraftStatus) editorDraftStatus.textContent = '기존 칼럼 불러옴';
+            } else {
+                currentEditingPostId = null;
+                if (editorModalTitle) editorModalTitle.textContent = '기업 분석 & 차트 칼럼 에디터';
+                if (editorPostTitle) editorPostTitle.value = '';
+                if (editorPostDate) editorPostDate.value = new Date().toISOString().slice(0, 10);
+                if (editorPostTicker) editorPostTicker.value = '';
+
+                // 임시저장 데이터 확인
+                const savedDraft = localStorage.getItem('dajavata_post_draft');
+                if (savedDraft) {
+                    try {
+                        const d = JSON.parse(savedDraft);
+                        if (editorPostTitle) editorPostTitle.value = d.title || '';
+                        if (editorPostDate && d.date) editorPostDate.value = d.date;
+                        if (editorPostTicker) editorPostTicker.value = d.ticker || '';
+                        if (editorContentCanvas) editorContentCanvas.innerHTML = d.html || '<p>이곳에 기업 분석 내용을 작성하세요...</p>';
+                        if (editorDraftStatus) editorDraftStatus.textContent = `임시저장 복원됨 (${d.savedAt || ''})`;
+                    } catch (e) {
+                        if (editorContentCanvas) editorContentCanvas.innerHTML = '<p>이곳에 기업 분석 내용을 작성하세요...</p>';
+                    }
+                } else {
+                    if (editorContentCanvas) editorContentCanvas.innerHTML = '<p>이곳에 기업 분석 및 차트 분석 내용을 작성하세요...</p>';
+                    if (editorDraftStatus) editorDraftStatus.textContent = '새 작성 모드';
+                }
+            }
+
+            editorModal.style.display = 'flex';
+            setTimeout(() => {
+                if (editorContentCanvas) editorContentCanvas.focus();
+            }, 100);
+        };
+
+        function closeEditorModal() {
+            if (!editorModal) return;
+            editorModal.style.display = 'none';
+        }
+
+        if (adminNewPostBtn) {
+            adminNewPostBtn.addEventListener('click', () => {
+                window.openEditorModal(null);
+            });
+        }
+        if (editorModalCloseBtn) editorModalCloseBtn.addEventListener('click', closeEditorModal);
+        if (btnEditorCancel) btnEditorCancel.addEventListener('click', closeEditorModal);
+
+        // 3. 서식 툴바 (execCommand)
+        document.querySelectorAll('.editor-tool-btn[data-cmd]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const cmd = btn.getAttribute('data-cmd');
+                const val = btn.getAttribute('data-val') || null;
+                if (editorContentCanvas) {
+                    editorContentCanvas.focus();
+                    document.execCommand(cmd, false, val);
+                }
+            });
+        });
+
+        // 4. 표 삽입
+        if (btnInsertTable) {
+            btnInsertTable.addEventListener('click', (e) => {
+                e.preventDefault();
+                const rowsInput = prompt('표의 행(Row) 개수를 입력하세요 (헤더 포함):', '4');
+                if (!rowsInput) return;
+                const colsInput = prompt('표의 열(Column) 개수를 입력하세요:', '3');
+                if (!colsInput) return;
+
+                const r = Math.max(1, Math.min(20, parseInt(rowsInput) || 4));
+                const c = Math.max(1, Math.min(10, parseInt(colsInput) || 3));
+
+                let tableHtml = '<table style="width:100%; border-collapse:collapse; margin:18px 0; font-size:14px; text-align:left;">';
+                for (let i = 0; i < r; i++) {
+                    tableHtml += '<tr>';
+                    for (let j = 0; j < c; j++) {
+                        if (i === 0) {
+                            tableHtml += `<th style="border:1px solid var(--border); padding:10px; background:rgba(255,255,255,0.06); color:white;">구분 ${j + 1}</th>`;
+                        } else {
+                            tableHtml += `<td style="border:1px solid var(--border); padding:10px; color:var(--text-main);">내용</td>`;
+                        }
+                    }
+                    tableHtml += '</tr>';
+                }
+                tableHtml += '</table><p><br></p>';
+
+                if (editorContentCanvas) {
+                    editorContentCanvas.focus();
+                    document.execCommand('insertHTML', false, tableHtml);
+                }
+            });
+        }
+
+        // 5. 핵심 요약 박스 삽입
+        if (btnInsertCallout) {
+            btnInsertCallout.addEventListener('click', (e) => {
+                e.preventDefault();
+                const calloutHtml = `
+                    <div class="editor-callout-box" style="background: rgba(59,130,246,0.08); border-left: 4px solid var(--primary); padding: 14px 16px; border-radius: 6px; margin: 18px 0; font-size: 14px; line-height: 1.6; color: var(--text-main);">
+                        <strong>💡 핵심 요약:</strong> 핵심 투자 포인트 또는 리스크 요인을 입력하세요.
+                    </div><p><br></p>
+                `;
+                if (editorContentCanvas) {
+                    editorContentCanvas.focus();
+                    document.execCommand('insertHTML', false, calloutHtml);
+                }
+            });
+        }
+
+        // 6. 이미지 WebP 캔버스 압축 & 본문 삽입 함수
+        function processAndInsertImage(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                showToast('이미지 파일만 삽입할 수 있습니다.');
+                return;
+            }
+            showToast('이미지 고효율 WebP 압축 중...');
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const maxWidth = 1200;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > maxWidth) {
+                        h = Math.round((h * maxWidth) / w);
+                        w = maxWidth;
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+                    const webpDataUrl = canvas.toDataURL('image/webp', 0.82);
+
+                    const figureHtml = `
+                        <figure style="margin: 20px 0; text-align: center;">
+                            <img src="${webpDataUrl}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);">
+                            <figcaption style="font-size: 12px; color: var(--text-muted); margin-top: 8px; text-align: center;">[사진 설명 입력]</figcaption>
+                        </figure><p><br></p>
+                    `;
+                    if (editorContentCanvas) {
+                        editorContentCanvas.focus();
+                        document.execCommand('insertHTML', false, figureHtml);
+                        showToast('이미지 삽입 완료 (WebP 고효율 압축)');
+                    }
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 캔버스 내 클립보드 붙여넣기 (Ctrl+V) 핸들러
+        if (editorContentCanvas) {
+            editorContentCanvas.addEventListener('paste', (e) => {
+                if (e.clipboardData && e.clipboardData.items) {
+                    for (let i = 0; i < e.clipboardData.items.length; i++) {
+                        const item = e.clipboardData.items[i];
+                        if (item.type && item.type.indexOf('image') !== -1) {
+                            e.preventDefault();
+                            const blob = item.getAsFile();
+                            processAndInsertImage(blob);
+                            return;
+                        }
+                    }
+                }
+            });
+        }
+
+        // 파일 선택 인풋 핸들러
+        if (editorImageFileInput) {
+            editorImageFileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0]) {
+                    processAndInsertImage(e.target.files[0]);
+                    e.target.value = '';
+                }
+            });
+        }
+
+        // 7. 자동 임시저장 (Autosave)
+        function autoSaveDraft() {
+            if (currentEditingPostId) return; // 기존 글 수정 중에는 초안 덮어쓰기 방지
+            const draft = {
+                title: editorPostTitle ? editorPostTitle.value.trim() : '',
+                date: editorPostDate ? editorPostDate.value : '',
+                ticker: editorPostTicker ? editorPostTicker.value.trim() : '',
+                html: editorContentCanvas ? editorContentCanvas.innerHTML : '',
+                savedAt: new Date().toLocaleTimeString('ko-KR')
+            };
+            localStorage.setItem('dajavata_post_draft', JSON.stringify(draft));
+            if (editorDraftStatus) {
+                editorDraftStatus.textContent = `자동 임시저장 (${draft.savedAt})`;
+            }
+        }
+
+        if (editorContentCanvas) {
+            editorContentCanvas.addEventListener('input', () => {
+                clearTimeout(draftTimer);
+                draftTimer = setTimeout(autoSaveDraft, 1500);
+            });
+        }
+        if (editorPostTitle) {
+            editorPostTitle.addEventListener('input', () => {
+                clearTimeout(draftTimer);
+                draftTimer = setTimeout(autoSaveDraft, 1500);
+            });
+        }
+        if (btnDraftSave) {
+            btnDraftSave.addEventListener('click', () => {
+                autoSaveDraft();
+                showToast('초안이 브라우저에 임시저장되었습니다.');
+            });
+        }
+
+        // 8. 실시간 미리보기 토글
+        if (btnTogglePreview) {
+            btnTogglePreview.addEventListener('click', () => {
+                const isPreview = (editorPreviewContainer && editorPreviewContainer.style.display !== 'none');
+                if (isPreview) {
+                    editorPreviewContainer.style.display = 'none';
+                    editorContentCanvas.style.display = 'block';
+                    btnTogglePreview.innerHTML = '<i class="ph ph-eye"></i> 미리보기';
+                } else {
+                    const title = (editorPostTitle ? editorPostTitle.value.trim() : '') || '칼럼 제목 없음';
+                    const date = (editorPostDate ? editorPostDate.value : '') || new Date().toISOString().slice(0, 10);
+                    const bodyHtml = editorContentCanvas ? editorContentCanvas.innerHTML : '';
+
+                    if (editorPreviewContainer) {
+                        editorPreviewContainer.innerHTML = `
+                            <div style="padding: 10px 0 20px;">
+                                <h1 style="color: white; font-size: 24px; margin-bottom: 8px;">${escapeHtml(title)}</h1>
+                                <div class="insight-meta-bar" style="margin-bottom: 20px;">
+                                    <span>작성일: ${date}</span>
+                                    <span style="color: var(--accent); font-weight: 600;">[실시간 미리보기]</span>
+                                </div>
+                                <div class="insight-body-content">
+                                    ${bodyHtml}
+                                </div>
+                                <div class="insight-disclaimer-card" style="margin-top: 30px;">
+                                    <div class="insight-disclaimer-header">
+                                        <i class="ph-bold ph-warning-circle"></i> 투자 유의사항 및 법적 면책 고지 (미리보기)
+                                    </div>
+                                    <p class="insight-disclaimer-text">
+                                        본 기업 분석은 정보 제공 목적으로 작성되었으며 모든 투자 판단의 최종 책임은 투자자 본인에게 귀속됩니다.
+                                    </p>
+                                </div>
+                            </div>
+                        `;
+                        editorContentCanvas.style.display = 'none';
+                        editorPreviewContainer.style.display = 'block';
+                        btnTogglePreview.innerHTML = '<i class="ph ph-pencil-simple"></i> 에디터로 복귀';
+                    }
+                }
+            });
+        }
+
+        // 9. 사이트에 즉시 발행 (Save & Publish)
+        if (btnPublishPost) {
+            btnPublishPost.addEventListener('click', async () => {
+                let title = editorPostTitle ? editorPostTitle.value.trim() : '';
+                if (!title) {
+                    alert('칼럼 제목을 입력해주세요.');
+                    if (editorPostTitle) editorPostTitle.focus();
+                    return;
+                }
+
+                // 종목코드가 입력되어 있고 제목에 코드가 없는 경우 자동 결합 (예: 삼성전자(005930) 기업 분석)
+                const ticker = editorPostTicker ? editorPostTicker.value.trim() : '';
+                if (ticker && !title.includes(ticker)) {
+                    title = `${title} (${ticker})`;
+                }
+
+                const date = (editorPostDate ? editorPostDate.value : '') || new Date().toISOString().slice(0, 10);
+                const blocks = canvasToBlocks(editorContentCanvas);
+                if (blocks.length === 0) {
+                    alert('본문 내용을 입력해주세요.');
+                    if (editorContentCanvas) editorContentCanvas.focus();
+                    return;
+                }
+
+                const postId = currentEditingPostId || ('post-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 6));
+                const newPost = {
+                    id: postId,
+                    title: title,
+                    date: date,
+                    blocks: blocks,
+                    updated_at: new Date().toISOString()
+                };
+
+                // 1단계: 브라우저 메모리 즉시 반영 (0ms)
+                if (!window.allInsights) window.allInsights = [];
+                const existingIdx = window.allInsights.findIndex(p => String(p.id) === String(postId));
+                if (existingIdx !== -1) {
+                    window.allInsights[existingIdx] = newPost;
+                } else {
+                    window.allInsights.unshift(newPost);
+                }
+
+                // 2단계: 브라우저 localStorage 로컬 DB 영구 보존
+                const localDb = { posts: window.allInsights, updated_at: new Date().toISOString() };
+                localStorage.setItem('dajavata_local_insights_db', JSON.stringify(localDb));
+                localStorage.removeItem('dajavata_post_draft');
+
+                // 3단계: 백엔드 API 영구 저장 시도
+                try {
+                    showToast('서버에 칼럼 저장 중...');
+                    const res = await fetch(`${API_BASE}/api/insights/save`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            pin: '4537',
+                            post: newPost
+                        })
+                    });
+                    if (res.ok) {
+                        showToast('칼럼이 성공적으로 발행되었습니다!');
+                    } else {
+                        showToast('로컬에 안전하게 저장되었습니다.');
+                    }
+                } catch (err) {
+                    console.warn('Backend save failed, saved locally:', err);
+                    showToast('로컬 저장 완료 (오프라인 모드)');
+                }
+
+                closeEditorModal();
+                headerTitle.textContent = "기업 개요 및 차트 분석";
+                themeBadge.textContent = "인사이트";
+                renderTable(window.allInsights, 'insights');
+            });
+        }
+
+        // 10. 칼럼 삭제 핸들러
+        window.deleteInsightPost = async function(id) {
+            const post = (window.allInsights || []).find(p => String(p.id) === String(id));
+            const postTitle = post ? post.title : '해당';
+            if (!confirm(`"${postTitle}" 칼럼을 정말 삭제하시겠습니까?\n삭제 후에는 복구할 수 없습니다.`)) {
+                return;
+            }
+
+            // 1단계: 메모리 삭제
+            window.allInsights = (window.allInsights || []).filter(p => String(p.id) !== String(id));
+
+            // 2단계: 로컬 DB 반영
+            const localDb = { posts: window.allInsights, updated_at: new Date().toISOString() };
+            localStorage.setItem('dajavata_local_insights_db', JSON.stringify(localDb));
+
+            // 3단계: 백엔드 API 삭제 호출
+            try {
+                await fetch(`${API_BASE}/api/insights/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin: '4537', id: id })
+                });
+                showToast('칼럼이 삭제되었습니다.');
+            } catch (e) {
+                console.warn('Backend delete failed, updated locally:', e);
+                showToast('로컬 목록에서 삭제되었습니다.');
+            }
+
+            // 4단계: 뷰 재렌더링
+            renderTable(window.allInsights, 'insights');
+        };
+    }
+
+    // CMS 초기화 실행
+    initAdminCMS();
 });
