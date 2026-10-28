@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 import requests
 import xml.etree.ElementTree as ET
 import json
@@ -289,7 +290,7 @@ def save_insight_post(req: AdminSavePostRequest):
         posts.insert(0, post) # 최신 글을 맨 위에 추가
 
     db["posts"] = posts
-    db["updated_at"] = datetime.now().isoformat()
+    db["updated_at"] = datetime.datetime.now().isoformat()
     save_local_insights_db(db)
 
     return {"success": True, "post": post, "total": len(posts)}
@@ -304,7 +305,7 @@ def delete_insight_post(req: AdminDeletePostRequest):
     posts = [p for p in posts if str(p.get("id")) != str(req.id)]
 
     db["posts"] = posts
-    db["updated_at"] = datetime.now().isoformat()
+    db["updated_at"] = datetime.datetime.now().isoformat()
     save_local_insights_db(db)
 
     return {"success": True, "deleted_id": req.id, "total": len(posts)}
