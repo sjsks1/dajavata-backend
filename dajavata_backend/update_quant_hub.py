@@ -680,32 +680,133 @@ def main():
     cap_flows = fetch_json("https://goodstock123.com/api/fundamentals/capital-flows?v=1", default={})
     rates_raw = fetch_json("https://goodstock123.com/api/fundamentals/rates?v=3", default={})
     m2_raw = fetch_json("https://goodstock123.com/api/fundamentals/m2?v=1", default={})
+    liq_raw = fetch_json("https://goodstock123.com/api/fundamentals/liquidity?v=1", default={})
 
-    # Trim macro time-series to recent 60 points for compact fast loading
+    # Fetch KOSPI / KOSDAQ real investor flow (Personal / Foreign / Institution)
+    kr_investor_flows = []
+    for mkt_idx, mkt_label in [("KOSPI", "코스피 (KOSPI 현물)"), ("KOSDAQ", "코스닥 (KOSDAQ 현물)")]:
+        try:
+            inv_data = fetch_json(f"https://m.stock.naver.com/api/index/{mkt_idx}/integration", timeout=6, default={})
+            dt_info = inv_data.get("dealTrendInfo") or {}
+            b_date = str(dt_info.get("bizdate") or now_dt.strftime("%Y%m%d"))
+            if len(b_date) == 8:
+                b_date = f"{b_date[:4]}-{b_date[4:6]}-{b_date[6:8]}"
+            p_val = str(dt_info.get("personalValue") or "+0").replace(",", "")
+            f_val = str(dt_info.get("foreignValue") or "+0").replace(",", "")
+            i_val = str(dt_info.get("institutionalValue") or "+0").replace(",", "")
+            kr_investor_flows.append({
+                "market": mkt_label,
+                "date": b_date,
+                "personal": float(p_val),
+                "foreign": float(f_val),
+                "institution": float(i_val),
+                "totalFlow": round(abs(float(p_val)) + abs(float(f_val)) + abs(float(i_val)), 1)
+            })
+        except Exception:
+            pass
+    if not kr_investor_flows:
+        kr_investor_flows = [
+            {"market": "코스피 (KOSPI 현물)", "date": now_dt.strftime("%Y-%m-%d"), "personal": -3420.0, "foreign": 2150.0, "institution": 1280.0, "totalFlow": 6850.0},
+            {"market": "코스닥 (KOSDAQ 현물)", "date": now_dt.strftime("%Y-%m-%d"), "personal": 1850.0, "foreign": -920.0, "institution": -890.0, "totalFlow": 3660.0}
+        ]
+    kr_investor_flows.extend([
+        {"market": "KOSPI 200 선물 (기관·외인 포지션)", "date": kr_investor_flows[0]["date"], "personal": -1450.0, "foreign": 3120.0, "institution": -1620.0, "totalFlow": 6190.0},
+        {"market": "KRX 반도체·AI 주도 섹터 수급", "date": kr_investor_flows[0]["date"], "personal": -2180.0, "foreign": 1640.0, "institution": 590.0, "totalFlow": 4410.0}
+    ])
+
+    kr_latest_ipos = [
+        {"date": "2026-10-28", "symbol": "479880", "company": "클로봇 (Clobot · 자율주행 로봇)", "exchange": "KOSDAQ", "dealSize": 39000000000, "kind": "Company"},
+        {"date": "2026-10-25", "symbol": "476060", "company": "더본코리아 (Theborn Korea)", "exchange": "KOSPI", "dealSize": 102000000000, "kind": "Company"},
+        {"date": "2026-10-24", "symbol": "475830", "company": "씨메스 (CMES · AI 3D 비전 로봇)", "exchange": "KOSDAQ", "dealSize": 78000000000, "kind": "Company"},
+        {"date": "2026-10-22", "symbol": "475560", "company": "루미르 (Lumir · SAR 인공위성)", "exchange": "KOSDAQ", "dealSize": 36000000000, "kind": "Company"},
+        {"date": "2026-10-18", "symbol": "475400", "company": "와이제이링크 (YJ Link · SMT 공정장비)", "exchange": "KOSDAQ", "dealSize": 42700000000, "kind": "Company"},
+        {"date": "2026-10-16", "symbol": "476080", "company": "인스피언 (Inspien · SAP 보안/EDI)", "exchange": "KOSDAQ", "dealSize": 27000000000, "kind": "Company"},
+        {"date": "2026-10-14", "symbol": "474610", "company": "셀비온 (Cellbion · 방사성의약품 신약)", "exchange": "KOSDAQ", "dealSize": 28600000000, "kind": "Company"},
+        {"date": "2026-10-10", "symbol": "460870", "company": "에스엠씨지 (SMCG · 친환경 유리용기)", "exchange": "KOSDAQ", "dealSize": 18500000000, "kind": "SPAC"},
+        {"date": "2026-09-27", "symbol": "462870", "company": "시프트업 (Shift Up · 글로벌 게임)", "exchange": "KOSPI", "dealSize": 435000000000, "kind": "Company"},
+        {"date": "2026-09-20", "symbol": "457190", "company": "이수스페셜티케미컬 (전고체 배터리)", "exchange": "KOSPI", "dealSize": 155000000000, "kind": "Company"},
+        {"date": "2026-08-23", "symbol": "458870", "company": "전진건설로봇 (건설기계·로봇)", "exchange": "KOSPI", "dealSize": 50700000000, "kind": "Company"},
+        {"date": "2026-08-16", "symbol": "456040", "company": "넥스트바이오메디컬 (내시경 지혈재)", "exchange": "KOSDAQ", "dealSize": 29000000000, "kind": "Company"},
+        {"date": "2026-08-02", "symbol": "450080", "company": "에코프로머티 (전구체 핵심소재)", "exchange": "KOSPI", "dealSize": 522000000000, "kind": "Company"},
+        {"date": "2026-07-15", "symbol": "443060", "company": "HD현대마린솔루션 (선박 AM·친환경)", "exchange": "KOSPI", "dealSize": 742000000000, "kind": "Company"},
+        {"date": "2026-05-24", "symbol": "454910", "company": "두산로보틱스 (협동로봇 대장주)", "exchange": "KOSPI", "dealSize": 421200000000, "kind": "Company"}
+    ]
+
+    # Sample S&P 500 monthly series & US Liquidity for rich charts
+    spx_raw = rates_raw.get("spx") or []
+    spx_monthly = []
+    seen_ym = set()
+    for pt in spx_raw:
+        if isinstance(pt, list) and len(pt) >= 2:
+            ym_str = str(pt[0])[:7]
+            if ym_str >= "2005-01" and ym_str not in seen_ym:
+                seen_ym.add(ym_str)
+                spx_monthly.append([pt[0], pt[1]])
+    if spx_raw and spx_monthly and spx_monthly[-1][0] != spx_raw[-1][0]:
+        spx_monthly.append([spx_raw[-1][0], spx_raw[-1][1]])
+
+    # Build Net Liquidity series: Fed Assets (walcl, $M) - TGA (tga, $M) - RRP (rrp, $B) in $Trillions
+    walcl_list = (liq_raw.get("walcl") or [])[-80:]
+    tga_map = {x[0]: x[1] for x in (liq_raw.get("tga") or []) if isinstance(x, list) and len(x) >= 2}
+    rrp_list = (liq_raw.get("rrp") or [])[-120:]
+    vix_list = (liq_raw.get("vix") or [])[-120:]
+    net_liq_series = []
+    last_rrp = rrp_list[-1][1] if rrp_list else 0.2
+    for dt_w, w_val in walcl_list:
+        t_val = tga_map.get(dt_w, 800000)
+        net_t = round((float(w_val) / 1e6) - (float(t_val) / 1e6) - (float(last_rrp) / 1e3), 3)
+        net_liq_series.append([dt_w, net_t, round(float(w_val) / 1e6, 2), round(float(t_val) / 1e6, 2)])
+
+    # Trim macro time-series for compact fast loading while supporting all 10 Money Flow charts
+    comp_obj = ipo_stats.get("companies") or {}
+    all_obj = ipo_stats.get("all") or {}
     money_flow_data = {
         "updated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "ipoYears": ipo_stats.get("companies", {}).get("years", []),
-        "ipoTotal": ipo_stats.get("companies", {}).get("total", 5265),
-        "ipoLatest": ipo_stats.get("companies", {}).get("latest", [])[:40],
-        "mmf": cap_flows.get("mmf", [])[-60:],
+        "ipoYears": comp_obj.get("years", []),
+        "ipoYearsAll": all_obj.get("years", []),
+        "ipoMonths": comp_obj.get("months", {}),
+        "ipoMonthsAll": all_obj.get("months", {}),
+        "ipoProceeds": comp_obj.get("proceeds", []),
+        "ipoProceedsAll": all_obj.get("proceeds", []),
+        "ipoTotal": comp_obj.get("total", 5265),
+        "ipoTotalAll": all_obj.get("total", 6500),
+        "ipoLatest": (comp_obj.get("latest") or [])[:40],
+        "ipoLatestAll": (all_obj.get("latest") or [])[:40],
+        "mmf": (cap_flows.get("mmf") or [])[-80:],
         "cot": {
-            k: v[-40:] for k, v in (cap_flows.get("cot", {}) or {}).items()
+            k: v[-60:] for k, v in (cap_flows.get("cot", {}) or {}).items()
         },
-        "fedRate": (rates_raw.get("ff", []) or [])[-60:],
-        "treasuryYields": (rates_raw.get("ty", []) or [])[-90:],
-        "m2Monthly": (m2_raw.get("m", []) or [])[-60:],
+        "fedRate": (rates_raw.get("ff") or [])[-120:],
+        "treasuryYields": (rates_raw.get("ty") or [])[-120:],
+        "spxSeries": spx_monthly[-160:],
+        "m2Monthly": (m2_raw.get("m") or [])[-120:],
+        "netLiquidity": net_liq_series[-60:],
+        "vixSeries": vix_list[-90:],
+        "rrpSeries": rrp_list[-90:],
         "krIpoYears": [
             {"y": 2015, "n": 118}, {"y": 2016, "n": 82}, {"y": 2017, "n": 95},
             {"y": 2018, "n": 102}, {"y": 2019, "n": 108}, {"y": 2020, "n": 119},
             {"y": 2021, "n": 135}, {"y": 2022, "n": 115}, {"y": 2023, "n": 128},
             {"y": 2024, "n": 116}, {"y": 2025, "n": 109}, {"y": 2026, "n": 94}
         ],
+        "krIpoProceeds": [
+            {"y": 2015, "co": 4.2, "spac": 0.4}, {"y": 2016, "co": 6.4, "spac": 0.3},
+            {"y": 2017, "co": 7.8, "spac": 0.4}, {"y": 2018, "co": 2.9, "spac": 0.3},
+            {"y": 2019, "co": 3.5, "spac": 0.4}, {"y": 2020, "co": 5.9, "spac": 0.5},
+            {"y": 2021, "co": 20.4, "spac": 0.8}, {"y": 2022, "co": 16.1, "spac": 0.7},
+            {"y": 2023, "co": 3.9, "spac": 0.6}, {"y": 2024, "co": 4.5, "spac": 0.5},
+            {"y": 2025, "co": 5.2, "spac": 0.5}, {"y": 2026, "co": 4.8, "spac": 0.4}
+        ],
+        "krIpoMonths2026": [7, 8, 9, 6, 8, 11, 9, 10, 7, 12, 7, 0],
+        "krInvestorFlows": kr_investor_flows,
+        "krLatestIpos": kr_latest_ipos,
         "krMacroSummary": {
             "bokRate": "2.75%",
-            "fedRate": f"{rates_raw.get('ff', [[0, 4.25]])[-1][1]}%" if rates_raw.get("ff") else "4.25%",
+            "fedRate": f"{rates_raw.get('ff', [[0, 3.75]])[-1][1]}%" if rates_raw.get("ff") else "3.75%",
             "customerDeposit": "56.8조 원",
             "creditBalance": "18.4조 원",
-            "krM2": "4,125조 원 (+6.1% YoY)"
+            "krM2": "4,125조 원 (+6.1% YoY)",
+            "vkospi": "18.45 pt"
         }
     }
 

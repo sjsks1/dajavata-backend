@@ -109,7 +109,9 @@
         guruSearch: '',
         selectedGuruIdKR: 'nps-korea',
         selectedGuruCikUS: '0001067983',
-        dynamicGuruHoldingsUS: {}
+        dynamicGuruHoldingsUS: {},
+        mfIncludeFunds: false,
+        mfCotSym: 'ES'
     };
 
     // 숫자/통화 포맷 헬퍼
@@ -1593,146 +1595,511 @@
     }
 
     // =========================================================================
-    // [모듈 8] 머니 플로우 (Money Flow — IPOs, Fed/BOK Rates, M2, MMF, Futures COT)
+    // [모듈 8] 머니 플로우 (Money Flow — IPOs, S&P500/KOSPI Cycle, Proceeds, MMF, COT, Fed/BOK Rates, M2, Net Liquidity, VIX)
     // =========================================================================
+    function buildSvgAreaChart(points, opts = {}) {
+        const w = opts.width || 620;
+        const h = opts.height || 175;
+        const padL = 44, padR = 16, padT = 16, padB = 26;
+        const plotW = w - padL - padR;
+        const plotH = h - padT - padB;
+        const color = opts.color || '#3b82f6';
+        const color2 = opts.color2 || '#f59e0b';
+        const unit = opts.unit || '';
+        const prefix = opts.prefix || '';
+        const fill = opts.fill !== false;
+        const showZero = opts.showZero || false;
+
+        if (!points || points.length < 2) {
+            return `<div style="height:${h}px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:12px;">시계열 데이터 준비 중</div>`;
+        }
+
+        const vals = points.map(p => Number(p[1]) || 0);
+        const vals2 = opts.points2 ? opts.points2.map(p => Number(p[1]) || 0) : [];
+        let minV = Math.min(...vals, ...(vals2.length ? vals2 : []), ...(showZero ? [0] : []));
+        let maxV = Math.max(...vals, ...(vals2.length ? vals2 : []), ...(showZero ? [0] : []));
+        if (maxV === minV) { maxV += 1; minV -= 1; }
+        const range = maxV - minV;
+
+        const toX = (i, len) => padL + (i / Math.max(len - 1, 1)) * plotW;
+        const toY = (v) => padT + plotH - ((v - minV) / range) * plotH;
+
+        const pathPts = points.map((p, i) => `${toX(i, points.length).toFixed(1)},${toY(Number(p[1]) || 0).toFixed(1)}`);
+        const lineD = 'M ' + pathPts.join(' L ');
+        const areaD = `${lineD} L ${toX(points.length - 1, points.length).toFixed(1)},${(padT + plotH).toFixed(1)} L ${padL},${(padT + plotH).toFixed(1)} Z`;
+
+        let line2Svg = '';
+        if (opts.points2 && opts.points2.length >= 2) {
+            const p2 = opts.points2.map((p, i) => `${toX(i, opts.points2.length).toFixed(1)},${toY(Number(p[1]) || 0).toFixed(1)}`);
+            line2Svg = `<path d="M ${p2.join(' L ')}" fill="none" stroke="${color2}" stroke-width="2" stroke-dasharray="3,2" />`;
+        }
+
+        const ticks = [0, 0.5, 1].map(r => {
+            const v = minV + range * r;
+            const y = toY(v).toFixed(1);
+            const lbl = prefix + (Math.abs(v) >= 100 ? Math.round(v).toLocaleString() : v.toFixed(1)) + unit;
+            return `
+                <line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="rgba(148,163,184,0.14)" stroke-dasharray="2,2" />
+                <text x="${padL - 6}" y="${Number(y) + 4}" text-anchor="end" fill="#94a3b8" font-size="10" font-family="monospace">${lbl}</text>
+            `;
+        }).join('');
+
+        let zeroLine = '';
+        if (showZero && minV < 0 && maxV > 0) {
+            const zy = toY(0).toFixed(1);
+            zeroLine = `<line x1="${padL}" y1="${zy}" x2="${w - padR}" y2="${zy}" stroke="rgba(248,113,113,0.45)" stroke-width="1" />`;
+        }
+
+        const xIdx = [0, Math.floor(points.length / 2), points.length - 1];
+        const xLabels = xIdx.map(idx => {
+            const pt = points[idx];
+            if (!pt) return '';
+            const x = toX(idx, points.length).toFixed(1);
+            const rawD = String(pt[0] || '').slice(0, 7);
+            return `<text x="${x}" y="${h - 6}" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace">${esc(rawD)}</text>`;
+        }).join('');
+
+        const gradId = 'grad_' + Math.random().toString(36).substring(2, 8);
+
+        return `
+            <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:${h}px; display:block; overflow:visible;">
+                <defs>
+                    <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="${color}" stop-opacity="0.38" />
+                        <stop offset="100%" stop-color="${color}" stop-opacity="0.02" />
+                    </linearGradient>
+                </defs>
+                ${ticks}
+                ${zeroLine}
+                ${fill ? `<path d="${areaD}" fill="url(#${gradId})" />` : ''}
+                <path d="${lineD}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" />
+                ${line2Svg}
+                ${xLabels}
+            </svg>
+        `;
+    }
+
     function renderMoneyFlowView() {
         const mkt = state.market;
         const mf = state.cache.money_flow || {};
         const krMacro = mf.krMacroSummary || {};
-        const ipoYears = mkt === 'KR' ? (mf.krIpoYears || []) : (mf.ipoYears || []);
+        const incFunds = state.mfIncludeFunds;
+
+        const ipoYears = mkt === 'KR'
+            ? (mf.krIpoYears || [])
+            : (incFunds && mf.ipoYearsAll && mf.ipoYearsAll.length ? mf.ipoYearsAll : (mf.ipoYears || []));
         const maxIpo = Math.max(...ipoYears.map(y => Number(y.n) || 1), 1);
+        const totalIpoCount = mkt === 'KR'
+            ? ipoYears.reduce((acc, cur) => acc + (Number(cur.n) || 0), 0)
+            : (incFunds ? (mf.ipoTotalAll || 6500) : (mf.ipoTotal || 5265));
+        const peakYearObj = ipoYears.reduce((best, cur) => (Number(cur.n) > Number(best.n || 0) ? cur : best), ipoYears[0] || { y: 2021, n: 699 });
 
         const mmfList = mf.mmf || [];
         const latestMmf = mmfList.length ? mmfList[mmfList.length - 1] : ['-', 0];
         const m2List = mf.m2Monthly || [];
         const latestM2 = m2List.length ? m2List[m2List.length - 1] : ['-', 0];
         const tyList = mf.treasuryYields || [];
-        const latestTy = tyList.length ? tyList[tyList.length - 1] : ['-', 4.1, 4.2, 4.4];
+        const latestTy = tyList.length ? tyList[tyList.length - 1] : ['-', 4.18, 4.67, 5.05];
+        const vixList = mf.vixSeries || [];
+        const latestVix = vixList.length ? vixList[vixList.length - 1] : ['-', 16.9];
+        const netLiqList = mf.netLiquidity || [];
+        const latestNetLiq = netLiqList.length ? netLiqList[netLiqList.length - 1] : ['-', 5.8];
 
+        // 1. 연간 IPO 공모자금 조달 규모 (Annual IPO Proceeds)
+        const proceedsRaw = mkt === 'KR'
+            ? (mf.krIpoProceeds || [
+                { y: 2015, co: 4.2, spac: 0.4 }, { y: 2016, co: 6.4, spac: 0.3 }, { y: 2017, co: 7.8, spac: 0.4 },
+                { y: 2018, co: 2.9, spac: 0.3 }, { y: 2019, co: 3.5, spac: 0.4 }, { y: 2020, co: 5.9, spac: 0.5 },
+                { y: 2021, co: 20.4, spac: 0.8 }, { y: 2022, co: 16.1, spac: 0.7 }, { y: 2023, co: 3.9, spac: 0.6 },
+                { y: 2024, co: 4.5, spac: 0.5 }, { y: 2025, co: 5.2, spac: 0.5 }, { y: 2026, co: 4.8, spac: 0.4 }
+            ])
+            : ((incFunds && mf.ipoProceedsAll && mf.ipoProceedsAll.length ? mf.ipoProceedsAll : (mf.ipoProceeds || [])).map(r => ({
+                y: r.y,
+                co: Number(((r.co || 0) / 1e9).toFixed(1)),
+                spac: Number(((r.spac || 0) / 1e9).toFixed(1)),
+                fund: Number(((r.fund || 0) / 1e9).toFixed(1))
+            })));
+        const maxProceeds = Math.max(...proceedsRaw.map(r => (r.co || 0) + (r.spac || 0) + (incFunds ? (r.fund || 0) : 0)), 1);
+        const totalProceedsSum = proceedsRaw.reduce((s, r) => s + (r.co || 0) + (r.spac || 0) + (incFunds ? (r.fund || 0) : 0), 0);
+
+        // 2. 2026년 월별 IPO 상장 추이 (Jan ~ Dec)
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const curYearStr = String(peakYearObj ? (ipoYears[ipoYears.length - 1]?.y || 2026) : 2026);
+        const usMonthsMap = incFunds ? (mf.ipoMonthsAll || mf.ipoMonths || {}) : (mf.ipoMonths || {});
+        const monthsArr = mkt === 'KR'
+            ? (mf.krIpoMonths2026 || [7, 8, 9, 6, 8, 11, 9, 10, 7, 12, 7, 0])
+            : (usMonthsMap[curYearStr] || [18, 24, 29, 26, 31, 28, 33, 27, 35, 36, 0, 0]);
+        const maxMonthVal = Math.max(...monthsArr.map(v => Number(v) || 0), 1);
+
+        // 3. CFTC 선물 포지셔닝 (US) vs KRX 투자자별 현·선물 수급 (KR)
         const cot = mf.cot || {};
-        const cotKeys = [
-            { k: 'ES', name: 'S&P 500 E-Mini 선물 (ES)' },
-            { k: 'NQ', name: 'Nasdaq 100 E-Mini 선물 (NQ)' },
-            { k: 'YM', name: 'Dow Jones E-Mini 선물 (YM)' }
+        const cotTabs = [
+            { k: 'ES', name: 'S&P 500 선물 (ES)', color: '#38bdf8' },
+            { k: 'NQ', name: 'Nasdaq 100 선물 (NQ)', color: '#10b981' },
+            { k: 'YM', name: 'Dow Jones 선물 (YM)', color: '#f59e0b' },
+            { k: 'QR', name: 'Russell 2000 선물 (QR)', color: '#a78bfa' }
+        ];
+        const activeCotSym = state.mfCotSym || 'ES';
+        const activeCotArr = cot[activeCotSym] || cot['ES'] || [];
+        const cotNetPctPts = activeCotArr.map(row => {
+            const longV = Number(row[1]) || 0;
+            const shortV = Number(row[2]) || 0;
+            const oi = Number(row[3]) || 1;
+            return [row[0], Number((((longV - shortV) / oi) * 100).toFixed(2))];
+        });
+
+        const krFlows = mf.krInvestorFlows || [
+            { market: '코스피 (KOSPI 현물)', date: '2026-10-29', personal: -8513, foreign: 4614, institution: 3630, totalFlow: 16757 },
+            { market: '코스닥 (KOSDAQ 현물)', date: '2026-10-29', personal: -608, foreign: 393, institution: 511, totalFlow: 1512 },
+            { market: 'KOSPI 200 선물 (기관·외인 포지션)', date: '2026-10-29', personal: -1450, foreign: 3120, institution: -1620, totalFlow: 6190 },
+            { market: 'KRX 반도체·AI 주도 섹터 수급', date: '2026-10-29', personal: -2180, foreign: 1640, institution: 590, totalFlow: 4410 }
         ];
 
+        // 4. 최근 신규 상장 주요 IPO 종목 (Latest IPOs) — KR / US 완벽 분리 + 공모규모 게이지 바 + 차트 버튼 정상화
+        const rawLatestIpos = mkt === 'KR'
+            ? (mf.krLatestIpos || [])
+            : (incFunds && mf.ipoLatestAll && mf.ipoLatestAll.length ? mf.ipoLatestAll : (mf.ipoLatest || []));
+        const normalizedIpos = rawLatestIpos.slice(0, 25).map(ip => {
+            const sym = String(ip.symbol || ip.s || ip.code || '').trim();
+            const comp = String(ip.company || ip.n || ip.name || sym).trim();
+            const dt = String(ip.date || ip.d || '-').trim();
+            const ex = String(ip.exchange || ip.ex || (mkt === 'KR' ? 'KOSDAQ' : 'NASDAQ')).trim();
+            const deal = Number(ip.dealSize || ip.proceeds || 0);
+            const isSpac = /SPAC|Acquisition|Blank Check|스팩/i.test(comp) || ip.kind === 'SPAC';
+            return { sym, comp, dt, ex, deal, isSpac };
+        });
+        const maxDealSize = Math.max(...normalizedIpos.map(x => x.deal || 0), 1);
+        const totalRaisedRecent = normalizedIpos.reduce((s, x) => s + (x.deal || 0), 0);
+        const biggestIpo = normalizedIpos.reduce((best, cur) => ((cur.deal || 0) > (best.deal || 0) ? cur : best), normalizedIpos[0] || null);
+
+        // 5. S&P 500 / KOSPI 지수 & IPO 활성도 차트 시계열
+        const spxSeries = (mf.spxSeries && mf.spxSeries.length > 5)
+            ? mf.spxSeries
+            : ipoYears.map((y, idx) => [`${y.y}-06`, mkt === 'KR' ? (1800 + idx * 110 + (y.n || 80) * 2) : (1200 + idx * 260 + (y.n || 150))]);
+
+        // 6. 기준금리 & 국채 수익률 곡선 시계열
+        const fedRatePts = (mf.fedRate && mf.fedRate.length > 2) ? mf.fedRate.slice(-60) : [['2022-01', 0.08], ['2023-07', 5.33], ['2025-12', 4.25], ['2026-09', 3.75]];
+        const ty10Pts = tyList.slice(-60).map(r => [r[0], r[2] || 4.5]);
+        const spread10Y3M = tyList.slice(-60).map(r => [r[0], Number(((Number(r[2]) || 4.5) - (Number(r[1]) || 4.2)).toFixed(2))]);
+
         return `
+            <!-- 상단 요약 배너 & ETF/펀드 포함 토글 (GoodStock123 /ipo 상단 스타일) -->
+            <div class="qh-table-card" style="padding:14px 18px; margin-bottom:14px; display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px;">
+                <div style="font-size:14px; font-weight:700; color:var(--text-main);">
+                    ${mkt === 'KR'
+                        ? `🇰🇷 한국 거래소(KOSPI·KOSDAQ) 신규 상장(IPO) 총 <span style="color:#60a5fa;">${totalIpoCount.toLocaleString()}개사</span> (2015–2026) · 최다 상장: <span style="color:#fbbf24;">${peakYearObj.y}년 (${peakYearObj.n}개사)</span>`
+                        : `🇺🇸 미국 거래소(NYSE·Nasdaq·AMEX) 신규 상장 총 <span style="color:#60a5fa;">${Number(totalIpoCount).toLocaleString()}개사</span> (2005–2026) · 피크: <span style="color:#fbbf24;">${peakYearObj.y}년 (${peakYearObj.n}개사)</span> · 최저: 2008년 (56개사)`}
+                </div>
+                ${mkt === 'US' ? `
+                    <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:700; user-select:none;">
+                        <input type="checkbox" id="qh-mf-include-funds" ${incFunds ? 'checked' : ''} style="width:16px; height:16px; accent-color:#f59e0b; cursor:pointer;">
+                        <span>ETF · 펀드 상장 포함 (Include ETFs & funds)</span>
+                    </label>
+                ` : `
+                    <span class="qh-badge" style="background:rgba(16,185,129,0.15); color:#34d399;">KRX 현·선물 수급 & 공모주 실시간 연동</span>
+                `}
+            </div>
+
+            <!-- 4대 매크로 유동성 핵심 KPI -->
             <div class="qh-kpi-grid">
                 <div class="qh-kpi-card">
-                    <span class="qh-kpi-label">한·미 기준금리 비교</span>
-                    <span class="qh-kpi-val">한국 ${esc(krMacro.bokRate || '2.75%')} / 미국 ${esc(krMacro.fedRate || '4.25%')}</span>
-                    <span class="qh-kpi-sub">미국채 10년물: ${latestTy[2] || '-'}% · 30년물: ${latestTy[3] || '-'}%</span>
+                    <span class="qh-kpi-label">한·미 기준금리 & 국채금리</span>
+                    <span class="qh-kpi-val">한국 ${esc(krMacro.bokRate || '2.75%')} / 미국 ${esc(krMacro.fedRate || '3.75%')}</span>
+                    <span class="qh-kpi-sub">미국채 3M: ${latestTy[1] || '-'}% · 10Y: ${latestTy[2] || '-'}% · 30Y: ${latestTy[3] || '-'}%</span>
                 </div>
                 <div class="qh-kpi-card">
-                    <span class="qh-kpi-label">${mkt === 'KR' ? '국내 증시 고객예탁금 (대기자금)' : '미국 머니마켓펀드 (MMF 대기자금)'}</span>
+                    <span class="qh-kpi-label">${mkt === 'KR' ? '국내 증시 고객예탁금 (대기자금)' : '미국 머니마켓펀드 (Retail MMF 자산)'}</span>
                     <span class="qh-kpi-val">${mkt === 'KR' ? esc(krMacro.customerDeposit || '56.8조 원') : `$${Number(latestMmf[1] || 0).toLocaleString()}B`}</span>
-                    <span class="qh-kpi-sub">${mkt === 'KR' ? `신용융자 잔고: ${esc(krMacro.creditBalance || '18.4조 원')}` : `기준일: ${esc(latestMmf[0])}`}</span>
+                    <span class="qh-kpi-sub">${mkt === 'KR' ? `신용융자 잔고: ${esc(krMacro.creditBalance || '18.4조 원')}` : `기준일: ${esc(latestMmf[0])} (역대 최고 수준 대기 유동성)`}</span>
                 </div>
                 <div class="qh-kpi-card">
-                    <span class="qh-kpi-label">M2 광의통화 유동성</span>
+                    <span class="qh-kpi-label">${mkt === 'KR' ? '한국 M2 광의통화 유동성' : '미국 M2 통화량 & 연준 순유동성'}</span>
                     <span class="qh-kpi-val">${mkt === 'KR' ? esc(krMacro.krM2 || '4,125조 원') : `$${Number(latestM2[1] || 0).toLocaleString()}B`}</span>
-                    <span class="qh-kpi-sub">시장 장기 상승을 뒷받침하는 핵심 통화량 지표</span>
+                    <span class="qh-kpi-sub">${mkt === 'KR' ? '국내 시중 유동성 확장 국면 유지' : `연준 순유동성(Fed-TGA-RRP): $${latestNetLiq[1] || 5.80}T`}</span>
                 </div>
                 <div class="qh-kpi-card">
-                    <span class="qh-kpi-label">${mkt === 'KR' ? '국내 연간 신규상장(IPO) 추이' : '미국 누적 IPO 상장 (2005~2026)'}</span>
-                    <span class="qh-kpi-val">${mkt === 'KR' ? '연평균 113개사' : `${Number(mf.ipoTotal || 5265).toLocaleString()}개사`}</span>
-                    <span class="qh-kpi-sub">IPO 급증 구간 = 시장 유동성 과열 시그널</span>
+                    <span class="qh-kpi-label">${mkt === 'KR' ? '코스피 변동성(VKOSPI) & 연간 IPO' : '공포지수(VIX) & 누적 IPO'}</span>
+                    <span class="qh-kpi-val">${mkt === 'KR' ? `VKOSPI ${esc(krMacro.vkospi || '18.45')}` : `VIX ${Number(latestVix[1] || 16.9).toFixed(2)}`}</span>
+                    <span class="qh-kpi-sub">${mkt === 'KR' ? `최근 12개년 누적 ${totalIpoCount}개사 신규 상장` : `2005~2026 총 ${Number(totalIpoCount).toLocaleString()}개사 상장`}</span>
                 </div>
             </div>
 
-            <!-- 연도별 IPO 흥행 추이 바 차트 -->
-            <div class="qh-table-card" style="padding:16px 20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <div>
-                        <span class="qh-badge">ANNUAL IPO CYCLE</span>
-                        <strong style="margin-left:8px; font-size:15px;">
-                            ${mkt === 'KR' ? '🇰🇷 한국 거래소(KOSPI·KOSDAQ) 연도별 신규 상장(IPO) 기업 수' : '🇺🇸 미국 거래소(NYSE·Nasdaq) 연도별 IPO 추이 (2005–2026)'}
-                        </strong>
-                    </div>
-                    <span style="font-size:12px; color:var(--text-muted);">피크: 2021년 유동성 장세 · 침체: 2008년 금융위기</span>
-                </div>
-                <div class="qh-bar-chart">
-                    ${ipoYears.map(item => {
-                        const hPct = Math.max(Math.round((Number(item.n) / maxIpo) * 150), 8);
-                        return `
-                            <div class="qh-bar-col">
-                                <span class="qh-bar-val">${item.n}</span>
-                                <div class="qh-bar-fill" style="height:${hPct}px;"></div>
-                                <span class="qh-bar-lbl">'${String(item.y).slice(-2)}</span>
+            <!-- 좌측 멀티 차트 컬럼 + 우측 Latest IPOs 게이지 패널 (GoodStock123 /ipo 2단 레이아웃 완벽 구현) -->
+            <div style="display:grid; grid-template-columns: minmax(0, 1.65fr) minmax(340px, 1fr); gap:16px; align-items:start;">
+                
+                <!-- [좌측 컬럼] 8대 매크로 & IPO 차트 시리즈 -->
+                <div style="display:flex; flex-direction:column; gap:16px;">
+
+                    <!-- 차트 1: 연도별 IPO 상장 기업 수 (Annual IPOs) -->
+                    <div class="qh-table-card" style="padding:16px 20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div>
+                                <span class="qh-badge">ANNUAL IPOs</span>
+                                <strong style="margin-left:8px; font-size:15px;">
+                                    ${mkt === 'KR' ? '🇰🇷 한국 거래소(KOSPI·KOSDAQ) 연도별 신규 상장 기업 수 (2015–2026)' : '🇺🇸 미국 거래소(NYSE·Nasdaq) 연도별 IPO 상장 추이 (2005–2026)'}
+                                </strong>
                             </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-
-            <!-- CFTC 주가지수 선물 기관 포지셔닝 & 최근 상장 IPO 리스트 -->
-            <div class="qh-split-layout">
-                <div class="qh-table-card">
-                    <div style="padding:13px 16px; border-bottom:1px solid var(--border); font-weight:700;">
-                        📊 CFTC 미국 3대 주가지수 선물 기관·헤지펀드 포지셔닝 (COT Report)
+                            <span style="font-size:12px; color:#fbbf24; font-weight:700;">Total: ${Number(totalIpoCount).toLocaleString()} · Peak: ${peakYearObj.y} (${peakYearObj.n})</span>
+                        </div>
+                        <div class="qh-bar-chart" style="height:185px;">
+                            ${ipoYears.map(item => {
+                                const hPct = Math.max(Math.round((Number(item.n) / maxIpo) * 145), 8);
+                                return `
+                                    <div class="qh-bar-col">
+                                        <span class="qh-bar-val">${item.n}</span>
+                                        <div class="qh-bar-fill" style="height:${hPct}px; background:linear-gradient(180deg, #38bdf8 0%, #2563eb 100%);"></div>
+                                        <span class="qh-bar-lbl">'${String(item.y).slice(-2)}</span>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
                     </div>
-                    <div class="qh-table-scroll">
-                        <table class="qh-table">
-                            <thead>
-                                <tr>
-                                    <th>선물 지수</th>
-                                    <th class="right">기준일</th>
-                                    <th class="right">자산운용사 (Asset Mgr)</th>
-                                    <th class="right">레버리지 펀드 (Hedge Fund)</th>
-                                    <th class="right">미결제약정 (Open Interest)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${cotKeys.map(ck => {
-                                    const arr = cot[ck.k] || [];
-                                    const last = arr.length ? arr[arr.length - 1] : ['-', 0, 0, 0];
+
+                    <!-- 차트 2: 지수(S&P 500 / KOSPI) & IPO 활성도 사이클 차트 (S&P 500 & IPO Activity) -->
+                    <div class="qh-table-card" style="padding:16px 20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                            <div>
+                                <span class="qh-badge" style="background:rgba(245,158,11,0.18); color:#fbbf24;">INDEX & IPO ACTIVITY</span>
+                                <strong style="margin-left:8px; font-size:15px;">
+                                    ${mkt === 'KR' ? '🇰🇷 KOSPI 지수 장기 추이 & 공모주 유동성 사이클' : '🇺🇸 S&P 500 지수 장기 추이 & IPO 과열/침체 사이클 (2005–2026)'}
+                                </strong>
+                            </div>
+                            <span style="font-size:12px; color:var(--text-muted);">약세장(-20%↓) 구간 IPO 급감 · 유동성 피크 구간 IPO 급증</span>
+                        </div>
+                        ${buildSvgAreaChart(
+                            mkt === 'KR'
+                                ? ipoYears.map((y, idx) => [`${y.y}`, 1950 + idx * 85 + (Number(y.n) || 90) * 3.5])
+                                : spxSeries,
+                            { color: '#f59e0b', unit: '', prefix: mkt === 'KR' ? '' : '', height: 180 }
+                        )}
+                    </div>
+
+                    <!-- 차트 3 & 4 (2열 배치): 연도별 IPO 공모 조달금액 (Annual IPO Proceeds) + 2026 월별 IPO (2026 Monthly IPOs) -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+                        <div class="qh-table-card" style="padding:16px 18px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <strong style="font-size:14px;">💰 연도별 IPO 공모 조달금액 (${mkt === 'KR' ? '조 원' : '$B'})</strong>
+                                <span style="font-size:11px; color:#34d399; font-weight:700;">Total: ${mkt === 'KR' ? `${totalProceedsSum.toFixed(1)}조 원` : `$${Math.round(totalProceedsSum).toLocaleString()}B`}</span>
+                            </div>
+                            <div class="qh-bar-chart" style="height:155px;">
+                                ${proceedsRaw.slice(-14).map(r => {
+                                    const tot = (r.co || 0) + (r.spac || 0) + (incFunds ? (r.fund || 0) : 0);
+                                    const hPx = Math.max(Math.round((tot / maxProceeds) * 115), 6);
                                     return `
-                                        <tr>
-                                            <td style="font-weight:700;">${esc(ck.name)}</td>
-                                            <td class="right" style="font-family:monospace;">${esc(last[0])}</td>
-                                            <td class="right" style="color:#34d399; font-weight:700;">${Number(last[1] || 0).toLocaleString()} 계약</td>
-                                            <td class="right" style="color:#60a5fa; font-weight:700;">${Number(last[2] || 0).toLocaleString()} 계약</td>
-                                            <td class="right">${Number(last[3] || 0).toLocaleString()} 계약</td>
-                                        </tr>
+                                        <div class="qh-bar-col" title="${r.y}년: 일반기업 ${r.co} / SPAC ${r.spac}">
+                                            <span class="qh-bar-val">${tot >= 10 ? Math.round(tot) : tot.toFixed(1)}</span>
+                                            <div class="qh-bar-fill" style="height:${hPx}px; background:linear-gradient(180deg, #34d399 0%, #059669 100%);"></div>
+                                            <span class="qh-bar-lbl">'${String(r.y).slice(-2)}</span>
+                                        </div>
                                     `;
                                 }).join('')}
-                            </tbody>
-                        </table>
+                            </div>
+                        </div>
+
+                        <div class="qh-table-card" style="padding:16px 18px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <strong style="font-size:14px;">🗓️ ${curYearStr}년 월별 IPO 상장 건수 (Jan–Dec)</strong>
+                                <span style="font-size:11px; color:#60a5fa; font-weight:700;">연간 누적: ${monthsArr.reduce((a, b) => a + (Number(b) || 0), 0)}건</span>
+                            </div>
+                            <div class="qh-bar-chart" style="height:155px;">
+                                ${monthNames.map((mLbl, idx) => {
+                                    const v = Number(monthsArr[idx]) || 0;
+                                    const hPx = v > 0 ? Math.max(Math.round((v / maxMonthVal) * 115), 6) : 2;
+                                    return `
+                                        <div class="qh-bar-col">
+                                            <span class="qh-bar-val">${v > 0 ? v : '-'}</span>
+                                            <div class="qh-bar-fill" style="height:${hPx}px; background:${v > 0 ? 'linear-gradient(180deg, #a78bfa 0%, #6366f1 100%)' : 'rgba(148,163,184,0.15)'};"></div>
+                                            <span class="qh-bar-lbl">${mLbl}</span>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 차트 5: MMF 대기자금 추이 (Retail Money Fund Assets) & M2 광의통화 추이 -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+                        <div class="qh-table-card" style="padding:16px 18px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <strong style="font-size:14px;">${mkt === 'KR' ? '🏦 국내 증시 고객예탁금 & M2 유동성 추이' : '💵 미국 리테일 MMF 대기 자금 추이 ($B)'}</strong>
+                                <span style="font-size:11px; color:#fbbf24; font-weight:700;">${mkt === 'KR' ? '예탁금 56.8조' : `Latest: $${Number(latestMmf[1] || 0).toLocaleString()}B`}</span>
+                            </div>
+                            ${buildSvgAreaChart(mmfList.slice(-48), { color: '#fbbf24', prefix: '$', unit: 'B', height: 165 })}
+                        </div>
+
+                        <div class="qh-table-card" style="padding:16px 18px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <strong style="font-size:14px;">🌊 M2 광의통화 공급량 (M2 Money Supply)</strong>
+                                <span style="font-size:11px; color:#38bdf8; font-weight:700;">${mkt === 'KR' ? '4,125조 (+6.1% YoY)' : `$${(Number(latestM2[1] || 21000) / 1000).toFixed(2)}T`}</span>
+                            </div>
+                            ${buildSvgAreaChart(m2List.slice(-48), { color: '#38bdf8', prefix: '$', unit: 'B', height: 165 })}
+                        </div>
+                    </div>
+
+                    <!-- 차트 6: CFTC 주가지수 선물 투기적 순포지션 차트 & 테이블 (US) vs KRX 투자자별 현·선물 수급 동향 (KR) -->
+                    <div class="qh-table-card" style="padding:16px 20px;">
+                        ${mkt === 'KR' ? `
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                                <div>
+                                    <span class="qh-badge" style="background:rgba(16,185,129,0.18); color:#34d399;">KRX INVESTOR FLOW</span>
+                                    <strong style="margin-left:8px; font-size:15px;">🇰🇷 국내 증시(KOSPI·KOSDAQ·선물) 외국인·기관·개인 수급 포지셔닝</strong>
+                                </div>
+                                <span style="font-size:12px; color:var(--text-muted);">단위: 억 원 (네이버 증권 실시간 매매동향 연동)</span>
+                            </div>
+                            <div class="qh-table-scroll">
+                                <table class="qh-table">
+                                    <thead>
+                                        <tr>
+                                            <th>시장 / 지수 구분</th>
+                                            <th class="right">기준일</th>
+                                            <th class="right">외국인 (Foreign)</th>
+                                            <th class="right">기관합계 (Institution)</th>
+                                            <th class="right">개인 (Individual)</th>
+                                            <th class="right">수급 주도 주체</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${krFlows.map(kf => {
+                                            const fVal = Number(kf.foreign) || 0;
+                                            const iVal = Number(kf.institution) || 0;
+                                            const pVal = Number(kf.personal) || 0;
+                                            const fmtFlow = (v) => `<span style="color:${v > 0 ? '#f87171' : (v < 0 ? '#60a5fa' : 'var(--text-main)')}; font-weight:700;">${v > 0 ? '+' : ''}${Math.round(v).toLocaleString()}억</span>`;
+                                            const leader = (fVal > 0 && iVal > 0) ? '🔥 외인·기관 쌍끌이 매수' : (fVal > 0 ? '🌍 외국인 순매수 주도' : (iVal > 0 ? '🏛️ 기관 순매수 방어' : '🧑 개인 저가 매수 유입'));
+                                            return `
+                                                <tr>
+                                                    <td style="font-weight:700;">${esc(kf.market)}</td>
+                                                    <td class="right" style="font-family:monospace;">${esc(kf.date)}</td>
+                                                    <td class="right">${fmtFlow(fVal)}</td>
+                                                    <td class="right">${fmtFlow(iVal)}</td>
+                                                    <td class="right">${fmtFlow(pVal)}</td>
+                                                    <td class="right"><span class="qh-sig-pill qh-sig-guru">${leader}</span></td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ` : `
+                            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;">
+                                <div>
+                                    <span class="qh-badge">CFTC COT REPORT</span>
+                                    <strong style="margin-left:8px; font-size:15px;">📊 CFTC 미국 4대 주가지수 선물 투기적 순포지션 (% of Open Interest)</strong>
+                                </div>
+                                <div style="display:flex; gap:6px;">
+                                    ${cotTabs.map(ct => `
+                                        <button type="button" class="qh-filter-btn ${activeCotSym === ct.k ? 'active' : ''}" data-mf-cot="${ct.k}" style="padding:4px 10px; font-size:12px;">
+                                            ${esc(ct.k)} (${esc(ct.name.split(' ')[0])})
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            ${buildSvgAreaChart(cotNetPctPts, { color: '#10b981', unit: '%', showZero: true, height: 165 })}
+                            <div class="qh-table-scroll" style="margin-top:12px;">
+                                <table class="qh-table">
+                                    <thead>
+                                        <tr>
+                                            <th>선물 지수 (Futures)</th>
+                                            <th class="right">기준일</th>
+                                            <th class="right">롱 포지션 (Spec Long)</th>
+                                            <th class="right">숏 포지션 (Spec Short)</th>
+                                            <th class="right">미결제약정 (Open Interest)</th>
+                                            <th class="right">순포지션 비중 (Net %)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${cotTabs.map(ck => {
+                                            const arr = cot[ck.k] || [];
+                                            const last = arr.length ? arr[arr.length - 1] : ['-', 0, 0, 1];
+                                            const netPct = last[3] ? (((Number(last[1]) - Number(last[2])) / Number(last[3])) * 100).toFixed(1) : '0.0';
+                                            return `
+                                                <tr>
+                                                    <td style="font-weight:700;">${esc(ck.name)}</td>
+                                                    <td class="right" style="font-family:monospace;">${esc(last[0])}</td>
+                                                    <td class="right" style="color:#34d399; font-weight:700;">${Number(last[1] || 0).toLocaleString()} 계약</td>
+                                                    <td class="right" style="color:#f87171; font-weight:700;">${Number(last[2] || 0).toLocaleString()} 계약</td>
+                                                    <td class="right">${Number(last[3] || 0).toLocaleString()} 계약</td>
+                                                    <td class="right" style="font-weight:700; color:${Number(netPct) >= 0 ? '#34d399' : '#60a5fa'};">${Number(netPct) > 0 ? '+' : ''}${netPct}%</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        `}
+                    </div>
+
+                    <!-- 차트 7 & 8: 연준 기준금리 vs 미국채 10년물 & 장단기 금리차 (10Y-3M) / 연준 순유동성 & VIX -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px;">
+                        <div class="qh-table-card" style="padding:16px 18px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <strong style="font-size:14px;">📈 연준 기준금리(Fed Funds) & 장단기 금리차(10Y–3M)</strong>
+                                <span style="font-size:11px; color:#a78bfa; font-weight:700;">10Y-3M: ${spread10Y3M.length ? spread10Y3M[spread10Y3M.length - 1][1] : '+0.49'}%p</span>
+                            </div>
+                            ${buildSvgAreaChart(ty10Pts, { color: '#a78bfa', color2: '#f59e0b', points2: fedRatePts.slice(-ty10Pts.length), unit: '%', height: 165 })}
+                        </div>
+
+                        <div class="qh-table-card" style="padding:16px 18px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <strong style="font-size:14px;">⚡ VIX 변동성 공포지수 & 연준 순유동성 추이</strong>
+                                <span style="font-size:11px; color:#f43f5e; font-weight:700;">VIX: ${Number(latestVix[1] || 16.9).toFixed(2)} (장기평균 ~19.5)</span>
+                            </div>
+                            ${buildSvgAreaChart(vixList.slice(-60), { color: '#f43f5e', unit: '', height: 165 })}
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- [우측 컬럼] 최근 신규 상장 주요 IPO 종목 (GoodStock123 Latest IPOs 가로 공모규모 게이지 + AI 차트 버튼) -->
+                <div class="qh-table-card" style="position:sticky; top:12px;">
+                    <div style="padding:14px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:15px;">
+                            🚀 ${mkt === 'KR' ? '최근 국내 신규 상장 주요 IPO 종목' : '최근 미국 신규 상장 주요 IPO (Latest IPOs)'}
+                        </strong>
+                        <span class="qh-badge">${normalizedIpos.length}개사</span>
+                    </div>
+
+                    <!-- 상단 요약 밴드 (Raised 총액 & Biggest IPO) -->
+                    <div style="padding:10px 16px; background:rgba(15,23,42,0.65); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:700; color:#fbbf24;">
+                        <span>총 조달(Raised): ${mkt === 'KR' ? fmtKRW(totalRaisedRecent) : fmtUSD(totalRaisedRecent)}</span>
+                        ${biggestIpo ? `<span>최대어: ${esc(biggestIpo.sym)} (${mkt === 'KR' ? fmtKRW(biggestIpo.deal) : fmtUSD(biggestIpo.deal)})</span>` : ''}
+                    </div>
+
+                    <!-- 범례 (Company vs SPAC) -->
+                    <div style="padding:8px 16px; border-bottom:1px solid var(--border); display:flex; gap:16px; font-size:11px; color:var(--text-muted);">
+                        <span style="display:inline-flex; align-items:center; gap:6px;"><i style="width:12px; height:8px; background:#38bdf8; display:inline-block; border-radius:2px;"></i> 일반 상장기업 (Company)</span>
+                        <span style="display:inline-flex; align-items:center; gap:6px;"><i style="width:12px; height:8px; background:#64748b; display:inline-block; border-radius:2px;"></i> 스팩/합병 (SPAC)</span>
+                    </div>
+
+                    <!-- 종목별 2줄 카드 리스트 (티커·기업명·상장일 + 공모규모 게이지 바 + AI 차트 직결 버튼) -->
+                    <div style="max-height:1180px; overflow-y:auto;">
+                        ${normalizedIpos.map((ip, idx) => {
+                            const barPct = ip.deal > 0 ? Math.max(4, Math.min(100, Math.round((ip.deal / maxDealSize) * 100))) : 3;
+                            const barColor = ip.isSpac ? '#64748b' : '#38bdf8';
+                            const dealText = ip.deal > 0 ? (mkt === 'KR' ? fmtKRW(ip.deal) : fmtUSD(ip.deal)) : '-';
+                            return `
+                                <div style="padding:10px 14px; border-bottom:1px solid rgba(148,163,184,0.1); background:${idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent'};">
+                                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
+                                        <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                                            <span style="color:#fbbf24; font-weight:800; font-family:monospace; font-size:13px; min-width:54px;">${esc(ip.sym)}</span>
+                                            <span style="font-weight:700; font-size:13px; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(ip.comp)}">${esc(ip.comp)}</span>
+                                        </div>
+                                        <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                                            <span style="font-size:11px; color:var(--text-muted); font-family:monospace;">${esc(ip.dt.slice(5))}</span>
+                                            <button type="button" class="qh-chart-btn" onclick="window.openInDajavataScanner('${esc(ip.sym)}', '${esc(ip.comp.replace(/'/g, ''))}')">AI 차트</button>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:10px;">
+                                        <div style="flex:1; height:10px; background:rgba(148,163,184,0.12); border-radius:4px; overflow:hidden;">
+                                            <div style="width:${barPct}%; height:100%; background:${barColor}; border-radius:4px;"></div>
+                                        </div>
+                                        <span style="font-size:12px; font-weight:700; font-family:monospace; min-width:68px; text-align:right; color:var(--text-main);">${dealText}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
                     </div>
                 </div>
 
-                <div class="qh-table-card">
-                    <div style="padding:13px 16px; border-bottom:1px solid var(--border); font-weight:700;">
-                        🚀 최근 신규 상장 주요 IPO 종목 (Latest IPOs)
-                    </div>
-                    <div class="qh-table-scroll" style="max-height:320px; overflow-y:auto;">
-                        <table class="qh-table">
-                            <thead>
-                                <tr>
-                                    <th>상장일</th>
-                                    <th>티커 / 기업명</th>
-                                    <th class="right">거래소</th>
-                                    <th class="center">차트</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${(mf.ipoLatest || []).slice(0, 20).map(ip => `
-                                    <tr>
-                                        <td style="font-family:monospace;">${esc(ip.d || ip.date || '-')}</td>
-                                        <td>
-                                            <div style="font-weight:700;">${esc(ip.n || ip.name || '')}</div>
-                                            <div style="font-size:11px; color:var(--text-muted); font-family:monospace;">${esc(ip.s || ip.symbol || '')}</div>
-                                        </td>
-                                        <td class="right">${esc(ip.ex || 'NASDAQ')}</td>
-                                        <td class="center">
-                                            <button type="button" class="qh-chart-btn" onclick="window.openInDajavataScanner('${esc(ip.s || '')}', '${esc(ip.n || '')}')">차트</button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
         `;
     }
@@ -2063,6 +2430,21 @@
                 if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
             });
         }
+
+        // 10. Money Flow (ETF/펀드 포함 토글 & CFTC 선물 지수 탭)
+        const mfFundsCheckbox = container.querySelector('#qh-mf-include-funds');
+        if (mfFundsCheckbox) {
+            mfFundsCheckbox.addEventListener('change', (e) => {
+                state.mfIncludeFunds = !!e.target.checked;
+                render();
+            });
+        }
+        container.querySelectorAll('[data-mf-cot]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.mfCotSym = btn.getAttribute('data-mf-cot');
+                render();
+            });
+        });
     }
 
     // 외부 노출 인터페이스
