@@ -1121,6 +1121,92 @@ def get_us_peer_summary(symbol: str):
     return res_data
 
 
+_calendar_month_cache = {}
+
+
+@app.get("/api/quant/calendar")
+def get_quant_calendar_month(year: int = None, month: int = None):
+    """임의의 연·월(YYYY, MM)에 대한 5대 증시 캘린더(실적·IPO·분할·배당·거시경제) 실시간 조회"""
+    import calendar as pycal
+    now_dt = datetime.datetime.now()
+    y = int(year or now_dt.year)
+    m = int(month or now_dt.month)
+    if m < 1:
+        m = 1
+    if m > 12:
+        m = 12
+    ym_key = f"{y:04d}-{m:02d}"
+
+    cached = _calendar_month_cache.get(ym_key)
+    if cached and (time.time() - cached["ts"] < 1800):
+        return cached["data"]
+
+    last_day = pycal.monthrange(y, m)[1]
+    m_start = f"{y:04d}-{m:02d}-01"
+    m_end = f"{y:04d}-{m:02d}-{last_day:02d}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    def _get(u):
+        try:
+            r = requests.get(u, headers=headers, timeout=8)
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
+            pass
+        return {}
+
+    earn_raw = _get(f"https://goodstock123.com/api/fundamentals/calendar-earnings?from={m_start}&to={m_end}&v=2")
+    ipo_raw = _get(f"https://goodstock123.com/api/fundamentals/calendar-ipos?from={m_start}&to={m_end}&v=1")
+    split_raw = _get(f"https://goodstock123.com/api/fundamentals/calendar-splits?board=1&from={m_start}&to={m_end}&v=1")
+    div_raw = _get(f"https://goodstock123.com/api/fundamentals/calendar-dividends?board=1&from={m_start}&to={m_end}&v=2")
+    econ_raw = _get(f"https://goodstock123.com/api/fundamentals/calendar-economic?from={m_start}&to={m_end}&v=1")
+
+    earn_by_date = {}
+    earn_counts = {}
+    for r in (earn_raw.get("rows") or []):
+        dt = r.get("date")
+        if dt:
+            earn_by_date.setdefault(dt, []).append(r)
+
+    compact_earnings = []
+    for dt in sorted(earn_by_date.keys()):
+        day_rows = earn_by_date[dt]
+        key_rows = [x for x in day_rows if x.get("key")]
+        other_rows = [x for x in day_rows if not x.get("key")][:30]
+        earn_counts[dt] = {"all": len(day_rows), "key": len(key_rows)}
+        compact_earnings.extend(key_rows + other_rows)
+
+    div_by_date = {}
+    div_counts = {}
+    for r in (div_raw.get("rows") or []):
+        dt = r.get("date")
+        if dt:
+            div_by_date.setdefault(dt, []).append(r)
+
+    compact_dividends = []
+    for dt in sorted(div_by_date.keys()):
+        day_rows = div_by_date[dt]
+        key_rows = [x for x in day_rows if x.get("key")]
+        other_rows = [x for x in day_rows if not x.get("key")][:20]
+        div_counts[dt] = {"all": len(day_rows), "key": len(key_rows)}
+        compact_dividends.extend(key_rows + other_rows)
+
+    data = {
+        "ym": ym_key,
+        "from": m_start,
+        "to": m_end,
+        "earnings_counts": earn_counts,
+        "earnings": compact_earnings,
+        "ipos": ipo_raw.get("rows") or [],
+        "splits": split_raw.get("rows") or [],
+        "dividends_counts": div_counts,
+        "dividends": compact_dividends,
+        "economic": econ_raw.get("rows") or []
+    }
+    _calendar_month_cache[ym_key] = {"ts": time.time(), "data": data}
+    return data
+
+
 @app.get("/")
 def read_root():
     return {"message": "DAJAVATA API Server is running!"}

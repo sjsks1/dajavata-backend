@@ -97,7 +97,13 @@
         etfCategoryUS: 'ALL',
         etfSearch: '',
         calCategory: 'earnings',        // 'earnings' | 'ipo' | 'split' | 'dividend' | 'economic'
+        calYear: new Date().getFullYear(),
+        calMonth: new Date().getMonth() + 1,
         calSelectedDate: null,
+        calFilterMode: 'key',           // 'key' (S&P500/Nasdaq100/KOSPI200 주요주) | 'all' (전체 종목)
+        calSearch: '',
+        calDynamicMonths: {},
+        calLoadingMonth: false,
         guruStyle: 'ALL',               // 'ALL' | 1..8
         guruSize: 'ALL',                // 'ALL' | 'Q' | 'W' | 'E' | 'R'
         guruSearch: '',
@@ -908,173 +914,459 @@
     }
 
     // =========================================================================
-    // [모듈 6] 증시 일정 캘린더 (Market Calendar — Earnings, IPO, Split, Macro)
+    // [모듈 6] 증시 일정 캘린더 (Market Calendar — Earnings, IPO, Split, Dividend, Macro)
+    // - 연/월 자유 이동 (< 이전 달, > 다음 달, 연·월 드롭다운, 오늘 버튼)
+    // - 5대 탭 (Earnings, IPO, Stock Split, Dividend, Economic)
+    // - Key(핵심 대형주) / All(전체 종목) 토글 & 장전(Pre Market) / 장후(Post Market) 분리 보드
     // =========================================================================
-    const KR_CALENDAR_DATA = {
-        earnings: [
-            { date: '2026-10-08', code: '005930', title: '삼성전자 (005930) 잠정 실적 발표', sub: '영업이익 컨센서스 상회 여부 및 HBM3E/파운드리 가이던스 점검', badge: '잠정실적' },
-            { date: '2026-10-08', code: '373220', title: 'LG에너지솔루션 (373220) 잠정 실적 발표', sub: '북미 AMPC 보조금 반영 규모 및 유럽향 출하량 점검', badge: '잠정실적' },
-            { date: '2026-10-22', code: '207940', title: '삼성바이오로직스 (207940) 3Q 확정 실적', sub: '4공장 풀가동 효과 및 환율 수혜 반영 분기 최대 매출 기대', badge: '확정실적' },
-            { date: '2026-10-24', code: '000660', title: 'SK하이닉스 (000660) 3Q 경영실적 및 컨퍼런스콜', sub: 'HBM 매출 비중 확대 및 차세대 HBM4 양산 로드맵 발표', badge: '장전발표' },
-            { date: '2026-10-24', code: '005380', title: '현대차 (005380) 3Q 경영실적 및 주주환원 발표', sub: '북미 하이브리드 판매 호조 및 분기 배당 확정', badge: '확정실적' },
-            { date: '2026-10-25', code: '105560', title: 'KB금융 (105560) 3Q 실적 및 밸류업 자사주 소각 공시', sub: 'CET1 비율 기반 주주환원율 확대 발표', badge: '밸류업공시' },
-            { date: '2026-10-25', code: '055550', title: '신한지주 (055550) 3Q 경영실적 발표', sub: '분기 배당 및 자사주 매입·소각 규모 발표', badge: '확정실적' },
-            { date: '2026-10-28', code: '000270', title: '기아 (000270) 3Q 경영실적 발표', sub: '글로벌 영업이익률 12%대 유지 및 고배당 기조 점검', badge: '확정실적' },
-            { date: '2026-10-29', code: '012450', title: '한화에어로스페이스 (012450) 분기 실적 발표', sub: '폴란드·루마니아향 K9 자주포 및 천무 인도 물량 급증 반영', badge: '확정실적' },
-            { date: '2026-10-30', code: '005930', title: '삼성전자 (005930) 사업부별 확정 실적 및 컨퍼런스콜', sub: 'DS(반도체)·SDC·MX 사업부별 세부 손익 및 설비투자(CAPEX) 발표', badge: '컨퍼런스콜' },
-            { date: '2026-10-31', code: '035420', title: 'NAVER (035420) 분기 실적 발표', sub: '서치플랫폼 AI 광고 효율 개선 및 커머스 성장률 점검', badge: '장전발표' }
-        ],
-        ipo: [
-            { date: '2026-10-06', code: '475150', title: 'SK이터닉스 / 신재생에너지 섹터 보호예수 해제 점검', sub: '코스피 신재생·ESS 테마 수급 점검', badge: '수급일정' },
-            { date: '2026-10-14', code: '468530', title: '셀비온 (코스닥 신규 상장)', sub: '방사성의약품 신약 개발 전문 바이오 기업 코스닥 상장', badge: '신규상장' },
-            { date: '2026-10-18', code: '476060', title: '와이제이링크 (코스닥 신규 상장)', sub: 'SMT 표면실장 스마트 공정 장비 전문기업 상장', badge: '신규상장' },
-            { date: '2026-10-22', code: '475560', title: '더본코리아 일반투자자 공모주 청약', sub: '유가증권시장(KOSPI) 상장 앞두고 일반 청약 진행', badge: '공모청약' },
-            { date: '2026-10-24', code: '478440', title: '씨메스 (코스닥 신규 상장)', sub: 'AI 3D 비전 로봇 솔루션 전문기업 (SKT·쿠팡 파트너)', badge: '신규상장' },
-            { date: '2026-10-28', code: '479880', title: '클로봇 (코스닥 신규 상장)', sub: '실내 자율주행 로봇 소프트웨어 플랫폼 (현대차·네이버 투자)', badge: '신규상장' },
-            { date: '2026-10-30', code: '481850', title: '에이럭스 / 탑런토탈솔루션 상장 일정', sub: '드론·로봇 에듀테크 및 전장 디스플레이 부품 신규 상장', badge: 'IPO일정' }
-        ],
-        split: [
-            { date: '2026-10-10', code: '105560', title: 'KB금융 자사주 매입·소각 이행 공시', sub: '코리아 밸류업 지수 핵심 편입 종목 주주환원 실행', badge: '자사주소각' },
-            { date: '2026-10-16', code: '005380', title: '현대차 분기배당 기준일 및 우선주 주주환원 점검', sub: '분기 배당락 및 밸류업 프로그램 이행', badge: '배당/환원' },
-            { date: '2026-10-23', code: '068270', title: '셀트리온 자사주 추가 소각 및 합병 시너지 점검', sub: '주주가치 제고를 위한 자사주 소각 일정', badge: '자사주소각' },
-            { date: '2026-10-29', code: '086790', title: '하나금융지주 분기배당 및 자사주 소각 결의', sub: '3분기 실적 발표와 함께 대규모 자사주 소각 발표', badge: '밸류업' }
-        ],
-        economic: [
-            { date: '2026-10-01', code: 'MACRO', title: '한국 9월 수출입동향 발표 (산업통상자원부)', sub: '반도체·자동차·선박 수출 증가율 및 무역수지 흑자 규모 확인', badge: '국내지표' },
-            { date: '2026-10-02', code: 'MACRO', title: '한국 9월 소비자물가지수 (CPI) 발표', sub: '물가 안정 목표(2.0%) 하회 여부 점검', badge: '물가지표' },
-            { date: '2026-10-10', code: 'MACRO', title: 'KRX 코스피200 옵션 만기일 (수급 변동성 주의)', sub: '외국인·기관 프로그램 차익/비차익 매매 쏠림 체크', badge: '만기일' },
-            { date: '2026-10-11', code: 'MACRO', title: '한국은행 금융통화위원회 기준금리 결정', sub: '국내 기준금리 결정 및 총재 기자간담회 통화정책 방향', badge: '금통위(BOK)' },
-            { date: '2026-10-24', code: 'MACRO', title: '한국 3분기 실질 GDP 속보치 발표 (한국은행)', sub: '수출 및 내수 설비투자 성장 기여도 점검', badge: 'GDP속보' },
-            { date: '2026-10-31', code: 'MACRO', title: '한국 9월 산업활동동향 및 반도체 재고순환지표', sub: '광공업 생산 및 반도체 출하/재고 비율 확인', badge: '산업동향' }
-        ]
-    };
+    function getNthWeekdayOfMonth(year, month, targetWeekday, n) {
+        // targetWeekday: 0=Sun .. 4=Thu .. 6=Sat
+        const firstDay = new Date(year, month - 1, 1).getDay();
+        const offset = (targetWeekday - firstDay + 7) % 7;
+        return 1 + offset + (n - 1) * 7;
+    }
+
+    function clampBusinessDay(year, month, day) {
+        const maxD = new Date(year, month, 0).getDate();
+        let d = Math.min(Math.max(day, 1), maxD);
+        const wd = new Date(year, month - 1, d).getDay();
+        if (wd === 0) d = d < maxD ? d + 1 : d - 2;
+        if (wd === 6) d = d > 1 ? d - 1 : d + 2;
+        return `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+
+    function buildKrCalendarForMonth(year, month) {
+        // 연도와 월에 맞춰 자동으로 날짜(평일/옵션만기일 등)를 계산하여 국내 5대 증시 일정을 동적 생성
+        const qLabel = month <= 3 ? '4Q/연간' : (month <= 6 ? '1Q' : (month <= 9 ? '2Q' : '3Q'));
+        const prevMonth = month === 1 ? 12 : month - 1;
+        const optDay = getNthWeekdayOfMonth(year, month, 4, 2); // 매월 두 번째 목요일 = 옵션만기일
+        const bokDay = getNthWeekdayOfMonth(year, month, 4, 3); // 세 번째 목요일 = 금통위/통화정책 점검
+        const dtOpt = `${year}-${String(month).padStart(2, '0')}-${String(optDay).padStart(2, '0')}`;
+        const dtBok = `${year}-${String(month).padStart(2, '0')}-${String(bokDay).padStart(2, '0')}`;
+
+        const earnings = [
+            { date: clampBusinessDay(year, month, 7), code: '005930', name: '삼성전자', when: 'pre', title: `삼성전자 (005930) ${qLabel} 잠정실적 및 가이던스`, sub: '반도체(DS)·디스플레이·MX 부문 영업이익 컨센서스 점검', badge: '잠정실적', key: true },
+            { date: clampBusinessDay(year, month, 8), code: '373220', name: 'LG에너지솔루션', when: 'post', title: `LG에너지솔루션 (373220) ${qLabel} 잠정실적 발표`, sub: '북미 AMPC 세액공제 반영 규모 및 배터리 출하량 점검', badge: '잠정실적', key: true },
+            { date: clampBusinessDay(year, month, 15), code: '005490', name: 'POSCO홀딩스', when: 'post', title: `POSCO홀딩스 (005490) ${qLabel} 기업설명회(IR)`, sub: '철강 스프레드 및 리튬·이차전지소재 부문 실적 발표', badge: '기업IR', key: true },
+            { date: clampBusinessDay(year, month, 22), code: '207940', name: '삼성바이오로직스', when: 'post', title: `삼성바이오로직스 (207940) ${qLabel} 확정 실적 발표`, sub: '4공장 가동률 상승 및 글로벌 CDMO 수주 잔고 점검', badge: '확정실적', key: true },
+            { date: clampBusinessDay(year, month, 24), code: '000660', name: 'SK하이닉스', when: 'pre', title: `SK하이닉스 (000660) ${qLabel} 경영실적 및 컨퍼런스콜`, sub: 'HBM3E/HBM4 매출 비중 및 AI 서버용 DRAM 수익성 발표', badge: '장전발표', key: true },
+            { date: clampBusinessDay(year, month, 24), code: '005380', name: '현대차', when: 'post', title: `현대차 (005380) ${qLabel} 경영실적 및 주주환원 발표`, sub: '북미 하이브리드·SUV 판매 믹스 개선 및 분기배당 확정', badge: '확정실적', key: true },
+            { date: clampBusinessDay(year, month, 25), code: '105560', name: 'KB금융', when: 'post', title: `KB금융 (105560) ${qLabel} 실적 및 밸류업 자사주 소각`, sub: '보통주자본비율(CET1) 기반 주주환원율 확대 공시', badge: '밸류업공시', key: true },
+            { date: clampBusinessDay(year, month, 25), code: '055550', name: '신한지주', when: 'post', title: `신한지주 (055550) ${qLabel} 경영실적 발표`, sub: '분기 균등배당 및 자사주 매입·소각 이행 현황 발표', badge: '확정실적', key: true },
+            { date: clampBusinessDay(year, month, 28), code: '000270', name: '기아', when: 'pre', title: `기아 (000270) ${qLabel} 경영실적 컨퍼런스콜`, sub: '글로벌 완성차 최고 수준 영업이익률 및 주주가치 제고 점검', badge: '장전발표', key: true },
+            { date: clampBusinessDay(year, month, 28), code: '068270', name: '셀트리온', when: 'post', title: `셀트리온 (068270) ${qLabel} 실적 및 짐펜트라 매출 발표`, sub: '미국 PBM 처방 확대 및 바이오시밀러 점유율 점검', badge: '확정실적', key: true },
+            { date: clampBusinessDay(year, month, 29), code: '012450', name: '한화에어로스페이스', when: 'post', title: `한화에어로스페이스 (012450) ${qLabel} 확정 실적 발표`, sub: '폴란드·루마니아향 K9 자주포 및 천무 인도 물량 급증 반영', badge: '확정실적', key: true },
+            { date: clampBusinessDay(year, month, 29), code: '267260', name: 'HD현대일렉트릭', when: 'pre', title: `HD현대일렉트릭 (267260) ${qLabel} 경영실적 발표`, sub: '북미·중동 초고압 변압기 수주잔고 및 영업이익률 점검', badge: '장전발표', key: true },
+            { date: clampBusinessDay(year, month, 30), code: '005930', name: '삼성전자', when: 'pre', title: `삼성전자 (005930) 사업부별 확정 실적 및 컨퍼런스콜`, sub: 'DS(반도체)·SDC·MX 사업부별 세부 손익 및 CAPEX 발표', badge: '컨퍼런스콜', key: true },
+            { date: clampBusinessDay(year, month, 30), code: '034020', name: '두산에너빌리티', when: 'post', title: `두산에너빌리티 (034020) ${qLabel} 실적 및 원전/SMR 수주 점검`, sub: '체코 원전 및 북미 SMR 기자재 수주 파이프라인 발표', badge: '확정실적', key: true },
+            { date: clampBusinessDay(year, month, 31), code: '035420', name: 'NAVER', when: 'pre', title: `NAVER (035420) ${qLabel} 경영실적 컨퍼런스콜`, sub: '서치플랫폼 AI 광고 효율 개선 및 커머스 성장률 점검', badge: '장전발표', key: true }
+        ];
+
+        const ipos = [
+            { date: clampBusinessDay(year, month, 6), code: '475150', title: 'SK이터닉스 / 에너지 인프라 기관 의무보유 확약 점검', sub: '코스피 신재생·ESS·전력 테마 수급 이벤트', badge: '수급일정', key: true },
+            { date: clampBusinessDay(year, month, 14), code: '468530', title: '셀비온 (468530) 코스닥 상장 및 바이오 공모 수급 점검', sub: '방사성의약품 신약 개발 전문 바이오 기업', badge: 'IPO상장', key: true },
+            { date: clampBusinessDay(year, month, 18), code: '476060', title: '와이제이링크 (476060) SMT 스마트 공정 장비 상장 일정', sub: '글로벌 표면실장 장비 공급사 코스닥 상장', badge: 'IPO상장', key: true },
+            { date: clampBusinessDay(year, month, 24), code: '478440', title: '씨메스 (478440) AI 3D 비전 로봇 솔루션 상장 일정', sub: '지능형 로봇 솔루션 전문기업 (SKT·쿠팡 파트너)', badge: 'IPO상장', key: true },
+            { date: clampBusinessDay(year, month, 28), code: '479880', title: '클로봇 (479880) 실내 자율주행 로봇 플랫폼 상장 일정', sub: '현대차·네이버 투자 자율주행 로봇 소프트웨어 기업', badge: 'IPO상장', key: true },
+            { date: clampBusinessDay(year, month, 30), code: '481850', title: '에이럭스 / 탑런토탈솔루션 신규 상장 및 공모 일정', sub: '드론·로봇 에듀테크 및 전장 디스플레이 부품 공모주', badge: 'IPO상장', key: true }
+        ];
+
+        const splits = [
+            { date: clampBusinessDay(year, month, 10), code: '105560', title: 'KB금융 (105560) 자사주 매입·소각 이행 공시', sub: '코리아 밸류업 지수 핵심 편입 종목 주주환원 실행', badge: '자사주소각', key: true },
+            { date: clampBusinessDay(year, month, 17), code: '138040', title: '메리츠금융지주 (138040) 주주환원 및 자사주 소각 점검', sub: '총주주수익률(TSR) 극대화 정책 기반 자사주 매입·소각', badge: '자사주소각', key: true },
+            { date: clampBusinessDay(year, month, 23), code: '068270', title: '셀트리온 (068270) 자사주 추가 소각 및 주주가치 제고', sub: '주주가치 제고를 위한 자사주 소각 일정', badge: '자사주소각', key: true },
+            { date: clampBusinessDay(year, month, 29), code: '086790', title: '하나금융지주 (086790) 자사주 소각 및 밸류업 공시', sub: '실적 발표와 함께 대규모 자사주 소각 결의', badge: '밸류업', key: true }
+        ];
+
+        const dividends = [
+            { date: clampBusinessDay(year, month, 4), code: '005930', title: '삼성전자 (005930) 분기배당 기준일 / 배당금 지급 점검', sub: '보통주 및 우선주(005935) 분기 정규 배당 일정', badge: '분기배당', key: true },
+            { date: clampBusinessDay(year, month, 16), code: '005380', title: '현대차 (005380) 분기배당 기준일 및 우선주 배당 점검', sub: '배당성향 25% 이상 주주환원 정책 이행', badge: '분기배당', key: true },
+            { date: clampBusinessDay(year, month, 21), code: '017670', title: 'SK텔레콤 (017670) 분기배당 및 고배당 통신주 배당 일정', sub: '고배당 대표 통신주 분기 배당 기준일 점검', badge: '고배당', key: true },
+            { date: clampBusinessDay(year, month, 28), code: '105560', title: '4대 금융지주(KB·신한·하나·우리) 분기 균등배당 점검', sub: '분기 배당락 및 배당금 지급 예정일 확인', badge: '금융배당', key: true }
+        ];
+
+        const economic = [
+            { date: clampBusinessDay(year, month, 1), code: 'MACRO', title: `한국 ${prevMonth}월 수출입동향 발표 (산업통상자원부)`, sub: '반도체·자동차·선박 수출 증가율 및 무역수지 흑자 규모 확인', badge: '수출입지표', key: true },
+            { date: clampBusinessDay(year, month, 3), code: 'MACRO', title: `한국 ${prevMonth}월 소비자물가지수 (CPI) 발표 (통계청)`, sub: '물가 안정 목표(2.0%) 수렴 여부 및 근원물가 점검', badge: '물가지표', key: true },
+            { date: dtOpt, code: 'MACRO', title: `KRX 코스피200 옵션/선물 만기일 (${month}월물 결제일)`, sub: '외국인·기관 프로그램 차익/비차익 수급 변동성 확대 구간 주의', badge: '옵션만기일', key: true },
+            { date: dtBok, code: 'MACRO', title: '한국은행 금융통화위원회 통화정책방향 / 기준금리 점검', sub: '국내 기준금리 및 가계부채·환율 관련 한은 총재 코멘트 확인', badge: '금통위(BOK)', key: true },
+            { date: clampBusinessDay(year, month, 24), code: 'MACRO', title: '한국 실질 GDP 성장률 및 소비자동향지수(CSI) 발표', sub: '수출 및 설비투자 성장 기여도 점검', badge: 'GDP/경기', key: true },
+            { date: clampBusinessDay(year, month, 30), code: 'MACRO', title: `한국 ${prevMonth}월 산업활동동향 및 반도체 재고순환지표`, sub: '광공업 생산 및 반도체 출하/재고 비율 확인', badge: '산업동향', key: true }
+        ];
+
+        return { earnings, ipos, splits, dividends, economic };
+    }
+
+    async function ensureCalendarMonthLoaded(year, month) {
+        const ym = `${year}-${String(month).padStart(2, '0')}`;
+        const calCache = (state.cache && state.cache.calendar && state.cache.calendar.months) || {};
+        if (calCache[ym] || state.calDynamicMonths[ym]) {
+            render();
+            return calCache[ym] || state.calDynamicMonths[ym];
+        }
+        state.calLoadingMonth = true;
+        render();
+        try {
+            const res = await fetch(`${API_BASE}/api/quant/calendar?year=${year}&month=${month}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.ym) {
+                    state.calDynamicMonths[ym] = data;
+                }
+            }
+        } catch (e) {
+            console.warn('Dynamic calendar fetch failed:', e);
+        }
+        state.calLoadingMonth = false;
+        render();
+        return state.calDynamicMonths[ym] || null;
+    }
 
     function renderCalendarView() {
         const mkt = state.market;
-        const cal = state.cache.calendar || {};
+        const year = state.calYear;
+        const month = state.calMonth;
+        const ym = `${year}-${String(month).padStart(2, '0')}`;
+        const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthHeaderTitle = `${monthNamesEn[month - 1]} ${year} (${year}년 ${month}월)`;
+
         const catTabs = [
-            { id: 'earnings', label: '📊 실적 발표 (Earnings)', icon: 'ph-chart-bar' },
-            { id: 'ipo', label: '🚀 공모·신규상장 (IPO)', icon: 'ph-rocket-launch' },
-            { id: 'split', label: mkt === 'KR' ? '💎 밸류업·배당·소각' : '✂️ 액면분할·증자 (Split)', icon: 'ph-scissors' },
-            { id: 'economic', label: '🏛️ 거시경제·금통위/FOMC', icon: 'ph-bank' }
+            { id: 'earnings', label: 'Earnings (실적 발표)' },
+            { id: 'ipo', label: 'IPO (공모·신규상장)' },
+            { id: 'split', label: 'Stock Split (액면분할·소각)' },
+            { id: 'dividend', label: 'Dividend (배당락·배당)' },
+            { id: 'economic', label: 'Economic (거시경제·FOMC/금통위)' }
         ];
 
-        let events = [];
-        if (mkt === 'KR') {
-            events = KR_CALENDAR_DATA[state.calCategory] || KR_CALENDAR_DATA.earnings;
-        } else if (state.calCategory === 'earnings') {
-            events = (cal.us_earnings || []).map(e => ({
-                date: e.date,
-                code: e.symbol,
-                title: `${e.name} (${e.symbol}) 실적 발표`,
-                sub: `EPS 예상: ${e.epsEst ?? '-'} / 실제: ${e.epsAct ?? '발표예정'} · 매출 예상: ${e.revEst ? fmtUSD(e.revEst) : '-'}`,
-                badge: e.when === 'pre' ? '장전(Pre)' : (e.when === 'post' ? '장후(After)' : '실적')
-            }));
-        } else if (state.calCategory === 'ipo') {
-            events = (cal.us_ipos || []).map(e => ({
-                date: e.d || e.date || '2026-10',
-                code: e.s || e.symbol || '',
-                title: `${e.n || e.name || ''} (${e.s || ''}) 신규 상장`,
-                sub: `거래소: ${e.ex || 'NASDAQ/NYSE'} · 공모 규모: ${e.p ? fmtUSD(e.p) : '공모 진행'}`,
-                badge: 'IPO 상장'
-            }));
-        } else if (state.calCategory === 'split') {
-            events = (cal.us_splits || []).map(e => ({
-                date: e.date,
-                code: e.symbol,
-                title: `${e.symbol} 주식 분할 (${e.numerator} : ${e.denominator})`,
-                sub: `비율: ${e.numerator} 대 ${e.denominator} 분할/병합 기준일`,
-                badge: 'Split'
-            }));
-        } else {
-            events = (cal.us_economic || []).map(e => ({
-                date: String(e.t || '').slice(0, 10),
-                code: 'MACRO',
-                title: e.event || '거시경제 지표 발표',
-                sub: `이전치: ${e.previous ?? '-'} · 예상치: ${e.estimate ?? '-'} · 실제: ${e.actual ?? '-'}`,
-                badge: e.impact || 'Macro'
-            }));
+        const calRoot = (state.cache && state.cache.calendar) || {};
+        const monthsMap = calRoot.months || {};
+        const usMonthObj = monthsMap[ym] || state.calDynamicMonths[ym] || (calRoot.month === ym ? {
+            earnings: calRoot.us_earnings || [],
+            ipos: calRoot.us_ipos || [],
+            splits: calRoot.us_splits || [],
+            dividends: [],
+            economic: calRoot.us_economic || []
+        } : null);
+
+        // 만약 US 모드에서 아직 캐시에 없는 연/월이면 백그라운드 자동 로드 트리거
+        if (mkt === 'US' && !usMonthObj && !state.calLoadingMonth && !state.calDynamicMonths[ym]) {
+            state.calDynamicMonths[ym] = { earnings: [], ipos: [], splits: [], dividends: [], economic: [], _fetching: true };
+            setTimeout(() => ensureCalendarMonthLoaded(year, month), 10);
         }
 
-        // 날짜별 이벤트 카운트 집계
-        const dateCounts = {};
-        events.forEach(ev => {
-            if (ev.date) dateCounts[ev.date] = (dateCounts[ev.date] || 0) + 1;
+        const krMonthObj = buildKrCalendarForMonth(year, month);
+        const isKeyOnly = state.calFilterMode === 'key';
+
+        // 카테고리별 이벤트 배열 및 일자별 정확한 카운트(counts_all, counts_key) 구성
+        let rawList = [];
+        let exactDayCounts = {}; // { 'YYYY-MM-DD': { all: N, key: K } }
+
+        if (mkt === 'KR') {
+            const krMap = {
+                earnings: krMonthObj.earnings,
+                ipo: krMonthObj.ipos,
+                split: krMonthObj.splits,
+                dividend: krMonthObj.dividends,
+                economic: krMonthObj.economic
+            };
+            rawList = (krMap[state.calCategory] || []).map(e => ({
+                ...e,
+                isKey: true
+            }));
+        } else if (usMonthObj) {
+            if (state.calCategory === 'earnings') {
+                exactDayCounts = usMonthObj.earnings_counts || {};
+                rawList = (usMonthObj.earnings || []).map(e => ({
+                    date: e.date,
+                    code: e.symbol,
+                    name: e.name || e.symbol,
+                    exchange: e.exchange || 'US',
+                    when: e.when || '',
+                    epsEst: e.epsEst,
+                    epsAct: e.epsAct,
+                    revEst: e.revEst,
+                    revAct: e.revAct,
+                    isKey: Boolean(e.key),
+                    title: `${e.name || e.symbol} (${e.symbol})`,
+                    sub: `EPS 예상: ${e.epsEst != null ? '$' + e.epsEst : '-'} / 실제: ${e.epsAct != null ? '$' + e.epsAct : '발표예정'} · 매출 예상: ${e.revEst ? fmtUSD(e.revEst) : '-'}`,
+                    badge: e.when === 'pre' ? 'Pre Market (장전)' : (e.when === 'post' ? 'Post Market (장후)' : 'Earnings')
+                }));
+            } else if (state.calCategory === 'ipo') {
+                rawList = (usMonthObj.ipos || []).map(e => ({
+                    date: e.date || e.d || '',
+                    code: e.symbol || e.s || '',
+                    name: e.company || e.n || '',
+                    exchange: e.exchange || e.ex || 'NASDAQ',
+                    isKey: true,
+                    title: `${e.company || e.n || ''} (${e.symbol || e.s || ''})`,
+                    sub: `거래소: ${e.exchange || e.ex || '-'} · 상태: ${e.actions || 'IPO'} · 공모가: ${e.priceRange || '-'} · 주식수: ${e.shares ? Number(e.shares).toLocaleString() + '주' : '-'}`,
+                    badge: e.actions || 'IPO'
+                }));
+            } else if (state.calCategory === 'split') {
+                rawList = (usMonthObj.splits || []).map(e => ({
+                    date: e.date,
+                    code: e.symbol,
+                    name: e.name || e.symbol,
+                    exchange: e.exchange || 'US',
+                    isKey: true,
+                    title: `${e.name || e.symbol} (${e.symbol}) 액면분할/병합`,
+                    sub: `비율: ${e.numerator} : ${e.denominator} · 거래소: ${e.exchange || '-'} · 시총: ${e.cap ? fmtUSD(e.cap) : '-'}`,
+                    badge: `${e.numerator}:${e.denominator} Split`
+                }));
+            } else if (state.calCategory === 'dividend') {
+                exactDayCounts = usMonthObj.dividends_counts || {};
+                rawList = (usMonthObj.dividends || []).map(e => ({
+                    date: e.date,
+                    code: e.symbol,
+                    name: e.name || e.symbol,
+                    exchange: e.exchange || 'US',
+                    isKey: Boolean(e.key),
+                    title: `${e.name || e.symbol} (${e.symbol}) 배당락`,
+                    sub: `배당금: $${e.adjDividend ?? '-'} · 배당수익률: ${e.yield ? Number(e.yield).toFixed(2) + '%' : '-'} · 지급일: ${e.paymentDate || '-'} (${e.frequency || ''})`,
+                    badge: e.yield ? `배당 ${Number(e.yield).toFixed(1)}%` : 'Dividend'
+                }));
+            } else {
+                rawList = (usMonthObj.economic || []).map(e => {
+                    const dtStr = String(e.t || '').slice(0, 10);
+                    const tmStr = String(e.t || '').slice(11, 16);
+                    return {
+                        date: dtStr,
+                        code: 'MACRO',
+                        name: e.event || 'Economic Event',
+                        isKey: e.impact === 'High' || e.impact === 'Medium',
+                        title: `${e.event || '거시경제 지표'} ${tmStr ? '(' + tmStr + ' UTC)' : ''}`,
+                        sub: `이전치: ${e.previous ?? '-'}${e.unit || ''} · 예상치: ${e.estimate ?? '-'}${e.unit || ''} · 실제 발표: ${e.actual ?? '발표예정'}${e.unit || ''}`,
+                        badge: e.impact || 'Macro'
+                    };
+                });
+            }
+        }
+
+        // 검색어 필터링
+        const term = state.calSearch.trim().toLowerCase();
+        const searchFiltered = term
+            ? rawList.filter(e => String(e.code || '').toLowerCase().includes(term) || String(e.title || '').toLowerCase().includes(term))
+            : rawList;
+
+        // 날짜별 카운트 집계
+        const dateCountsAll = {};
+        const dateCountsKey = {};
+        searchFiltered.forEach(ev => {
+            if (!ev.date || !ev.date.startsWith(ym)) return;
+            dateCountsAll[ev.date] = (dateCountsAll[ev.date] || 0) + 1;
+            if (ev.isKey) {
+                dateCountsKey[ev.date] = (dateCountsKey[ev.date] || 0) + 1;
+            }
         });
 
-        const filteredEvents = state.calSelectedDate
-            ? events.filter(e => e.date === state.calSelectedDate)
-            : events;
+        // 검색어가 없을 때는 서버가 집계한 정확한 원본 전체 건수(예: 10월 29일 Key 74건 / All 440건)를 우선 사용
+        if (!term && Object.keys(exactDayCounts).length > 0) {
+            Object.keys(exactDayCounts).forEach(dt => {
+                if (dt.startsWith(ym)) {
+                    dateCountsAll[dt] = exactDayCounts[dt].all;
+                    dateCountsKey[dt] = exactDayCounts[dt].key;
+                }
+            });
+        }
 
-        // 2026년 10월 달력 셀 생성 (1일 = 목요일 기준)
-        const daysInMonth = 31;
-        const firstDayOffset = 4; // 2026-10-01 is Thursday
+        // 오늘 날짜(또는 현재 월에서 가장 최근 일정 있는 날짜) 기본 자동 선택
+        const nowKst = new Date();
+        const todayStr = `${nowKst.getFullYear()}-${String(nowKst.getMonth() + 1).padStart(2, '0')}-${String(nowKst.getDate()).padStart(2, '0')}`;
+        let activeDate = state.calSelectedDate;
+        if (activeDate === null) {
+            if (todayStr.startsWith(ym) && (dateCountsAll[todayStr] || dateCountsKey[todayStr])) {
+                activeDate = todayStr;
+            } else if (todayStr.startsWith(ym) && dateCountsAll['2026-10-29']) {
+                activeDate = '2026-10-29';
+            }
+        } else if (activeDate === 'ALL') {
+            activeDate = null; // 전체 월 보기
+        } else if (!activeDate.startsWith(ym)) {
+            activeDate = null;
+        }
+
+        // 달력 그리드 동적 생성 (어떤 연도/월이든 정확한 요일 오프셋 계산)
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const firstDayOffset = new Date(year, month - 1, 1).getDay();
         const cellsHtml = [];
+
         for (let i = 0; i < firstDayOffset; i++) {
-            cellsHtml.push(`<div class="qh-cal-cell" style="opacity:0.25; pointer-events:none;"></div>`);
+            cellsHtml.push(`<div class="qh-cal-cell" style="opacity:0.2; pointer-events:none; min-height:84px;"></div>`);
         }
         for (let d = 1; d <= daysInMonth; d++) {
-            const dateStr = `2026-10-${String(d).padStart(2, '0')}`;
-            const cnt = dateCounts[dateStr] || 0;
-            const isSel = state.calSelectedDate === dateStr;
+            const dateStr = `${ym}-${String(d).padStart(2, '0')}`;
+            const cntKey = dateCountsKey[dateStr] != null ? dateCountsKey[dateStr] : (dateCountsAll[dateStr] || 0);
+            const cntAll = dateCountsAll[dateStr] || 0;
+            const displayCnt = isKeyOnly ? cntKey : cntAll;
+            const isSel = activeDate === dateStr;
+            const isToday = dateStr === todayStr || dateStr === '2026-10-29';
+
             cellsHtml.push(`
-                <div class="qh-cal-cell ${isSel ? 'active' : ''}" data-cal-date="${dateStr}">
+                <div class="qh-cal-cell ${isSel ? 'active' : ''}" data-cal-date="${dateStr}" style="min-height:84px; ${isSel ? 'background:rgba(37,99,235,0.28); border-color:#60a5fa;' : (isToday ? 'border-color:rgba(245,158,11,0.6);' : '')}">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="qh-cal-date">${d}일</span>
-                        ${cnt > 0 ? `<span class="qh-sig-badge qh-sig-News" style="margin:0;">${cnt}건</span>` : ''}
+                        <span class="qh-cal-date" style="${isSel ? 'color:#fff; font-weight:800;' : ''}">${d}</span>
+                        ${isToday ? `<span style="font-size:9.5px; color:#fbbf24; font-weight:800;">TODAY</span>` : ''}
                     </div>
-                    <div style="font-size:11px; color:var(--text-muted); margin-top:6px;">
-                        ${cnt > 0 ? `${cnt}개 일정 보기 →` : '일정 없음'}
+                    <div style="margin-top:8px;">
+                        ${displayCnt > 0 ? `
+                            <span style="display:inline-block; background:#f59e0b; color:#0f172a; font-weight:900; font-size:11.5px; padding:2px 8px; border-radius:4px;">
+                                ${displayCnt}
+                            </span>
+                        ` : '<span style="font-size:11px; color:var(--text-muted); opacity:0.4;">-</span>'}
                     </div>
                 </div>
             `);
         }
 
+        // 선택된 날짜(또는 월 전체)의 이벤트 리스트 추출
+        const dateEventsAll = activeDate
+            ? searchFiltered.filter(e => e.date === activeDate)
+            : searchFiltered.filter(e => e.date && e.date.startsWith(ym));
+
+        const dateEventsKey = dateEventsAll.filter(e => e.isKey);
+        const activeDayCounts = (activeDate && exactDayCounts[activeDate])
+            ? exactDayCounts[activeDate]
+            : { key: dateEventsKey.length, all: dateEventsAll.length };
+
+        const displayEvents = isKeyOnly ? dateEventsKey : dateEventsAll;
+
+        // Earnings 탭일 때 Pre Market(장전) / Post Market(장마감 후) 분리 보드 (GoodStock123 스타일)
+        const preMarketEvents = displayEvents.filter(e => e.when === 'pre');
+        const postMarketEvents = displayEvents.filter(e => e.when === 'post');
+
+        const yearsList = [2024, 2025, 2026, 2027, 2028];
+        const monthsList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
         return `
-            <div class="qh-filter-bar">
+            <!-- 1. 5대 탭 & 종목 검색바 -->
+            <div class="qh-filter-bar" style="padding:10px 16px;">
                 <div class="qh-filter-group">
-                    <span class="qh-filter-label">일정 카테고리:</span>
                     ${catTabs.map(t => `
-                        <button type="button" class="qh-pill ${state.calCategory === t.id ? 'active' : ''}" data-cal-cat="${t.id}">
+                        <button type="button" class="qh-pill ${state.calCategory === t.id ? 'active' : ''}" data-cal-cat="${t.id}" style="padding:7px 14px; font-size:13px;">
                             ${esc(t.label)}
                         </button>
                     `).join('')}
                 </div>
-                ${state.calSelectedDate ? `
-                    <button type="button" class="qh-pill active" id="qh-cal-clear-date">
-                        선택 날짜: ${esc(state.calSelectedDate)} (전체 보기로 해제 ×)
-                    </button>
-                ` : '<span style="font-size:12px; color:var(--text-muted);">📅 달력에서 날짜를 클릭하면 해당 일자의 세부 일정을 필터링합니다</span>'}
+                <div class="qh-filter-group">
+                    <input type="text" class="qh-search-input" id="qh-cal-search" placeholder="티커 또는 기업명 검색 (예: AAPL, LLY, 삼성전자)..." value="${esc(state.calSearch)}" style="min-width:250px;">
+                </div>
             </div>
 
+            <!-- 2. GoodStock123 스타일 월 이동 골드 헤더 바 (< 이전 달 | 연·월 선택 | 오늘 | 다음 달 >) -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; background:linear-gradient(90deg, #f59e0b, #d97706); color:#0f172a; padding:10px 16px; border-radius:8px; font-weight:800;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:16px; font-weight:900; letter-spacing:0.3px;">${esc(monthHeaderTitle)}</span>
+                    <select id="qh-cal-year-select" style="background:rgba(0,0,0,0.15); border:1px solid rgba(0,0,0,0.25); color:#0f172a; font-weight:800; padding:4px 8px; border-radius:5px; cursor:pointer;">
+                        ${yearsList.map(y => `<option value="${y}" ${y === year ? 'selected' : ''}>${y}년</option>`).join('')}
+                    </select>
+                    <select id="qh-cal-month-select" style="background:rgba(0,0,0,0.15); border:1px solid rgba(0,0,0,0.25); color:#0f172a; font-weight:800; padding:4px 8px; border-radius:5px; cursor:pointer;">
+                        ${monthsList.map(m => `<option value="${m}" ${m === month ? 'selected' : ''}>${m}월</option>`).join('')}
+                    </select>
+                    ${state.calLoadingMonth ? `<span style="font-size:12px;">⏳ 해당 월 일정 실시간 동기화 중...</span>` : ''}
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <button type="button" id="qh-cal-prev-month" style="background:rgba(0,0,0,0.15); border:1px solid rgba(0,0,0,0.3); color:#0f172a; font-weight:900; padding:5px 12px; border-radius:5px; cursor:pointer;" title="이전 달">&lt; 이전 달</button>
+                    <button type="button" id="qh-cal-today-btn" style="background:rgba(0,0,0,0.18); border:1px solid rgba(0,0,0,0.3); color:#0f172a; font-weight:800; padding:5px 12px; border-radius:5px; cursor:pointer;">오늘 (Today)</button>
+                    <button type="button" id="qh-cal-next-month" style="background:rgba(0,0,0,0.15); border:1px solid rgba(0,0,0,0.3); color:#0f172a; font-weight:900; padding:5px 12px; border-radius:5px; cursor:pointer;" title="다음 달">다음 달 &gt;</button>
+                </div>
+            </div>
+
+            <!-- 3. 월간 달력 그리드 -->
             <div class="qh-cal-grid">
-                <div class="qh-cal-day-header" style="color:#ef4444;">일 (Sun)</div>
-                <div class="qh-cal-day-header">월 (Mon)</div>
-                <div class="qh-cal-day-header">화 (Tue)</div>
-                <div class="qh-cal-day-header">수 (Wed)</div>
-                <div class="qh-cal-day-header">목 (Thu)</div>
-                <div class="qh-cal-day-header">금 (Fri)</div>
-                <div class="qh-cal-day-header" style="color:#3b82f6;">토 (Sat)</div>
+                <div class="qh-cal-day-header" style="color:#ef4444;">Sun (일)</div>
+                <div class="qh-cal-day-header">Mon (월)</div>
+                <div class="qh-cal-day-header">Tue (화)</div>
+                <div class="qh-cal-day-header">Wed (수)</div>
+                <div class="qh-cal-day-header">Thu (목)</div>
+                <div class="qh-cal-day-header">Fri (금)</div>
+                <div class="qh-cal-day-header" style="color:#3b82f6;">Sat (토)</div>
                 ${cellsHtml.join('')}
             </div>
 
+            <!-- 4. 선택 일자 타이틀 & Key / All 전환 바 -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding:12px 16px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px;">
+                <div>
+                    <div style="font-size:15px; font-weight:800; color:var(--text-main);">
+                        📅 ${activeDate ? `선택 일자: ${esc(activeDate)}` : `${year}년 ${month}월 전체 일정`}
+                        ${activeDate ? `<button type="button" id="qh-cal-show-all-month" style="margin-left:10px; background:transparent; border:1px solid var(--border); color:#60a5fa; padding:3px 9px; border-radius:5px; font-size:11.5px; cursor:pointer;">이 달 전체 날짜 보기</button>` : ''}
+                    </div>
+                    <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                        ${mkt === 'US' ? 'S&P 500, Nasdaq 100, Dow Jones 주요 대형주(Key) 및 미국 상장 전체 종목(All)' : 'KOSPI 200 · 코스닥 주요 기업 실적·IPO·밸류업·거시경제 일정'}
+                    </div>
+                </div>
+                <div style="display:inline-flex; border:1px solid var(--border); border-radius:7px; overflow:hidden;">
+                    <button type="button" class="qh-cal-mode-btn" data-cal-mode="key" style="border:none; padding:7px 14px; font-weight:800; font-size:12.5px; cursor:pointer; background:${isKeyOnly ? '#f59e0b' : 'transparent'}; color:${isKeyOnly ? '#0f172a' : 'var(--text-main)'};">
+                        Key · ${activeDayCounts.key}
+                    </button>
+                    <button type="button" class="qh-cal-mode-btn" data-cal-mode="all" style="border:none; padding:7px 14px; font-weight:800; font-size:12.5px; cursor:pointer; background:${!isKeyOnly ? '#f59e0b' : 'transparent'}; color:${!isKeyOnly ? '#0f172a' : 'var(--text-main)'};">
+                        All · ${activeDayCounts.all}
+                    </button>
+                </div>
+            </div>
+
+            <!-- 5. Earnings 탭 전용: Pre Market (장전 발표) / Post Market (장후 발표) 2단 보드 -->
+            ${state.calCategory === 'earnings' && (preMarketEvents.length > 0 || postMarketEvents.length > 0) ? `
+                <div class="qh-split-layout">
+                    <div class="qh-table-card">
+                        <div style="padding:10px 14px; background:rgba(16,185,129,0.14); border-bottom:1px solid rgba(16,185,129,0.3); color:#34d399; font-weight:800; font-size:13px;">
+                            ☀️ Pre Market (장 시작 전 발표 · ${preMarketEvents.length}건)
+                        </div>
+                        <div style="max-height:360px; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;">
+                            ${preMarketEvents.slice(0, 40).map(ev => `
+                                <div style="padding:10px 12px; border:1px solid var(--border); border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                                    <div>
+                                        <div style="font-weight:800; font-size:13.5px;">
+                                            <span style="color:#f59e0b; font-family:monospace; margin-right:6px;">${esc(ev.code)}</span>
+                                            ${esc(ev.name || ev.title)}
+                                        </div>
+                                        <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">${esc(ev.sub)}</div>
+                                    </div>
+                                    <button type="button" class="qh-chart-btn" onclick="window.openInDajavataScanner('${esc(ev.code)}', '${esc(ev.name || ev.code)}')">AI 차트</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="qh-table-card">
+                        <div style="padding:10px 14px; background:rgba(245,158,11,0.14); border-bottom:1px solid rgba(245,158,11,0.3); color:#fbbf24; font-weight:800; font-size:13px;">
+                            🌙 Post Market (장 마감 후 발표 · ${postMarketEvents.length}건)
+                        </div>
+                        <div style="max-height:360px; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:8px;">
+                            ${postMarketEvents.slice(0, 40).map(ev => `
+                                <div style="padding:10px 12px; border:1px solid var(--border); border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                                    <div>
+                                        <div style="font-weight:800; font-size:13.5px;">
+                                            <span style="color:#f59e0b; font-family:monospace; margin-right:6px;">${esc(ev.code)}</span>
+                                            ${esc(ev.name || ev.title)}
+                                        </div>
+                                        <div style="font-size:11.5px; color:var(--text-muted); margin-top:3px;">${esc(ev.sub)}</div>
+                                    </div>
+                                    <button type="button" class="qh-chart-btn" onclick="window.openInDajavataScanner('${esc(ev.code)}', '${esc(ev.name || ev.code)}')">AI 차트</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- 6. 전체 상세 테이블 -->
             <div class="qh-table-card">
                 <div style="padding:12px 16px; border-bottom:1px solid var(--border); font-weight:700;">
-                    일정 상세 내역 (${filteredEvents.length}건)
+                    일정 상세 리스트 (${displayEvents.length}건 표시 중)
                 </div>
-                <div class="qh-table-scroll" style="max-height:480px; overflow-y:auto;">
+                <div class="qh-table-scroll" style="max-height:500px; overflow-y:auto;">
                     <table class="qh-table">
                         <thead>
                             <tr>
-                                <th style="width:120px;">일자</th>
-                                <th style="width:110px;">구분</th>
-                                <th>일정 및 종목명</th>
-                                <th>상세 컨센서스 / 발표 수치</th>
+                                <th style="width:115px;">일자</th>
+                                <th style="width:130px;">구분</th>
+                                <th>종목명 / 일정명</th>
+                                <th>컨센서스 및 세부 내용</th>
                                 <th class="center">차트 연동</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${filteredEvents.slice(0, 150).map(ev => `
+                            ${displayEvents.slice(0, 200).map(ev => `
                                 <tr>
                                     <td style="font-family:monospace; font-weight:700;">${esc(ev.date)}</td>
                                     <td><span class="qh-sig-badge qh-sig-turnover">${esc(ev.badge)}</span></td>
@@ -1086,7 +1378,7 @@
                                         ` : '-'}
                                     </td>
                                 </tr>
-                            `).join('') || '<tr><td colspan="5" class="center" style="padding:30px;">해당 날짜에 등록된 일정이 없습니다.</td></tr>'}
+                            `).join('') || '<tr><td colspan="5" class="center" style="padding:30px;">해당 날짜에 등록된 일정이 없습니다. 다른 날짜나 [이 달 전체 날짜 보기]를 클릭해보세요.</td></tr>'}
                         </tbody>
                     </table>
                 </div>
@@ -1615,26 +1907,90 @@
             });
         }
 
-        // 8. Calendar 이벤트
+        // 8. Calendar 이벤트 (월 이동, 연·월 선택, 5대 탭, Key/All 토글, 검색)
         container.querySelectorAll('[data-cal-cat]').forEach(btn => {
             btn.addEventListener('click', () => {
                 state.calCategory = btn.getAttribute('data-cal-cat');
-                state.calSelectedDate = null;
                 render();
             });
         });
         container.querySelectorAll('[data-cal-date]').forEach(cell => {
             cell.addEventListener('click', () => {
                 const dt = cell.getAttribute('data-cal-date');
-                state.calSelectedDate = (state.calSelectedDate === dt) ? null : dt;
+                state.calSelectedDate = (state.calSelectedDate === dt) ? 'ALL' : dt;
                 render();
             });
         });
-        const calClearBtn = container.querySelector('#qh-cal-clear-date');
-        if (calClearBtn) {
-            calClearBtn.addEventListener('click', () => {
-                state.calSelectedDate = null;
+        const showAllMonthBtn = container.querySelector('#qh-cal-show-all-month');
+        if (showAllMonthBtn) {
+            showAllMonthBtn.addEventListener('click', () => {
+                state.calSelectedDate = 'ALL';
                 render();
+            });
+        }
+        container.querySelectorAll('.qh-cal-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.calFilterMode = btn.getAttribute('data-cal-mode');
+                render();
+            });
+        });
+        const prevMonthBtn = container.querySelector('#qh-cal-prev-month');
+        if (prevMonthBtn) {
+            prevMonthBtn.addEventListener('click', () => {
+                state.calMonth -= 1;
+                if (state.calMonth < 1) {
+                    state.calMonth = 12;
+                    state.calYear -= 1;
+                }
+                state.calSelectedDate = 'ALL';
+                ensureCalendarMonthLoaded(state.calYear, state.calMonth);
+            });
+        }
+        const nextMonthBtn = container.querySelector('#qh-cal-next-month');
+        if (nextMonthBtn) {
+            nextMonthBtn.addEventListener('click', () => {
+                state.calMonth += 1;
+                if (state.calMonth > 12) {
+                    state.calMonth = 1;
+                    state.calYear += 1;
+                }
+                state.calSelectedDate = 'ALL';
+                ensureCalendarMonthLoaded(state.calYear, state.calMonth);
+            });
+        }
+        const todayMonthBtn = container.querySelector('#qh-cal-today-btn');
+        if (todayMonthBtn) {
+            todayMonthBtn.addEventListener('click', () => {
+                const now = new Date();
+                state.calYear = now.getFullYear();
+                state.calMonth = now.getMonth() + 1;
+                state.calSelectedDate = null;
+                ensureCalendarMonthLoaded(state.calYear, state.calMonth);
+            });
+        }
+        const yearSelect = container.querySelector('#qh-cal-year-select');
+        if (yearSelect) {
+            yearSelect.addEventListener('change', (e) => {
+                state.calYear = Number(e.target.value);
+                state.calSelectedDate = 'ALL';
+                ensureCalendarMonthLoaded(state.calYear, state.calMonth);
+            });
+        }
+        const monthSelect = container.querySelector('#qh-cal-month-select');
+        if (monthSelect) {
+            monthSelect.addEventListener('change', (e) => {
+                state.calMonth = Number(e.target.value);
+                state.calSelectedDate = 'ALL';
+                ensureCalendarMonthLoaded(state.calYear, state.calMonth);
+            });
+        }
+        const calSearch = container.querySelector('#qh-cal-search');
+        if (calSearch) {
+            calSearch.addEventListener('input', (e) => {
+                state.calSearch = e.target.value;
+                render();
+                const el = container.querySelector('#qh-cal-search');
+                if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
             });
         }
 
@@ -1735,4 +2091,16 @@
             render();
         }
     };
+
+    // URL 딥링크(?view=quant&tab=...&market=...)로 직접 진입하거나 새로고침했을 때 즉시 렌더링
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('view') === 'quant') {
+                const mkt = params.get('market');
+                if (mkt === 'KR' || mkt === 'US') state.market = mkt;
+                window.QuantHub.navigate(params.get('tab') || 'quant-rising');
+            }
+        } catch (e) {}
+    });
 })();

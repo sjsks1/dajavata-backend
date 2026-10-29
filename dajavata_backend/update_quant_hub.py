@@ -2,6 +2,7 @@ import os
 import json
 import time
 import shutil
+import calendar as pycal
 import datetime
 import requests
 
@@ -492,6 +493,66 @@ def build_kr_gurus(all_stocks):
     return kr_gurus
 
 
+def fetch_us_calendar_for_month(year: int, month: int):
+    """특정 연·월(YYYY-MM)의 미국 5대 증시 캘린더(Earnings, IPO, Split, Dividend, Economic) 전수 수집 및 일자별 보존"""
+    last_day = pycal.monthrange(year, month)[1]
+    m_start = f"{year:04d}-{month:02d}-01"
+    m_end = f"{year:04d}-{month:02d}-{last_day:02d}"
+
+    earn_raw = fetch_json(f"https://goodstock123.com/api/fundamentals/calendar-earnings?from={m_start}&to={m_end}&v=2", timeout=10, default={}) or {}
+    ipo_raw = fetch_json(f"https://goodstock123.com/api/fundamentals/calendar-ipos?from={m_start}&to={m_end}&v=1", timeout=8, default={}) or {}
+    split_raw = fetch_json(f"https://goodstock123.com/api/fundamentals/calendar-splits?board=1&from={m_start}&to={m_end}&v=1", timeout=8, default={}) or {}
+    div_raw = fetch_json(f"https://goodstock123.com/api/fundamentals/calendar-dividends?board=1&from={m_start}&to={m_end}&v=2", timeout=10, default={}) or {}
+    econ_raw = fetch_json(f"https://goodstock123.com/api/fundamentals/calendar-economic?from={m_start}&to={m_end}&v=1", timeout=8, default={}) or {}
+
+    # 1. Earnings: 일자별로 그룹핑하여 Key 종목 100% 보존 + 일반 종목 일자별 상위 25개 보존 (월말 누락 원천 방지)
+    earn_by_date = {}
+    earn_counts = {}
+    for r in (earn_raw.get("rows") or []):
+        dt = r.get("date")
+        if not dt:
+            continue
+        earn_by_date.setdefault(dt, []).append(r)
+
+    compact_earnings = []
+    for dt in sorted(earn_by_date.keys()):
+        day_rows = earn_by_date[dt]
+        key_rows = [x for x in day_rows if x.get("key")]
+        other_rows = [x for x in day_rows if not x.get("key")][:20]
+        earn_counts[dt] = {"all": len(day_rows), "key": len(key_rows)}
+        compact_earnings.extend(key_rows + other_rows)
+
+    # 2. Dividends: 일자별로 그룹핑하여 Key 종목 100% 보존 + 일반 배당주 일자별 15개 보존
+    div_by_date = {}
+    div_counts = {}
+    for r in (div_raw.get("rows") or []):
+        dt = r.get("date")
+        if not dt:
+            continue
+        div_by_date.setdefault(dt, []).append(r)
+
+    compact_dividends = []
+    for dt in sorted(div_by_date.keys()):
+        day_rows = div_by_date[dt]
+        key_rows = [x for x in day_rows if x.get("key")]
+        other_rows = [x for x in day_rows if not x.get("key")][:15]
+        div_counts[dt] = {"all": len(day_rows), "key": len(key_rows)}
+        compact_dividends.extend(key_rows + other_rows)
+
+    return {
+        "ym": f"{year:04d}-{month:02d}",
+        "from": m_start,
+        "to": m_end,
+        "earnings_counts": earn_counts,
+        "earnings": compact_earnings,
+        "ipos": (ipo_raw.get("rows") or []),
+        "splits": (split_raw.get("rows") or []),
+        "dividends_counts": div_counts,
+        "dividends": compact_dividends,
+        "economic": (econ_raw.get("rows") or [])
+    }
+
+
 def main():
     print("=== Updating Dajavata Quant Hub Cache (KRX + US) ===")
     all_stocks = load_local_json("data/all_stocks.json", default=[])
@@ -595,14 +656,25 @@ def main():
         if h_data and h_data.get("rows"):
             us_guru_holdings_sample[cik] = h_data.get("rows", [])[:25]
 
-    # 5. Calendar & Money Flow (IPOs, Fed Rates, M2, MMF, COT)
-    print("[5/5] Fetching Calendar & Macro Money Flow data...")
+    # 5. Calendar (Multi-month: prev, current, next, +2 month) & Money Flow (IPOs, Fed Rates, M2, MMF, COT)
+    print("[5/5] Fetching Multi-Month Calendar (M-1 to M+2) & Macro Money Flow data...")
     now_dt = datetime.datetime.now()
-    m_start = now_dt.strftime("%Y-%m-01")
-    m_end = now_dt.strftime("%Y-%m-31")
-    us_cal_earnings = fetch_json(f"https://goodstock123.com/api/fundamentals/calendar-earnings?from={m_start}&to={m_end}&v=2", default={})
-    us_cal_splits = fetch_json(f"https://goodstock123.com/api/fundamentals/calendar-splits?from={m_start}&to={m_end}&v=1", default={})
-    us_cal_econ = fetch_json(f"https://goodstock123.com/api/fundamentals/calendar-economic?from={m_start}&to={m_end}&v=1", default={})
+    calendar_months = {}
+    for offset in [-1, 0, 1, 2]:
+        y = now_dt.year
+        m = now_dt.month + offset
+        while m < 1:
+            m += 12
+            y -= 1
+        while m > 12:
+            m -= 12
+            y += 1
+        ym_key = f"{y:04d}-{m:02d}"
+        print(f"  -> Fetching US 5-tab calendar for {ym_key}...")
+        calendar_months[ym_key] = fetch_us_calendar_for_month(y, m)
+
+    cur_ym = now_dt.strftime("%Y-%m")
+    cur_cal = calendar_months.get(cur_ym, {})
 
     ipo_stats = fetch_json("https://goodstock123.com/api/fundamentals/ipo-stats?v=3", default={})
     cap_flows = fetch_json("https://goodstock123.com/api/fundamentals/capital-flows?v=1", default={})
@@ -681,11 +753,12 @@ def main():
             }
         },
         "calendar": {
-            "month": now_dt.strftime("%Y-%m"),
-            "us_earnings": (us_cal_earnings.get("rows", []) or [])[:300],
-            "us_splits": (us_cal_splits.get("rows", []) or [])[:100],
-            "us_economic": (us_cal_econ.get("rows", []) or [])[:150],
-            "us_ipos": money_flow_data["ipoLatest"][:40]
+            "month": cur_ym,
+            "months": calendar_months,
+            "us_earnings": cur_cal.get("earnings", []),
+            "us_splits": cur_cal.get("splits", []),
+            "us_economic": cur_cal.get("economic", []),
+            "us_ipos": cur_cal.get("ipos", [])
         },
         "money_flow": money_flow_data
     }
