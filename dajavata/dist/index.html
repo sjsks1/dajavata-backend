@@ -31,6 +31,7 @@
     <link rel="stylesheet" href="style.css?v=5">
     <link rel="stylesheet" href="trader_room.css?v=7">
     <link rel="stylesheet" href="chart_scanner.css?v=9">
+    <link rel="stylesheet" href="quant_hub.css?v=1">
     <!-- TradingView Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
 </head>
@@ -109,6 +110,25 @@
                     </ul>
                 </div>
 
+                <!-- 신규 추가: 글로벌 퀀트 & 마켓 인텔리전스 (국내 KRX + 미국 US 통합 8대 모듈) -->
+                <div class="menu-section">
+                    <h3>글로벌 퀀트 & 마켓 (KR/US)</h3>
+                    <ul id="quant-menu-list">
+                        <li data-action="quant-rising">
+                            <a href="#"><i class="ph-fill ph-lightning" style="color: #f59e0b;"></i> 급등 초입 포착 (Rising)
+                                <span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 4px;">HOT</span>
+                            </a>
+                        </li>
+                        <li data-action="quant-promising"><a href="#"><i class="ph ph-arrows-Clockwise"></i> 낙폭과대 우량주 랭킹</a></li>
+                        <li data-action="quant-market-view"><a href="#"><i class="ph ph-globe-hemisphere-west"></i> 글로벌 마켓 뷰 (수급/회전율)</a></li>
+                        <li data-action="quant-peer"><a href="#"><i class="ph ph-tree-structure"></i> 섹터·동종업계 비교 (Peer)</a></li>
+                        <li data-action="quant-etf-finder"><a href="#"><i class="ph ph-funnel"></i> 한·미 ETF 파인더</a></li>
+                        <li data-action="quant-calendar"><a href="#"><i class="ph ph-calendar-check"></i> 증시 일정 캘린더</a></li>
+                        <li data-action="quant-guru"><a href="#"><i class="ph ph-Strategy"></i> 대가·큰손 포트폴리오 (Guru)</a></li>
+                        <li data-action="quant-money-flow"><a href="#"><i class="ph ph-currency-circle-dollar"></i> 머니 플로우 (IPO·금리·유동성)</a></li>
+                    </ul>
+                </div>
+
                 <!-- 신규 추가: 트레이더 룸 (기존 기능 아래에 안전하게 추가) -->
                 <div class="menu-section">
                     <h3>트레이더 룸 (WORK)</h3>
@@ -178,6 +198,9 @@
 
             <!-- 신규: AI 차트 스캐너 전용 뷰 컨테이너 (초기에는 숨김) -->
             <div id="chart-scanner-container" class="chart-scanner-container" style="display: none;"></div>
+
+            <!-- 신규: 글로벌 퀀트 & 마켓 인텔리전스 허브 전용 뷰 컨테이너 (초기에는 숨김) -->
+            <div id="quant-hub-container" class="quant-hub-container" style="display: none;"></div>
 
             <!-- 글로벌 하단 푸터 바 (Image 4 스타일) -->
             <footer class="dajavata-global-footer">
@@ -440,8 +463,9 @@
         </div>
     </div>
     
-    <script src="chart_scanner.js?v=17"></script>
-    <script src="trader_room.js?v=7"></script>
-    <script src="app.js?v=19"></script>
+    <script src="chart_scanner.js?v=18"></script>
+    <script src="trader_room.js?v=8"></script>
+    <script src="quant_hub.js?v=1"></script>
+    <script src="app.js?v=20"></script>
 </body>
 </html>

@@ -3927,12 +3927,14 @@
             const workspace = document.getElementById('trader-workspace-container');
             const defaultView = document.getElementById('default-view-container');
             const scannerView = document.getElementById('chart-scanner-container');
+            const quantHubView = document.getElementById('quant-hub-container');
 
             if (!workspace || !defaultView) return;
 
-            // 기존 테마 테이블 뷰 및 차트 스캐너 뷰는 감추고, 트레이더 룸 표시
+            // 기존 테마 테이블 뷰, 차트 스캐너 뷰, 퀀트 허브 뷰는 감추고 트레이더 룸 표시
             defaultView.style.display = 'none';
             if (scannerView) scannerView.style.display = 'none';
+            if (quantHubView) quantHubView.style.display = 'none';
             workspace.style.display = 'flex';
 
             // 사이드바 활성 상태 동기화

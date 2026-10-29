@@ -1068,6 +1068,59 @@ def get_stock_chart(code: str, periodType: str = "dayCandle"):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/quant/hub")
+def get_quant_hub():
+    """국내+미국 8대 퀀트·마켓 인텔리전스 통합 캐시 반환"""
+    candidates = [
+        "data/quant_hub_cache.json",
+        "dajavata_backend/data/quant_hub_cache.json",
+        "../data/quant_hub_cache.json",
+        os.path.join(os.path.dirname(__file__), "data", "quant_hub_cache.json"),
+        os.path.join(os.path.dirname(__file__), "..", "data", "quant_hub_cache.json"),
+    ]
+    for p in candidates:
+        if os.path.exists(p) and os.path.getsize(p) > 500:
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"[QuantHub API] Error reading {p}: {e}")
+    return {"error": "Quant Hub cache not found"}
+
+
+@app.get("/api/quant/guru-holdings")
+def get_us_guru_holdings(cik: str):
+    """특정 미국 구루(CIK)의 SEC 13F 포트폴리오 상세 보유종목 실시간 프록시"""
+    clean_cik = "".join(ch for ch in str(cik) if ch.isdigit()).zfill(10)
+    url = f"https://goodstock123.com/api/fundamentals/guru-holdings?cik={clean_cik}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        r = requests.get(url, headers=headers, timeout=8)
+        if r.status_code == 200:
+            return r.json()
+    except Exception as e:
+        print(f"[QuantHub Guru API Error] {clean_cik}: {e}")
+    return {"cik": clean_cik, "rows": []}
+
+
+@app.get("/api/quant/peer-summary")
+def get_us_peer_summary(symbol: str):
+    """미국 특정 티커(symbol)의 동종업계 Peer 비교 및 기업 통계 프록시"""
+    sym = symbol.strip().upper()
+    headers = {"User-Agent": "Mozilla/5.0"}
+    res_data = {"symbol": sym, "peer": {}, "stats": {}}
+    try:
+        r1 = requests.get(f"https://goodstock123.com/api/fundamentals/peer-summary?symbol={sym}", headers=headers, timeout=6)
+        if r1.status_code == 200:
+            res_data["peer"] = r1.json()
+        r2 = requests.get(f"https://goodstock123.com/api/fundamentals/company-stats?symbol={sym}", headers=headers, timeout=6)
+        if r2.status_code == 200:
+            res_data["stats"] = r2.json()
+    except Exception as e:
+        print(f"[QuantHub Peer API Error] {sym}: {e}")
+    return res_data
+
+
 @app.get("/")
 def read_root():
     return {"message": "DAJAVATA API Server is running!"}

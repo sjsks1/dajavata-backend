@@ -5261,11 +5261,13 @@
             const defaultView = document.getElementById('default-view-container');
             const traderWorkspace = document.getElementById('trader-workspace-container');
             const scannerContainer = document.getElementById('chart-scanner-container');
+            const quantHubContainer = document.getElementById('quant-hub-container');
 
             if (!scannerContainer) return;
 
             if (defaultView) defaultView.style.display = 'none';
             if (traderWorkspace) traderWorkspace.style.display = 'none';
+            if (quantHubContainer) quantHubContainer.style.display = 'none';
 
             scannerContainer.style.display = 'flex';
 

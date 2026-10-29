@@ -447,6 +447,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     return true;
                 }
             }
+            if (view === 'quant' && window.QuantHub) {
+                if (window.ChartScanner) window.ChartScanner.hide();
+                const marketParam = params.get('market');
+                if (marketParam === 'KR' || marketParam === 'US') window.QuantHub.market = marketParam;
+                window.QuantHub.navigate(tab || 'quant-rising');
+                setPageSeo("글로벌 퀀트 & 마켓 허브", "다자바타 국내주식(KRX) 및 미국주식(US) 8대 퀀트 스크리너");
+                return true;
+            }
         } catch (e) {
             console.warn('dispatchRouteFromUrl error:', e);
         }
@@ -1312,9 +1320,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const defaultView = document.getElementById('default-view-container');
         const workspace = document.getElementById('trader-workspace-container');
         const scanner = document.getElementById('chart-scanner-container');
+        const quantHub = document.getElementById('quant-hub-container');
         if (defaultView) defaultView.style.display = 'flex';
         if (workspace) workspace.style.display = 'none';
         if (scanner) scanner.style.display = 'none';
+        if (quantHub) quantHub.style.display = 'none';
     }
 
     // 테마 메뉴 클릭 이벤트
@@ -1460,6 +1470,24 @@ document.addEventListener('DOMContentLoaded', () => {
             setPageSeo("AI 차트 스캐너", "다자바타 AI 실시간 차트 분석 및 시그널 랩");
             if (window.ChartScanner) {
                 window.ChartScanner.show();
+            }
+        });
+    });
+
+    // 글로벌 퀀트 & 마켓 인텔리전스 메뉴 클릭 이벤트
+    const quantMenus = document.querySelectorAll('#quant-menu-list li');
+    quantMenus.forEach(menu => {
+        menu.addEventListener('click', (e) => {
+            e.preventDefault();
+            const action = menu.getAttribute('data-action');
+            const mkt = (window.QuantHub && window.QuantHub.market) ? window.QuantHub.market : 'KR';
+            updateUrlState({ view: 'quant', tab: action, market: mkt, id: null, name: null, action: null });
+            setPageSeo(menu.textContent.trim(), "다자바타 국내주식(KRX) & 미국주식(US) 통합 퀀트 인텔리전스 허브");
+            if (window.ChartScanner) {
+                window.ChartScanner.hide();
+            }
+            if (window.QuantHub) {
+                window.QuantHub.navigate(action);
             }
         });
     });
