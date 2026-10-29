@@ -987,26 +987,144 @@ def get_stock_chart(code: str, periodType: str = "dayCandle"):
         is_overseas = not is_korean
         if is_overseas:
             ticker = clean_code
-            # 네이버 해외 증권 포맷 후보 (.O = 나스닥, .N = 뉴욕, .K = 아르카)
-            candidates = [f"{ticker}.O", f"{ticker}.N", f"{ticker}.K", ticker] if '.' not in ticker else [ticker]
-            for cand in candidates:
-                url = f"https://api.stock.naver.com/chart/foreign/item/{cand}?periodType={periodType}"
+            base_ticker = ticker.split('.')[0] if ticker.endswith(('.O', '.N', '.K', '.A')) else ticker
+            yf_ticker = base_ticker.replace('.', '-')
+
+            # 1차: Yahoo Finance v8 Chart API (전 세계 모든 미국 주식·ETF 6,000+ 실시간 지원)
+            yf_interval = "1d"
+            yf_range = "1y"
+            if periodType in ("weekCandle", "week"):
+                yf_interval = "1wk"
+                yf_range = "5y"
+            elif periodType in ("monthCandle", "month"):
+                yf_interval = "1mo"
+                yf_range = "10y"
+            elif periodType in ("yearCandle", "year"):
+                yf_interval = "3mo"
+                yf_range = "max"
+            elif periodType in ("1m", "2m", "5m", "15m", "30m", "60m", "1h"):
+                yf_interval = "60m" if periodType == "1h" else periodType
+                yf_range = "5d" if yf_interval in ("1m", "2m", "5m") else "1mo"
+            elif periodType == "day":
+                yf_interval = "5m"
+                yf_range = "5d"
+
+            for yf_host in ("query1.finance.yahoo.com", "query2.finance.yahoo.com"):
+                yf_url = f"https://{yf_host}/v8/finance/chart/{yf_ticker}?interval={yf_interval}&range={yf_range}"
                 try:
-                    r = requests.get(url, headers=headers, timeout=5)
+                    yr = requests.get(yf_url, headers=headers, timeout=5)
+                    if yr.status_code == 200:
+                        ydata = yr.json()
+                        result_list = (ydata.get("chart") or {}).get("result") or []
+                        if result_list:
+                            res0 = result_list[0]
+                            timestamps = res0.get("timestamp") or []
+                            quote_list = ((res0.get("indicators") or {}).get("quote")) or []
+                            if timestamps and quote_list:
+                                q = quote_list[0]
+                                opens = q.get("open") or []
+                                highs = q.get("high") or []
+                                lows = q.get("low") or []
+                                closes = q.get("close") or []
+                                vols = q.get("volume") or []
+                                is_intra = yf_interval.endswith("m") or yf_interval.endswith("h")
+                                priceInfos = []
+                                seen_dates = set()
+                                for idx_t, ts in enumerate(timestamps):
+                                    if idx_t >= len(closes) or closes[idx_t] is None:
+                                        continue
+                                    c_val = float(closes[idx_t])
+                                    o_val = float(opens[idx_t]) if (idx_t < len(opens) and opens[idx_t] is not None) else c_val
+                                    h_val = float(highs[idx_t]) if (idx_t < len(highs) and highs[idx_t] is not None) else max(o_val, c_val)
+                                    l_val = float(lows[idx_t]) if (idx_t < len(lows) and lows[idx_t] is not None) else min(o_val, c_val)
+                                    v_val = int(vols[idx_t]) if (idx_t < len(vols) and vols[idx_t] is not None) else 0
+                                    dt_obj = datetime.datetime.utcfromtimestamp(ts)
+                                    if is_intra:
+                                        priceInfos.append({
+                                            "localDateTime": dt_obj.strftime("%Y%m%d%H%M"),
+                                            "openPrice": round(o_val, 4),
+                                            "highPrice": round(h_val, 4),
+                                            "lowPrice": round(l_val, 4),
+                                            "closePrice": round(c_val, 4),
+                                            "volume": v_val
+                                        })
+                                    else:
+                                        d_str = dt_obj.strftime("%Y%m%d")
+                                        if d_str in seen_dates:
+                                            continue
+                                        seen_dates.add(d_str)
+                                        priceInfos.append({
+                                            "localDate": d_str,
+                                            "openPrice": round(o_val, 4),
+                                            "highPrice": round(h_val, 4),
+                                            "lowPrice": round(l_val, 4),
+                                            "closePrice": round(c_val, 4),
+                                            "volume": v_val
+                                        })
+                                if len(priceInfos) >= 5:
+                                    meta = res0.get("meta") or {}
+                                    return {
+                                        "symbol": base_ticker,
+                                        "shortName": meta.get("shortName") or meta.get("longName") or base_ticker,
+                                        "exchangeName": meta.get("exchangeName") or "US",
+                                        "regularMarketPrice": meta.get("regularMarketPrice"),
+                                        "priceInfos": priceInfos[-250:]
+                                    }
+                except Exception as ye:
+                    pass
+
+            # 2차: 네이버 해외 증권 포맷 후보 (.O = 나스닥, .N = 뉴욕, .A = 아멕스, .K = 아르카)
+            naver_pt = periodType if periodType in ("dayCandle", "weekCandle", "monthCandle", "yearCandle", "day") else "dayCandle"
+            candidates = [f"{base_ticker}.O", f"{base_ticker}.N", f"{base_ticker}.A", f"{base_ticker}.K", ticker]
+            for cand in candidates:
+                url = f"https://api.stock.naver.com/chart/foreign/item/{cand}?periodType={naver_pt}"
+                try:
+                    r = requests.get(url, headers=headers, timeout=4)
                     if r.status_code == 200:
                         data = r.json()
                         if data.get('priceInfos') and len(data['priceInfos']) > 0:
                             return data
                 except Exception:
                     pass
+
+            # 3차: GoodStock123 Price History API 폴백
+            try:
+                gs_url = f"https://goodstock123.com/api/fundamentals/price-history?symbol={base_ticker}&range=1Y"
+                gr = requests.get(gs_url, headers=headers, timeout=5)
+                if gr.status_code == 200:
+                    gdata = gr.json()
+                    pts = gdata.get("points") or gdata.get("rows") or gdata.get("prices") or []
+                    if pts:
+                        priceInfos = []
+                        for idx_p, pt in enumerate(pts):
+                            d_raw = str(pt.get("date") or pt.get("d") or "").replace("-", "")
+                            c_p = pt.get("close") or pt.get("c") or pt.get("price")
+                            if len(d_raw) == 8 and c_p is not None:
+                                c_f = float(c_p)
+                                prev_f = float(pts[idx_p - 1].get("close") or pts[idx_p - 1].get("c") or c_f) if idx_p > 0 else c_f
+                                o_f = float(pt.get("open") or pt.get("o") or prev_f)
+                                h_f = float(pt.get("high") or pt.get("h") or max(o_f, c_f) * 1.008)
+                                l_f = float(pt.get("low") or pt.get("l") or min(o_f, c_f) * 0.992)
+                                priceInfos.append({
+                                    "localDate": d_raw,
+                                    "openPrice": round(o_f, 4),
+                                    "highPrice": round(h_f, 4),
+                                    "lowPrice": round(l_f, 4),
+                                    "closePrice": round(c_f, 4),
+                                    "volume": int(pt.get("volume") or pt.get("v") or 0)
+                                })
+                        if priceInfos:
+                            return {"priceInfos": priceInfos[-200:]}
+            except Exception:
+                pass
             
-            # 네이버 실패 시 FinanceDataReader 폴백
+            # 4차: FinanceDataReader 폴백
             try:
                 import FinanceDataReader as fdr
-                clean_ticker = ticker.split('.')[0]
+                clean_ticker = base_ticker
                 df = fdr.DataReader(clean_ticker)
                 if not df.empty:
-                    df = df.tail(120)
+                    df = df.tail(150)
                     priceInfos = []
                     for dt, row in df.iterrows():
                         priceInfos.append({

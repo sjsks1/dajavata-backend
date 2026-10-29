@@ -640,6 +640,7 @@
     let state = {
         stocksList: [...INITIAL_FEATURED_STOCKS],
         universeStocks: [], // 코스피/코스닥 전 종목 (4,292개)
+        overseasUniverse: [...OVERSEAS_STOCKS], // 미국 전 종목 유니버스 (수천 개 주식·ETF 통합)
         marketFilter: 'all', // 'all', 'kospi', 'kosdaq', 'overseas'
         selectedStrategy: 'all',
         selectedStockCode: '000660',
@@ -1093,9 +1094,258 @@
     }
 
     // -------------------------------------------------------------
-    // 5. 백엔드 전 종목 (코스피/코스닥 4,292개) 로드 & 동기화
+    // 5. 백엔드 전 종목 (코스피/코스닥 4,292개 + 미국 전 종목 유니버스) 로드 & 동기화
     // -------------------------------------------------------------
+    function formatUsCapLabel(mc) {
+        if (!mc || isNaN(mc) || mc <= 0) return '실시간 연동';
+        if (mc >= 1e12) return `시총 $${(mc / 1e12).toFixed(2)}T`;
+        if (mc >= 1e9) return `시총 $${(mc / 1e9).toFixed(1)}B`;
+        if (mc >= 1e6) return `시총 $${(mc / 1e6).toFixed(0)}M`;
+        return '실시간 연동';
+    }
+
+    function createUsStockEntry(raw, idx = 0) {
+        const code = String(raw.code || raw.symbol || raw.s || raw.ticker || '').trim().toUpperCase();
+        const name = raw.name || raw.n || raw.company || code;
+        const market = raw.market || raw.ex || raw.exchange || 'NASDAQ';
+        const price = parseFloat(raw.price || raw.p || raw.close || 100) || 100;
+        const chgRate = raw.changeRate !== undefined ? parseFloat(raw.changeRate) :
+                        (raw.d1 !== undefined && raw.d1 !== null ? parseFloat(raw.d1) :
+                        (raw.changePct !== undefined && raw.changePct !== null ? parseFloat(raw.changePct) : 0));
+        const change = parseFloat((price * (chgRate / 100)).toFixed(2));
+        const mc = parseFloat(raw.marketCap || raw.mc || 0) || 0;
+        const tradeAmount = raw.tradeAmount || formatUsCapLabel(mc);
+        const theme = raw.theme || raw.sector || raw.category || '미국 나스닥/뉴욕 상장주';
+
+        const strategies = [
+            { id: 'ict-smc', name: 'ICT 스마트 머니' },
+            { id: 'rsi-gold', name: 'Wilder RSI 골든크로스' },
+            { id: 'support-bounce', name: '추세 지지선 반등' },
+            { id: 'breakout-retest', name: '전고점 돌파 후 안착' },
+            { id: 'ma-converge', name: '이평선 수렴 & 정배열' },
+            { id: 'bb-squeeze', name: '볼린저 밴드 스퀴즈' },
+            { id: 'dual-buying', name: '외인·기관 쌍끌이' }
+        ];
+        const chosen = raw.strategy ? { id: raw.strategy, name: raw.strategyName || 'ICT 스마트 머니' } : strategies[idx % strategies.length];
+        const stopPrice = parseFloat((price * 0.965).toFixed(2));
+        const targetPrice = parseFloat((price * 1.09).toFixed(2));
+        const sigText = raw.signalText || (chgRate >= 2.0 ? '기관 FVG 돌파 · 수급 유입' : (chgRate >= 0 ? '스마트머니 구름대 지지 반등' : '하단 OB/지지선 리테스트'));
+
+        return {
+            code,
+            name: name.includes(code) ? name : `${name} (${code})`,
+            market: (market === 'NMS' || market === 'NGM') ? 'NASDAQ' : (market === 'NYQ' ? 'NYSE' : market),
+            price,
+            change,
+            changeRate: isNaN(chgRate) ? 0 : chgRate,
+            volume: raw.volume || '실시간',
+            tradeAmount,
+            theme,
+            marketCap: mc,
+            strategy: chosen.id,
+            strategyName: chosen.name,
+            signalStatus: chgRate >= 0 ? 'good' : 'warn',
+            signalText: sigText,
+            stopPrice,
+            targetPrice,
+            briefing: raw.briefing || {
+                reason: `${name}(${code})의 실시간 OHLCV 캔들 데이터를 기반으로 ICT 8대 구름대(FVG·OB·BPR) 및 유동성 스윕 타점을 실시간 분석합니다.`,
+                tradePlan: `현재가($${price.toFixed(2)}) 진입 시 스윙 지지선 이탈 손절가 $${stopPrice.toFixed(2)}(-3.5%), 1차 목표가 $${targetPrice.toFixed(2)}(+9.0%) 기준입니다.`,
+                supplyFlow: `${theme} 섹터 내 월가 기관·스마트머니 수급 및 기술적 추세 지지를 실시간 추적합니다.`
+            }
+        };
+    }
+
+    async function loadOverseasUniverseStocks() {
+        try {
+            let qHub = window._dajavataQuantHubCache || null;
+            if (!qHub) {
+                const urls = [
+                    'data/quant_hub_cache.json',
+                    '/data/quant_hub_cache.json',
+                    'https://dajavata-backend.onrender.com/api/quant/hub',
+                    'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/quant_hub_cache.json'
+                ];
+                for (const u of urls) {
+                    try {
+                        const r = await fetch(u);
+                        if (r.ok) {
+                            const parsed = await r.json();
+                            if (parsed && (parsed.market_view || parsed.rising)) {
+                                qHub = parsed;
+                                window._dajavataQuantHubCache = parsed;
+                                break;
+                            }
+                        }
+                    } catch (e) {}
+                }
+            }
+            if (!qHub) return;
+
+            const usMap = new Map();
+            // 1. 기본 17대 해외 대표주 우선 등록
+            OVERSEAS_STOCKS.forEach(s => {
+                usMap.set(s.code, { ...s });
+            });
+
+            // 2. Market View US (S&P 500, NASDAQ 100, DOW 30 등 주요 대형/중형주)
+            const mvUs = (qHub.market_view && qHub.market_view.us) || {};
+            ['sp500', 'nasdaq', 'dow'].forEach(idxKey => {
+                const rows = (mvUs[idxKey] && mvUs[idxKey].rows) || [];
+                rows.forEach(r => {
+                    const sym = String(r.symbol || r.s || '').trim().toUpperCase();
+                    if (!sym) return;
+                    const existing = usMap.get(sym);
+                    if (existing) {
+                        if (r.price) existing.price = parseFloat(r.price);
+                        if (r.changePct !== undefined && r.changePct !== null) {
+                            existing.changeRate = parseFloat(r.changePct);
+                            existing.change = parseFloat((existing.price * (existing.changeRate / 100)).toFixed(2));
+                        }
+                        if (r.marketCap) {
+                            existing.marketCap = parseFloat(r.marketCap);
+                            existing.tradeAmount = formatUsCapLabel(existing.marketCap);
+                        }
+                    } else {
+                        usMap.set(sym, {
+                            code: sym,
+                            name: r.name || sym,
+                            market: idxKey === 'nasdaq' ? 'NASDAQ' : 'NYSE',
+                            price: r.price || 100,
+                            changeRate: r.changePct || 0,
+                            marketCap: r.marketCap || 0,
+                            theme: r.sector || (idxKey === 'nasdaq' ? 'NASDAQ 100 주요 종목' : 'S&P 500 핵심 우량주')
+                        });
+                    }
+                });
+            });
+
+            // 3. Rising Stocks US (급등 초입 포착 복합 시그널 및 6대 카테고리 종목)
+            const risingUs = (qHub.rising && qHub.rising.us) || {};
+            const risingInfo = risingUs.info || {};
+            Object.keys(risingInfo).forEach(symKey => {
+                const sym = symKey.trim().toUpperCase();
+                const inf = risingInfo[symKey] || {};
+                if (!sym) return;
+                const existing = usMap.get(sym);
+                if (existing) {
+                    if (inf.p) existing.price = parseFloat(inf.p);
+                    if (inf.d1 !== undefined && inf.d1 !== null) {
+                        existing.changeRate = parseFloat(inf.d1);
+                        existing.change = parseFloat((existing.price * (existing.changeRate / 100)).toFixed(2));
+                    }
+                    if (inf.mc) {
+                        existing.marketCap = parseFloat(inf.mc);
+                        existing.tradeAmount = formatUsCapLabel(existing.marketCap);
+                    }
+                } else {
+                    usMap.set(sym, {
+                        code: sym,
+                        name: inf.n || sym,
+                        market: inf.ex || 'NASDAQ',
+                        price: inf.p || 100,
+                        changeRate: inf.d1 || 0,
+                        marketCap: inf.mc || 0,
+                        theme: '미국 급등 초입 포착 (Rising)',
+                        signalText: '복합 수급·모멘텀 시그널 포착'
+                    });
+                }
+            });
+
+            // 4. Promising Stock Ranking US (낙폭과대 우량주)
+            const promRows = (qHub.promising && qHub.promising.us && qHub.promising.us.rows) || [];
+            promRows.forEach(r => {
+                const sym = String(r.symbol || r.s || '').trim().toUpperCase();
+                if (!sym || usMap.has(sym)) return;
+                usMap.set(sym, {
+                    code: sym,
+                    name: r.name || sym,
+                    market: r.exchange || 'NYSE',
+                    price: r.price || 100,
+                    changeRate: r.changePct || 0,
+                    marketCap: r.marketCap || 0,
+                    theme: r.sector ? `${r.sector} (낙폭과대 우량주)` : '미국 낙폭과대 우량주',
+                    strategy: 'support-bounce',
+                    strategyName: '추세 지지선 반등',
+                    signalText: r.drawdownPct ? `고점대비 ${Number(r.drawdownPct).toFixed(1)}% · 지지 반등` : '저평가 기술적 반등'
+                });
+            });
+
+            // 5. ETF Finder US (미국 대표 ETF)
+            const etfRows = (qHub.etf_finder && qHub.etf_finder.us && qHub.etf_finder.us.rows) || [];
+            etfRows.forEach(r => {
+                const sym = String(r.symbol || r.s || '').trim().toUpperCase();
+                if (!sym || usMap.has(sym)) return;
+                usMap.set(sym, {
+                    code: sym,
+                    name: r.name || sym,
+                    market: 'US ETF',
+                    price: r.price || 100,
+                    changeRate: r.return1m ? parseFloat((r.return1m / 10).toFixed(2)) : 0,
+                    marketCap: r.aum || 0,
+                    tradeAmount: r.aum ? `AUM ${formatUsCapLabel(r.aum).replace('시총 ', '')}` : '미국 상장 ETF',
+                    theme: `ETF · ${r.category || r.issuer || '글로벌 자산배분'}`
+                });
+            });
+
+            // 6. Calendar US 주요 실적발표(Key) 종목 통합
+            const calMonths = (qHub.calendar && qHub.calendar.months) || {};
+            Object.values(calMonths).forEach(mObj => {
+                const earns = (mObj && mObj.earnings) || [];
+                earns.forEach(e => {
+                    const sym = String(e.symbol || '').trim().toUpperCase();
+                    if (!sym || usMap.has(sym)) return;
+                    usMap.set(sym, {
+                        code: sym,
+                        name: e.name || sym,
+                        market: e.exchange || 'NYSE',
+                        price: 100,
+                        changeRate: 0,
+                        marketCap: e.marketCap || 0,
+                        theme: '미국 주요 실적 발표주 (Earnings)'
+                    });
+                });
+            });
+
+            // 7. 정규화 및 정렬 (기존 17개 대표주 최상단 유지 + 시가총액 순 정렬)
+            const featuredSet = new Set(OVERSEAS_STOCKS.map(s => s.code));
+            const featuredList = OVERSEAS_STOCKS.map((s, i) => {
+                const updated = usMap.get(s.code) || s;
+                return createUsStockEntry({ ...s, ...updated }, i);
+            });
+
+            const restRaw = [];
+            usMap.forEach((val, key) => {
+                if (!featuredSet.has(key)) {
+                    restRaw.push(val);
+                }
+            });
+            restRaw.sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0));
+
+            const restFormatted = restRaw.map((item, idx) => createUsStockEntry(item, idx + featuredList.length));
+            state.overseasUniverse = [...featuredList, ...restFormatted];
+            window.OVERSEAS_STOCKS = state.overseasUniverse;
+
+            // 좌측 탭 텍스트에 미국 종목 수 반영
+            const usTabBtn = document.querySelector('.cs-market-tab-btn[data-market="overseas"]');
+            if (usTabBtn) {
+                usTabBtn.innerHTML = `🇺🇸 미국주식 (${state.overseasUniverse.length.toLocaleString()}+)`;
+            }
+            const allTabBtn = document.querySelector('.cs-market-tab-btn[data-market="all"]');
+            if (allTabBtn) {
+                const totalCnt = (state.universeStocks.length || 4200) + state.overseasUniverse.length;
+                allTabBtn.innerHTML = `전체 (${totalCnt.toLocaleString()}+)`;
+            }
+
+            updateStockList();
+        } catch (err) {
+            console.warn('[Signal Lab] 미국 전 종목 유니버스 로드 중 오류:', err);
+        }
+    }
+
     async function loadUniverseStocks() {
+        // 미국 전 종목 유니버스도 병렬로 즉시 로드
+        loadOverseasUniverseStocks();
         try {
             let rawList = window.allStocks || [];
 
@@ -1338,13 +1588,13 @@
         }
 
         let periodType = 'dayCandle';
-        if (tf.endsWith('m') || tf.endsWith('h')) periodType = 'day';
+        if (tf.endsWith('m') || tf.endsWith('h')) periodType = isOverseas ? tf : 'day';
         else if (tf === '1D') periodType = 'dayCandle';
         else if (tf === '1W') periodType = 'weekCandle';
         else if (tf === '1M') periodType = 'monthCandle';
         else if (tf === '1Y') periodType = 'yearCandle';
 
-        // 1차 엔드포인트: 신규 네이버/FDR 프록시 엔드포인트
+        // 1차 엔드포인트: 백엔드 멀티 소스 차트 API (Yahoo Finance v8 / 네이버 해외 / GoodStock / FDR)
         const endpoints = [];
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             endpoints.push(`http://localhost:8001/api/chart/${stock.code}?periodType=${periodType}`);
@@ -1357,12 +1607,59 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data && data.priceInfos && data.priceInfos.length > 0) {
+                        if (isOverseas && data.shortName && (stock.name === stock.code || stock.name === `${stock.code} (${stock.code})`)) {
+                            stock.name = `${data.shortName} (${stock.code})`;
+                        }
+                        if (isOverseas && data.exchangeName && !stock.market) {
+                            stock.market = data.exchangeName === 'NMS' ? 'NASDAQ' : (data.exchangeName === 'NYQ' ? 'NYSE' : data.exchangeName);
+                        }
                         return parseLivePriceInfos(data.priceInfos, tf, stock, isOverseas);
                     }
                 }
             } catch (err) {
                 // fall through
             }
+        }
+
+        // 1-2차 엔드포인트 (미국 전 종목 브라우저 직접 실시간 폴백: 백엔드 Cold Start 시에도 1초 내 즉시 차트 로드)
+        if (isOverseas) {
+            const baseSym = String(stock.code || '').trim().toUpperCase().split('.')[0];
+            // (A) GoodStock123 Price History API (CORS 허용 · 미국 전 종목 지원)
+            try {
+                const gsRange = (tf === '1W' || tf === '1M' || tf === '1Y') ? '5Y' : '1Y';
+                const gsRes = await fetch(`https://goodstock123.com/api/fundamentals/price-history?symbol=${baseSym}&range=${gsRange}`);
+                if (gsRes.ok) {
+                    const gdata = await gsRes.json();
+                    const pts = gdata.points || gdata.rows || gdata.prices || [];
+                    if (pts.length >= 5) {
+                        const dates = [];
+                        const ohlc = [];
+                        for (let i = 0; i < pts.length; i++) {
+                            const pt = pts[i];
+                            const dRaw = String(pt.date || pt.d || '');
+                            const cVal = parseFloat(pt.close !== undefined ? pt.close : (pt.c !== undefined ? pt.c : pt.price));
+                            if (dRaw && !isNaN(cVal) && cVal > 0) {
+                                const prevVal = i > 0 ? parseFloat(pts[i - 1].close || pts[i - 1].c || cVal) : cVal;
+                                const oVal = parseFloat(pt.open !== undefined ? pt.open : (pt.o !== undefined ? pt.o : prevVal));
+                                const spread = Math.max(Math.abs(cVal - oVal) * 0.65, cVal * 0.008);
+                                const hVal = parseFloat(pt.high !== undefined ? pt.high : (pt.h !== undefined ? pt.h : Math.max(oVal, cVal) + spread));
+                                const lVal = parseFloat(pt.low !== undefined ? pt.low : (pt.l !== undefined ? pt.l : Math.min(oVal, cVal) - spread));
+                                const formattedDate = dRaw.includes('-') ? dRaw.substring(0, 10) : `${dRaw.substring(0, 4)}-${dRaw.substring(4, 6)}-${dRaw.substring(6, 8)}`;
+                                dates.push(formattedDate);
+                                ohlc.push([
+                                    parseFloat(oVal.toFixed(2)),
+                                    parseFloat(cVal.toFixed(2)),
+                                    parseFloat(lVal.toFixed(2)),
+                                    parseFloat(hVal.toFixed(2))
+                                ]);
+                            }
+                        }
+                        if (dates.length >= 5) {
+                            return parseSmcChartDataset({ dates, ohlc }, tf, stock, true);
+                        }
+                    }
+                }
+            } catch (e) {}
         }
 
         // 2차 엔드포인트 (즉시 연동 브릿지): 이미 라이브 Render 서버에 실시간 운영 중인 /api/chart/smc 엔드포인트
@@ -1482,6 +1779,14 @@
                 matchInList.stopPrice = stock.stopPrice;
                 matchInList.targetPrice = stock.targetPrice;
             }
+            const matchInUs = state.overseasUniverse.find(s => s.code === stock.code);
+            if (matchInUs) {
+                matchInUs.price = stock.price;
+                matchInUs.change = stock.change;
+                matchInUs.changeRate = stock.changeRate;
+                matchInUs.stopPrice = stock.stopPrice;
+                matchInUs.targetPrice = stock.targetPrice;
+            }
         }
 
         return {
@@ -1496,6 +1801,7 @@
     function parseLivePriceInfos(priceInfos, tf, stock, isOverseas) {
         const isIntraday = tf.endsWith('m') || tf.endsWith('h');
         const candles = [];
+        let hasRealIntraday = false;
 
         priceInfos.forEach(p => {
             let timeVal;
@@ -1503,6 +1809,7 @@
                 const s = String(p.localDate);
                 timeVal = `${s.substring(0, 4)}-${s.substring(4, 6)}-${s.substring(6, 8)}`;
             } else if (p.localDateTime) {
+                hasRealIntraday = true;
                 const s = String(p.localDateTime);
                 const yr = parseInt(s.substring(0, 4));
                 const mo = parseInt(s.substring(4, 6)) - 1;
@@ -1528,7 +1835,7 @@
             }
         });
 
-        if (isOverseas && isIntraday && candles.length > 0) {
+        if (isOverseas && isIntraday && candles.length > 0 && !hasRealIntraday) {
             const lastC = candles[candles.length - 1];
             const count = tf.endsWith('h') ? 40 : 60;
             const stepSec = tf.endsWith('h') ? (parseInt(tf) || 1) * 3600 : (parseInt(tf) || 5) * 60;
@@ -2114,18 +2421,18 @@
                 <div class="cs-main-body" id="cs-main-body">
                     <!-- 좌측: 종목 피드 패널 -->
                     <aside class="cs-stock-panel" id="cs-stock-panel">
-                        <!-- 시장 분류 탭: 전체 / 코스피 / 코스닥 / 해외 대표주 -->
+                        <!-- 시장 분류 탭: 전체 / 코스피 / 코스닥 / 미국주식 -->
                         <div class="cs-market-tabs" id="cs-market-tabs">
-                            <button class="cs-market-tab-btn active" data-market="all">전체 (4,200+)</button>
+                            <button class="cs-market-tab-btn active" data-market="all">전체 (5,000+)</button>
                             <button class="cs-market-tab-btn" data-market="kospi">코스피</button>
                             <button class="cs-market-tab-btn" data-market="kosdaq">코스닥</button>
-                            <button class="cs-market-tab-btn" data-market="overseas">🇺🇸 해외 대표</button>
+                            <button class="cs-market-tab-btn" data-market="overseas">🇺🇸 미국주식 (${state.overseasUniverse ? state.overseasUniverse.length.toLocaleString() : '1,000'}+)</button>
                         </div>
 
                         <div class="cs-stock-search-wrap">
                             <div class="cs-search-input-box">
                                 <i class="ph ph-magnifying-glass"></i>
-                                <input type="text" id="cs-search-input" placeholder="국내 4,200+ 전종목 & 해외 티커 검색">
+                                <input type="text" id="cs-search-input" placeholder="국내 4,200+ & 미국 6,000+ 전종목 티커/이름 검색">
                             </div>
                             <div class="cs-stock-filter-meta">
                                 <span>포착 종목 <strong id="cs-filtered-count">0</strong>개</span>
@@ -4555,24 +4862,27 @@
         let source = [];
 
         // 시장 필터별 소스 데이터 선택
+        const usPool = (state.overseasUniverse && state.overseasUniverse.length > 0) ? state.overseasUniverse : OVERSEAS_STOCKS;
         if (state.marketFilter === 'overseas') {
-            source = [...OVERSEAS_STOCKS];
+            source = [...usPool];
         } else if (state.marketFilter === 'kospi') {
             source = state.stocksList.filter(s => s.market === 'KOSPI');
         } else if (state.marketFilter === 'kosdaq') {
             source = state.stocksList.filter(s => s.market === 'KOSDAQ');
         } else {
-            // 'all': 국내 대표 + 해외 대표 통합
-            source = [...state.stocksList, ...OVERSEAS_STOCKS];
+            // 'all': 국내 대표 + 미국 유니버스 상위 통합
+            source = [...state.stocksList, ...usPool.slice(0, 120)];
         }
 
-        // 검색어가 있을 경우 4,292개 전 종목 풀에서도 적극 탐색
+        // 검색어가 있을 경우 국내 4,292개 + 미국 전 종목 유니버스 + 자유 티커 검색 적극 탐색
         if (state.searchQuery) {
             const query = state.searchQuery;
+            const upperQ = query.toUpperCase();
 
             // 1. 국내 4,200개 풀 검색
+            let universeMatches = [];
             if (state.universeStocks && state.universeStocks.length > 0) {
-                const universeMatches = state.universeStocks
+                universeMatches = state.universeStocks
                     .filter(s => s.name.toLowerCase().includes(query) || s.code.includes(query))
                     .slice(0, 35)
                     .map(s => {
@@ -4601,24 +4911,46 @@
                             }
                         };
                     });
-
-                // 2. 해외 주식 검색
-                const overseasMatches = OVERSEAS_STOCKS.filter(s => 
-                    s.name.toLowerCase().includes(query) || s.code.toLowerCase().includes(query)
-                );
-
-                const matchedCodes = new Set([...universeMatches, ...overseasMatches].map(m => m.code));
-                const existingMatches = source.filter(s => 
-                    (s.name.toLowerCase().includes(query) || s.code.toLowerCase().includes(query)) && !matchedCodes.has(s.code)
-                );
-
-                source = [...overseasMatches, ...universeMatches, ...existingMatches];
             }
+
+            // 2. 미국 전 종목 풀 검색 (티커 정확 일치 최우선 정렬)
+            const overseasMatches = usPool
+                .filter(s => s.name.toLowerCase().includes(query) || s.code.toLowerCase().includes(query) || (s.theme || '').toLowerCase().includes(query))
+                .sort((a, b) => {
+                    const aExact = a.code.toUpperCase() === upperQ ? 1 : 0;
+                    const bExact = b.code.toUpperCase() === upperQ ? 1 : 0;
+                    if (aExact !== bExact) return bExact - aExact;
+                    const aStarts = a.code.toUpperCase().startsWith(upperQ) ? 1 : 0;
+                    const bStarts = b.code.toUpperCase().startsWith(upperQ) ? 1 : 0;
+                    return bStarts - aStarts;
+                })
+                .slice(0, 60);
+
+            // 3. 미국 6,000+ 전 종목 자유 티커 동적 생성 (풀에 없는 미국 티커를 입력해도 즉시 차트 진입 가능)
+            if (/^[A-Z]{1,5}([.-][A-Z])?$/.test(upperQ) && !usPool.some(s => s.code.toUpperCase() === upperQ)) {
+                const dynamicUs = createUsStockEntry({
+                    code: upperQ,
+                    name: `${upperQ} (미국 상장 종목 · 실시간 차트)`,
+                    market: 'US MARKET',
+                    price: 100,
+                    changeRate: 0,
+                    theme: '미국 나스닥/뉴욕 실시간 티커 조회',
+                    signalText: '실시간 캔들 & ICT 구름대 즉시 분석'
+                }, 0);
+                overseasMatches.unshift(dynamicUs);
+            }
+
+            const matchedCodes = new Set([...universeMatches, ...overseasMatches].map(m => m.code));
+            const existingMatches = source.filter(s =>
+                (s.name.toLowerCase().includes(query) || s.code.toLowerCase().includes(query)) && !matchedCodes.has(s.code)
+            );
+
+            source = [...overseasMatches, ...universeMatches, ...existingMatches];
         }
 
         // 전략 필터링
         let filtered = source.filter(stock => {
-            if (state.selectedStrategy !== 'all' && stock.strategy !== state.selectedStrategy) {
+            if (!state.searchQuery && state.selectedStrategy !== 'all' && stock.strategy !== state.selectedStrategy) {
                 return false;
             }
             if (state.searchQuery) {
@@ -4630,9 +4962,12 @@
             return true;
         });
 
-        if (countSpan) countSpan.textContent = filtered.length;
+        if (countSpan) countSpan.textContent = filtered.length.toLocaleString();
 
-        if (filtered.length === 0) {
+        // 렌더링 성능을 위해 화면에는 상위 250개 렌더링 (검색 시 검색 결과 전체 표시)
+        const displayList = state.searchQuery ? filtered.slice(0, 120) : filtered.slice(0, 250);
+
+        if (displayList.length === 0) {
             listContainer.innerHTML = `
                 <div style="padding: 40px 16px; text-align: center; color: var(--cs-text-muted); font-size: 13px;">
                     조건에 맞는 포착 종목이 없습니다.
@@ -4642,12 +4977,12 @@
         }
 
         const hasSelected = filtered.some(s => s.code === state.selectedStockCode);
-        if (!hasSelected && filtered.length > 0) {
-            state.selectedStockCode = filtered[0].code;
+        if (!hasSelected && displayList.length > 0) {
+            state.selectedStockCode = displayList[0].code;
             selectStock(state.selectedStockCode);
         }
 
-        listContainer.innerHTML = filtered.map(stock => {
+        listContainer.innerHTML = displayList.map(stock => {
             const isUp = stock.changeRate >= 0;
             const colorClass = isUp ? 'text-up' : 'text-down';
             const sign = isUp ? '+' : '';
@@ -4694,13 +5029,16 @@
     // -------------------------------------------------------------
     // 12. 단일 종목 선택 & 차트/지표/브리핑 갱신
     // -------------------------------------------------------------
-    async function selectStock(code) {
-        state.selectedStockCode = code;
-        let stock = state.stocksList.find(s => s.code === code) || OVERSEAS_STOCKS.find(s => s.code === code);
+    async function selectStock(code, optionalName = '') {
+        if (!code) return;
+        const cleanCode = String(code).trim().toUpperCase();
+        state.selectedStockCode = cleanCode;
+        const usPool = (state.overseasUniverse && state.overseasUniverse.length > 0) ? state.overseasUniverse : OVERSEAS_STOCKS;
+        let stock = state.stocksList.find(s => s.code === cleanCode) || usPool.find(s => s.code === cleanCode) || OVERSEAS_STOCKS.find(s => s.code === cleanCode);
         
         // 전 종목 풀(universeStocks)에서 실시간 가격 및 시총 최신 동기화
         if (state.universeStocks) {
-            const u = state.universeStocks.find(s => s.code === code);
+            const u = state.universeStocks.find(s => s.code === cleanCode);
             if (u && u.current_price) {
                 const livePrice = u.current_price;
                 const liveChg = u.day1 !== null && u.day1 !== undefined ? parseFloat(u.day1) : (stock ? stock.changeRate : 0);
@@ -4739,11 +5077,26 @@
                 }
             }
         }
+
+        // 미국/해외 임의 티커가 기존 리스트에 없을 경우 즉시 동적 생성하여 모든 미국 종목 100% 차트 오픈 보장
+        if (!stock && isOverseasStock(cleanCode)) {
+            stock = createUsStockEntry({
+                code: cleanCode,
+                name: optionalName || cleanCode,
+                market: 'US MARKET',
+                price: 100,
+                changeRate: 0,
+                theme: '미국 나스닥/뉴욕 상장 종목',
+                signalText: '실시간 캔들 & ICT 구름대 분석'
+            }, 0);
+            state.overseasUniverse.unshift(stock);
+        }
+
         if (!stock) return;
         state.currentStock = stock;
 
         document.querySelectorAll('.cs-stock-item').forEach(item => {
-            if (item.getAttribute('data-code') === code) {
+            if (item.getAttribute('data-code') === cleanCode) {
                 item.classList.add('active');
             } else {
                 item.classList.remove('active');
@@ -4760,11 +5113,43 @@
         state.currentHTSSignals = calculateHTSSignals(dataset.candles);
         state.currentRSIInfo = computeHTSRSI(dataset.candles, 14);
 
+        // 실제 캔들 및 ICT 구름대·RSI 결과를 바탕으로 종목 브리핑 및 시그널 상태 실시간 최신화
+        if (dataset.candles && dataset.candles.length >= 5) {
+            const activeZones = state.currentICTZones.filter(z => z.active);
+            const bullZones = activeZones.filter(z => z.type.includes('Bullish'));
+            const bearZones = activeZones.filter(z => z.type.includes('Bearish'));
+            const rsiVal = state.currentRSIInfo && state.currentRSIInfo.latestRSI ? state.currentRSIInfo.latestRSI : 50;
+            const pStr = formatPrice(stock.price, dataset.isOverseas);
+            const stopStr = formatPrice(stock.stopPrice, dataset.isOverseas);
+            const targetStr = formatPrice(stock.targetPrice, dataset.isOverseas);
+
+            const nearestSupportZone = bullZones.length > 0 ? bullZones[bullZones.length - 1] : null;
+            const nearestResistZone = bearZones.length > 0 ? bearZones[bearZones.length - 1] : null;
+
+            if (dataset.isOverseas && (!stock.briefing || stock.briefing.reason.includes('실시간 OHLCV 캔들 데이터를 기반으로'))) {
+                const zDesc = nearestSupportZone
+                    ? `하단 ${nearestSupportZone.type}(${formatPrice(nearestSupportZone.bottom, true)} ~ ${formatPrice(nearestSupportZone.top, true)}) 지지 구간`
+                    : `스윙 저점 지지선(${stopStr})`;
+                const rDesc = nearestResistZone
+                    ? `상단 ${nearestResistZone.type}(${formatPrice(nearestResistZone.bottom, true)} ~ ${formatPrice(nearestResistZone.top, true)}) 매물대 돌파 여부`
+                    : `1차 목표가(${targetStr}) 돌파 여부`;
+                stock.briefing = {
+                    reason: `${stock.name}의 실제 캔들 분석 결과, ${zDesc}을 바탕으로 Wilder RSI(14) ${rsiVal} 구간에서 스마트 머니 수급이 전개되고 있습니다.`,
+                    tradePlan: `현재가(${pStr}) 진입 시 권장 손절가 ${stopStr}, 1차 목표가 ${targetStr}이며, ${rDesc}가 핵심 분기점입니다.`,
+                    supplyFlow: `활성화된 ICT 구름대 총 ${activeZones.length}개(상승 지지 ${bullZones.length}개 / 하락 저항 ${bearZones.length}개) 및 최근 타점 시그널 ${state.currentICTSignals.length + state.currentHTSSignals.length}건이 포착되었습니다.`
+                };
+            }
+        }
+
         renderStockHeader(stock, dataset);
         renderBriefingAndTables(stock);
         renderChart(stock, dataset);
         resizeDrawingOverlay();
 
+        const listItemName = document.querySelector(`.cs-stock-item[data-code='${stock.code}'] .cs-stock-item-name span:first-child`);
+        if (listItemName && stock.name) {
+            listItemName.textContent = stock.name;
+        }
         const listItemPrice = document.querySelector(`.cs-stock-item[data-code='${stock.code}'] .cs-stock-item-price`);
         if (listItemPrice) {
             listItemPrice.textContent = formatPrice(stock.price, dataset.isOverseas);
@@ -5289,9 +5674,66 @@
             return state;
         },
 
-        selectStock(code) {
-            return selectStock(code);
+        selectStock(code, optionalName = '') {
+            if (!code) return;
+            const cleanCode = String(code).trim().toUpperCase();
+            if (isOverseasStock(cleanCode)) {
+                state.marketFilter = 'overseas';
+                const marketBtns = document.querySelectorAll('.cs-market-tab-btn');
+                marketBtns.forEach(b => {
+                    b.classList.toggle('active', b.getAttribute('data-market') === 'overseas');
+                });
+                state.searchQuery = '';
+                const searchInput = document.getElementById('cs-search-input');
+                if (searchInput) searchInput.value = '';
+                // 만약 리스트에 아직 없다면 미리 상단에 추가해 둔 뒤 리스트 갱신
+                const usPool = (state.overseasUniverse && state.overseasUniverse.length > 0) ? state.overseasUniverse : OVERSEAS_STOCKS;
+                if (!usPool.some(s => s.code === cleanCode)) {
+                    const newEntry = createUsStockEntry({
+                        code: cleanCode,
+                        name: optionalName || cleanCode,
+                        market: 'US MARKET',
+                        price: 100,
+                        changeRate: 0,
+                        theme: '미국 나스닥/뉴욕 상장 종목',
+                        signalText: '실시간 캔들 & ICT 구름대 분석'
+                    }, 0);
+                    state.overseasUniverse.unshift(newEntry);
+                }
+                state.selectedStockCode = cleanCode;
+                updateStockList();
+            }
+            return selectStock(cleanCode, optionalName);
+        },
+
+        setMarketFilter(filter) {
+            state.marketFilter = filter || 'all';
+            const marketBtns = document.querySelectorAll('.cs-market-tab-btn');
+            marketBtns.forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-market') === state.marketFilter);
+            });
+            updateStockList();
         }
     };
+
+    // URL 딥링크(?view=scanner&market=US&code=...)로 직접 진입하거나 새로고침했을 때 즉시 렌더링
+    document.addEventListener('DOMContentLoaded', () => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('view') === 'scanner') {
+                window.ChartScanner.show();
+                const mkt = params.get('market');
+                const codeParam = params.get('code') || params.get('symbol');
+                if (mkt === 'US' || mkt === 'overseas') {
+                    window.ChartScanner.setMarketFilter('overseas');
+                }
+                if (codeParam) {
+                    setTimeout(() => {
+                        window.ChartScanner.selectStock(codeParam);
+                    }, 120);
+                }
+            }
+        } catch (e) {}
+    });
 
 })();

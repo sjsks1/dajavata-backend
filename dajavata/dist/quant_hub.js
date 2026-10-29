@@ -148,13 +148,14 @@
         return d.innerHTML;
     }
 
-    // 차트 스캐너 연동 헬퍼
+    // 차트 스캐너 연동 헬퍼 (한국 전 종목 + 미국 6,000+ 전 종목 완벽 직결)
     window.openInDajavataScanner = function (code, name) {
+        if (!code || code === 'MACRO') return;
         if (window.ChartScanner && typeof window.ChartScanner.show === 'function') {
             window.ChartScanner.show();
             if (typeof window.ChartScanner.selectStock === 'function') {
                 setTimeout(() => {
-                    window.ChartScanner.selectStock(code);
+                    window.ChartScanner.selectStock(code, name || '');
                 }, 80);
             }
         } else {
