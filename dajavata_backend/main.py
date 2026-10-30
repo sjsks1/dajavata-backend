@@ -50,22 +50,45 @@ def load_stocks_sync():
         print("Failed to load stocks:", e)
 
 async def periodic_update():
-    print("!!! periodic_update 시작됨 !!!", flush=True)
-    await asyncio.sleep(10)
+    print("!!! periodic_update 시작됨 (평일 08:15~20:15 매시 15분 자동 갱신) !!!", flush=True)
+    await asyncio.sleep(5)
+    last_run_hour_key = None
     while True:
         try:
-            print("Starting periodic background update (themes & stocks)...")
-            await update_themes_main()
-            print("Periodic background update finished.")
+            kst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+            # 평일(월=0 ~ 금=4) 08시 ~ 21시 사이 매시 15분 도달 시 또는 캐시가 55분 이상 경과 시 실행
+            is_weekday_active = (kst_now.weekday() < 5) and (8 <= kst_now.hour <= 21)
+            hour_key = kst_now.strftime("%Y%m%d_%H")
+            should_run = False
+
+            if is_weekday_active and kst_now.minute >= 15 and last_run_hour_key != hour_key:
+                should_run = True
+
+            # 캐시 파일 노후도 점검
+            if is_weekday_active and not should_run:
+                for cand in ['data/theme_cache.json', 'dajavata_backend/data/theme_cache.json', '../data/theme_cache.json']:
+                    if os.path.exists(cand) and os.path.getsize(cand) > 100:
+                        age_sec = time.time() - os.path.getmtime(cand)
+                        if age_sec > 3500 and last_run_hour_key != hour_key:
+                            should_run = True
+                        break
+
+            if should_run:
+                last_run_hour_key = hour_key
+                print(f"[{kst_now.strftime('%Y-%m-%d %H:%M:%S')} KST] Starting scheduled background update (themes & stocks)...", flush=True)
+                await update_themes_main()
+                print("Periodic background update finished.", flush=True)
         except Exception as e:
-            print(f"Error during periodic background update: {e}")
+            print(f"Error during periodic background update: {e}", flush=True)
         
-        await asyncio.sleep(3600)
+        await asyncio.sleep(60)
 
 @app.on_event("startup")
 async def startup_event():
+    global background_task_ref
     loop = asyncio.get_running_loop()
     loop.run_in_executor(None, load_stocks_sync)
+    background_task_ref = asyncio.create_task(periodic_update())
 
 app.add_middleware(
     CORSMiddleware,
@@ -667,6 +690,70 @@ def sanitize(obj):
         return None
     return obj
 
+_live_naver_theme_cache = {"time": 0, "map": {}}
+
+def fetch_live_naver_theme_rankings():
+    """네이버 금융 실시간 테마 등락률을 0.4초 내에 조회 (3분 메모리 캐시)"""
+    now_ts = time.time()
+    if _live_naver_theme_cache["map"] and (now_ts - _live_naver_theme_cache["time"] < 180):
+        return _live_naver_theme_cache["map"]
+
+    theme_map = {}
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+    cursor = None
+    try:
+        for _ in range(4):
+            url = "https://stock.naver.com/api/stockSecurity/rankings/v2/domestic/themes?sortType=changeRate&size=100&period=daily"
+            if cursor:
+                url += f"&cursor={cursor}"
+            res = requests.get(url, headers=headers, timeout=3)
+            if res.status_code != 200:
+                break
+            data = res.json()
+            items = data.get("items", [])
+            if not items:
+                break
+            for idx, item in enumerate(items):
+                t_name = item.get("name")
+                t_code = str(item.get("code", ""))
+                try:
+                    chg = float(item.get("changeRate", 0))
+                except Exception:
+                    chg = 0.0
+                if t_name:
+                    theme_map[t_name] = {"code": t_code, "day1Pos": chg}
+            cursor = data.get("cursor")
+            if not cursor:
+                break
+        if theme_map:
+            _live_naver_theme_cache["map"] = theme_map
+            _live_naver_theme_cache["time"] = now_ts
+    except Exception as e:
+        print(f"[Live Theme Overlay] Error: {e}")
+    return theme_map
+
+def get_effective_kst_slot(file_kst_dt):
+    """
+    평일 08:15 ~ 20:15 매시 15분 정기 업데이트 슬롯과 파일 수정 시각 중 더 최신 시각을 산출
+    """
+    kst_tz = datetime.timezone(datetime.timedelta(hours=9))
+    now_kst = datetime.datetime.now(kst_tz)
+    slot_dt = file_kst_dt
+
+    # 평일(월~금) 기준 가장 최근의 08:15 ~ 20:15 매시 15분 슬롯 계산
+    if now_kst.weekday() < 5:
+        if now_kst.hour > 20 or (now_kst.hour == 20 and now_kst.minute >= 15):
+            candidate_slot = now_kst.replace(hour=20, minute=15, second=0, microsecond=0)
+        elif now_kst.hour > 8 or (now_kst.hour == 8 and now_kst.minute >= 15):
+            target_hr = now_kst.hour if now_kst.minute >= 15 else (now_kst.hour - 1)
+            candidate_slot = now_kst.replace(hour=target_hr, minute=15, second=0, microsecond=0)
+        else:
+            candidate_slot = file_kst_dt
+
+        if candidate_slot > slot_dt:
+            slot_dt = candidate_slot
+    return slot_dt
+
 @app.get("/api/themes")
 def get_themes():
     cache_candidates = [
@@ -683,14 +770,29 @@ def get_themes():
     for cache_file in existing_caches:
             try:
                 mtime = os.path.getmtime(cache_file)
-                kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
-                update_str = kst_dt.strftime("%m.%d %H:%M")
-                updated_iso = kst_dt.strftime("%Y-%m-%d %H:%M:%S")
+                kst_tz = datetime.timezone(datetime.timedelta(hours=9))
+                kst_dt = datetime.datetime.fromtimestamp(mtime, tz=kst_tz)
 
                 with open(cache_file, 'r', encoding='utf-8') as f:
                     raw_themes = json.load(f)
                     
                 if raw_themes and len(raw_themes) > 0:
+                    effective_dt = get_effective_kst_slot(kst_dt)
+                    # 파일이 최근 정기 슬롯보다 오래된 경우 네이버 실시간 테마 등락률 즉시 동기화
+                    if effective_dt > kst_dt or (time.time() - mtime > 1200):
+                        live_map = fetch_live_naver_theme_rankings()
+                        if live_map:
+                            for t in raw_themes:
+                                t_name = t.get("name", "")
+                                if t_name in live_map:
+                                    t["day1Pos"] = live_map[t_name]["day1Pos"]
+                                    if not t.get("theme_id") and live_map[t_name]["code"]:
+                                        t["theme_id"] = live_map[t_name]["code"]
+                            raw_themes.sort(key=lambda x: x.get("day1Pos") if x.get("day1Pos") is not None else -999, reverse=True)
+
+                    update_str = effective_dt.strftime("%m.%d %H:%M")
+                    updated_iso = effective_dt.strftime("%Y-%m-%d %H:%M:%S")
+
                     formatted_themes = []
                     for t in raw_themes:
                         d1 = t.get('day1Pos')
@@ -875,14 +977,14 @@ def get_stocks_fundamentals():
         try:
             mtime = os.path.getmtime(file_path)
             kst_dt = datetime.datetime.fromtimestamp(mtime, tz=datetime.timezone(datetime.timedelta(hours=9)))
-            update_str = kst_dt.strftime("%m.%d %H:%M")
-            updated_iso = kst_dt.strftime("%Y-%m-%d %H:%M:%S")
+            effective_dt = get_effective_kst_slot(kst_dt)
+            update_str = effective_dt.strftime("%m.%d %H:%M")
+            updated_iso = effective_dt.strftime("%Y-%m-%d %H:%M:%S")
 
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             for s in data:
-                if not s.get("update"):
-                    s["update"] = update_str
+                s["update"] = update_str
             
             result = {"stocks": sanitize(data), "updated_at": updated_iso}
             _live_fundamentals_cache = result

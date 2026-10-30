@@ -1,0 +1,52 @@
+name: Update Theme Data
+
+on:
+  schedule:
+    # 1) 평일 아침 08:15 KST (일~목 UTC 23:15 = 월~금 KST 08:15)
+    - cron: '15 23 * * 0-4'
+    # 2) 평일 장전·장중 09:15 ~ 14:15 KST (월~금 UTC 00:15 ~ 05:15, 매시 15분)
+    - cron: '15 0,1,2,3,4,5 * * 1-5'
+    # 3) 평일 장마감·시간외·야간 15:15 ~ 20:15 KST + 21:15 최종 정산 (월~금 UTC 06:15 ~ 12:15, 매시 15분)
+    - cron: '15 6,7,8,9,10,11,12 * * 1-5'
+    # 4) 주말 정기 점검 2회 (토~일 KST 10:15, 18:15)
+    - cron: '15 1,9 * * 0,6'
+  workflow_dispatch:       # 수동으로도 실행 가능하게
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        working-directory: dajavata_backend
+        run: pip install -r requirements.txt
+
+      - name: Run update script
+        working-directory: dajavata_backend
+        run: |
+          python update_themes.py
+          python update_quant_hub.py || true
+
+      - name: Sync data to all directories
+        run: |
+          mkdir -p data dajavata/dist/data dajavata_backend/data
+          cp dajavata_backend/data/*.json data/ || true
+          cp dajavata_backend/data/*.json dajavata/dist/data/ || true
+
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/*.json dajavata_backend/data/*.json dajavata/dist/data/*.json
+          git diff --staged --quiet || git commit -m "Auto-update theme data [skip ci]"
+          git push

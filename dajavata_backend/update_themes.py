@@ -272,8 +272,8 @@ async def main():
     from concurrent.futures import ThreadPoolExecutor
     loop = asyncio.get_running_loop()
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        batch_size = 50
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        batch_size = 100
         for i in range(0, len(unique_codes), batch_size):
             batch = unique_codes[i:i+batch_size]
             tasks = [loop.run_in_executor(executor, calculate_stock_metrics, code, df_krx) for code in batch]
@@ -287,6 +287,10 @@ async def main():
                 print(f"Processed {min(i + batch_size, len(unique_codes))}/{len(unique_codes)} stocks...")
 
     print(f"Successfully calculated metrics for {len(stock_metrics_dict)}/{len(unique_codes)} stocks.")
+
+    # 완료 시점 KST 타임스탬프 갱신
+    kst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+    kst_update_str = kst_now.strftime("%m.%d %H:%M")
 
     # 5.5. 네이버 실시간 호가/현재가 일괄 동기화 (100개씩 배치 호출하여 100% 실시간 시세 반영)
     print("Fetching live real-time prices & change rates from Naver Polling API...")

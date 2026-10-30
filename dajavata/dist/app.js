@@ -113,8 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2200);
     }
 
-    // KST(한국시간 UTC+9) 변환 및 포맷 헬퍼 함수
-    function getKstDate(d) {
+    // KST(한국시간 UTC+9) 변환 및 평일 08:15~20:15 매시 15분 정기 슬롯 동기화 헬퍼 함수
+    function getRawKstDate(d) {
         if (typeof d === 'string') {
             const m = d.trim().match(/^(\d{2})\.(\d{2})\s+(\d{2}):(\d{2})$/);
             if (m) {
@@ -126,6 +126,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const valid = !isNaN(base.getTime()) ? base : new Date();
         const utc = valid.getTime() + (valid.getTimezoneOffset() * 60000);
         return new Date(utc + (9 * 3600000));
+    }
+
+    function getKstDate(d) {
+        const parsed = getRawKstDate(d);
+        const nowBase = new Date();
+        const nowUtc = nowBase.getTime() + (nowBase.getTimezoneOffset() * 60000);
+        const nowKst = new Date(nowUtc + (9 * 3600000));
+        const day = nowKst.getDay(); // 0=일, 1=월 ~ 5=금, 6=토
+
+        if (day >= 1 && day <= 5) {
+            const hr = nowKst.getHours();
+            const mi = nowKst.getMinutes();
+            let slotKst = null;
+            if (hr > 20 || (hr === 20 && mi >= 15)) {
+                slotKst = new Date(nowKst.getFullYear(), nowKst.getMonth(), nowKst.getDate(), 20, 15, 0);
+            } else if (hr > 8 || (hr === 8 && mi >= 15)) {
+                const slotHr = mi >= 15 ? hr : (hr - 1);
+                slotKst = new Date(nowKst.getFullYear(), nowKst.getMonth(), nowKst.getDate(), slotHr, 15, 0);
+            }
+            if (slotKst && slotKst.getTime() > parsed.getTime()) {
+                return slotKst;
+            }
+        }
+        return parsed;
     }
 
     function formatKstTime(rawVal, fallbackDate) {
@@ -468,35 +492,118 @@ document.addEventListener('DOMContentLoaded', () => {
 
     tbody.innerHTML = '<tr><td colspan="10" class="center" style="padding: 40px; color: var(--text-muted);">데이터를 불러오는 중입니다...<br><span style="font-size: 13px;">(무료 서버 특성상 첫 접속 시 최대 1분 정도 소요될 수 있습니다)</span></td></tr>';
     
-    // Fetch data
-    fetch(API_URL)
-        .then(response => {
-            const serverDate = response.headers.get('date');
-            return response.json().then(data => ({ data, serverDate }));
-        })
-        .then(async ({ data, serverDate }) => {
-            window.allThemes = data.themes || [];
-            if (data.updated_at) {
-                window._themeUpdatedAt = new Date(data.updated_at);
-            } else if (serverDate) {
-                window._themeUpdatedAt = new Date(serverDate);
-            }
-            updateHeaderBadge();
-            if (window.allThemes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="15" class="center">데이터를 불러올 수 없습니다. API 연결을 확인해주세요.</td></tr>';
-                return;
-            }
+    // 원시 theme_cache.json 항목을 프론트엔드 표 형식으로 변환
+    function normalizeRawTheme(t, fallbackUpdate) {
+        if (!t) return null;
+        if (typeof t.day1 === 'string' && t.day1.includes('%')) return t;
+        const fmtPct = (v, digits = 1) => (v !== null && v !== undefined && !isNaN(Number(v))) ? `${Number(v) >= 0 ? '+' : ''}${Number(v).toFixed(digits)}%` : '-';
+        const fmtInt = (v) => (v !== null && v !== undefined && !isNaN(Number(v))) ? `${Math.round(Number(v))}` : '-';
+        const d1 = t.day1Pos !== undefined ? Number(t.day1Pos) : Number(t.day1 || 0);
+        const d3 = t.day3Pos !== undefined ? Number(t.day3Pos) : Number(t.day3 || 0);
+        const h52 = Number(t.high52);
+        const l52 = Number(t.low52);
+        const n52 = Number(t.neglect52);
+        const h3y = Number(t.high3y);
+        const l3y = Number(t.low3y);
+        const n3y = Number(t.neglect3y);
+        const exp = Number(t.expReturn);
+        return {
+            name: t.name || '',
+            theme_id: t.theme_id || '',
+            desc: t.desc || `${t.name || ''} 테마 구성종목 평균 데이터입니다.`,
+            day1: fmtPct(d1, 2),
+            day1Pos: !isNaN(d1) ? d1 >= 0 : true,
+            day3: fmtPct(d3, 2),
+            day3Pos: !isNaN(d3) ? d3 >= 0 : true,
+            high52: fmtPct(h52, 1),
+            high52Pos: !isNaN(h52) ? h52 >= 0 : true,
+            low52: fmtPct(l52, 1),
+            low52Pos: !isNaN(l52) ? l52 >= 0 : true,
+            neglect52: fmtInt(n52),
+            high3y: fmtPct(h3y, 1),
+            high3yPos: !isNaN(h3y) ? h3y >= 0 : true,
+            low3y: fmtPct(l3y, 1),
+            low3yPos: !isNaN(l3y) ? l3y >= 0 : true,
+            neglect3y: fmtInt(n3y),
+            expReturn: !isNaN(exp) ? `${Math.round(exp)}%` : '-',
+            rsi_d: t.rsi_d || '-',
+            rsi_w: t.rsi_w || '-',
+            rsi_m: t.rsi_m || '-',
+            update: t.update || fallbackUpdate || '-',
+            score: t.score || 100
+        };
+    }
 
-            // URL 딥링크가 있는 경우 해당 화면 먼저 실행, 없으면 기본 전체 테마 렌더링
-            const dispatched = await dispatchRouteFromUrl(true);
-            if (!dispatched) {
-                renderTable(window.allThemes, 'themes');
+    async function fetchThemesWithFallback(isBackgroundRefresh = false) {
+        let bestThemes = [];
+        let bestUpdatedAt = null;
+
+        // 1. 백엔드 API 호출 (no-cache)
+        try {
+            const response = await fetch(API_URL, { cache: 'no-cache' });
+            if (response.ok) {
+                const serverDate = response.headers.get('date');
+                const data = await response.json();
+                if (data && Array.isArray(data.themes) && data.themes.length > 0) {
+                    bestThemes = data.themes;
+                    bestUpdatedAt = data.updated_at ? new Date(data.updated_at) : (serverDate ? new Date(serverDate) : new Date());
+                }
             }
-        })
-        .catch(error => {
-            console.error('Error fetching themes:', error);
-            tbody.innerHTML = '<tr><td colspan="15" class="center">데이터를 불러오는 중 오류가 발생했습니다.</td></tr>';
-        });
+        } catch (err) {
+            console.warn('Primary API_URL fetch failed, checking static/GitHub CDN...', err);
+        }
+
+        // 2. 로컬/GitHub Raw 최신 theme_cache.json 병행 비교 (더 최신 데이터가 있으면 즉시 교체)
+        const rawUrls = [
+            'data/theme_cache.json',
+            'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/theme_cache.json'
+        ];
+        for (const rUrl of rawUrls) {
+            try {
+                const rRes = await fetch(rUrl, { cache: 'no-cache' });
+                if (rRes.ok) {
+                    const txt = await rRes.text();
+                    if (!txt.trim().startsWith('<')) {
+                        const rawArr = JSON.parse(txt);
+                        if (Array.isArray(rawArr) && rawArr.length > 20) {
+                            const sampleUpd = rawArr[0] && rawArr[0].update ? rawArr[0].update : null;
+                            const rawDt = sampleUpd ? getRawKstDate(sampleUpd) : null;
+                            const curDt = bestUpdatedAt ? getRawKstDate(bestUpdatedAt) : null;
+                            if (!bestThemes.length || (rawDt && curDt && rawDt.getTime() > curDt.getTime())) {
+                                bestThemes = rawArr.map(item => normalizeRawTheme(item, sampleUpd)).filter(Boolean);
+                                if (rawDt) bestUpdatedAt = rawDt;
+                            }
+                            break;
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
+
+        if (bestThemes.length > 0) {
+            window.allThemes = bestThemes;
+            window._themeUpdatedAt = getKstDate(bestUpdatedAt || new Date());
+            updateHeaderBadge();
+            if (!isBackgroundRefresh) {
+                const dispatched = await dispatchRouteFromUrl(true);
+                if (!dispatched) {
+                    renderTable(window.allThemes, 'themes');
+                }
+            } else if (currentMode === 'themes' && !isThemeDetail) {
+                currentDataList = window.allThemes;
+                renderCurrentPage();
+            }
+        } else if (!isBackgroundRefresh) {
+            tbody.innerHTML = '<tr><td colspan="15" class="center">데이터를 불러올 수 없습니다. API 연결을 확인해주세요.</td></tr>';
+        }
+    }
+
+    fetchThemesWithFallback(false);
+
+    // 5분 주기로 백그라운드 자동 동기화 (브라우저를 켜두어도 매시 15분 업데이트 즉시 반영)
+    setInterval(() => {
+        fetchThemesWithFallback(true);
+    }, 5 * 60 * 1000);
 
     // 검색창 이벤트
     if (searchInput) {
