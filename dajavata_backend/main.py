@@ -1077,6 +1077,98 @@ def get_stocks_realtime(codes: str):
         print(f"[Realtime API Error]: {e}")
     return {"realtime": {}}
 
+_stock_briefing_cache = {}
+
+@app.get("/api/stocks/briefing/{code}")
+def get_stock_briefing(code: str):
+    """
+    개별 종목 클릭 시 매수/매도 판단에 필요한 종합 브리핑(외인·기관 수급, 핵심 투자지표, 목표주가, 증권사 리포트, 실시간 특징주 뉴스)을 반환
+    """
+    clean_code = code.strip().upper()
+    now_ts = time.time()
+    cached = _stock_briefing_cache.get(clean_code)
+    if cached and (now_ts - cached["ts"] < 120):
+        return cached["data"]
+
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://m.stock.naver.com/'
+    }
+    result = {
+        "code": clean_code,
+        "name": clean_code,
+        "market": "KRX",
+        "closePrice": None,
+        "fluctuationsRatio": None,
+        "totalInfos": {},
+        "dealTrends": [],
+        "consensus": {},
+        "researches": [],
+        "news": []
+    }
+
+    try:
+        r_basic = requests.get(f"https://m.stock.naver.com/api/stock/{clean_code}/basic", headers=headers, timeout=4)
+        if r_basic.status_code == 200:
+            b_data = r_basic.json()
+            result["name"] = b_data.get("stockName") or clean_code
+            result["market"] = b_data.get("stockExchangeName") or b_data.get("sosok") or "KRX"
+            result["closePrice"] = b_data.get("closePrice")
+            result["fluctuationsRatio"] = b_data.get("fluctuationsRatio")
+    except Exception as e:
+        print(f"[Briefing Basic Error] {clean_code}: {e}")
+
+    try:
+        r_integ = requests.get(f"https://m.stock.naver.com/api/stock/{clean_code}/integration", headers=headers, timeout=4)
+        if r_integ.status_code == 200:
+            i_data = r_integ.json()
+            if i_data.get("stockName"):
+                result["name"] = i_data.get("stockName")
+            info_map = {}
+            for item in i_data.get("totalInfos", []):
+                k = item.get("code") or item.get("key")
+                if k:
+                    info_map[k] = {
+                        "label": item.get("key") or k,
+                        "value": item.get("value")
+                    }
+            result["totalInfos"] = info_map
+            result["dealTrends"] = i_data.get("dealTrendInfos", [])[:10]
+            result["consensus"] = i_data.get("consensusInfo") or {}
+            result["researches"] = i_data.get("researches", [])[:5]
+    except Exception as e:
+        print(f"[Briefing Integration Error] {clean_code}: {e}")
+
+    try:
+        r_news = requests.get(f"https://m.stock.naver.com/api/news/stock/{clean_code}?pageSize=6&page=1", headers=headers, timeout=4)
+        if r_news.status_code == 200:
+            n_data = r_news.json()
+            news_items = []
+            for group in (n_data if isinstance(n_data, list) else []):
+                for it in group.get("items", []):
+                    dt_raw = str(it.get("datetime", ""))
+                    dt_fmt = f"{dt_raw[4:6]}.{dt_raw[6:8]} {dt_raw[8:10]}:{dt_raw[10:12]}" if len(dt_raw) >= 12 else dt_raw
+                    oid = it.get("officeId", "")
+                    aid = it.get("articleId", "")
+                    url = it.get("mobileNewsUrl") or (f"https://n.news.naver.com/mnews/article/{oid}/{aid}" if oid and aid else "#")
+                    news_items.append({
+                        "title": it.get("titleFull") or it.get("title") or "",
+                        "office": it.get("officeName") or "",
+                        "datetime": dt_fmt,
+                        "body": (it.get("body") or "")[:140],
+                        "url": url
+                    })
+                    if len(news_items) >= 6:
+                        break
+                if len(news_items) >= 6:
+                    break
+            result["news"] = news_items
+    except Exception as e:
+        print(f"[Briefing News Error] {clean_code}: {e}")
+
+    _stock_briefing_cache[clean_code] = {"ts": now_ts, "data": result}
+    return result
+
 @app.get("/api/chart/{code}")
 def get_stock_chart(code: str, periodType: str = "dayCandle"):
     try:

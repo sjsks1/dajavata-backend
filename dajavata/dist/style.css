@@ -1040,3 +1040,367 @@ tbody tr:hover td {
     font-size: 14px;
 }
 
+
+/* =========================================================================
+   개별 종목 종합 매매 브리핑 & 타점 분석 모달 (방식 A - Stock Briefing Modal)
+   ========================================================================= */
+tr.stock-clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+tr.stock-clickable-row:hover {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+}
+.stock-briefing-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: 7px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #60a5fa;
+    background: rgba(59, 130, 246, 0.14);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    opacity: 0.78;
+    transition: all 0.15s ease;
+}
+tr.stock-clickable-row:hover .stock-briefing-pill {
+    opacity: 1;
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #3b82f6;
+}
+
+#stock-briefing-modal-overlay {
+    z-index: 11800;
+    padding: 18px;
+}
+.sb-modal-card {
+    width: min(1180px, 96vw);
+    max-height: 92vh;
+    background: #0b1120;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-radius: 14px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: #f8fafc;
+}
+.sb-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 22px;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+.sb-title-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.sb-stock-name {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.02em;
+}
+.sb-stock-code {
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.06);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-family: monospace;
+}
+.sb-market-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.14);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    padding: 2px 8px;
+    border-radius: 5px;
+}
+.sb-price-hero {
+    font-size: 1.35rem;
+    font-weight: 800;
+    margin-left: 6px;
+}
+.sb-verdict-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+}
+.sb-header-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sb-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 7px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(30, 41, 59, 0.85);
+    color: #e2e8f0;
+}
+.sb-action-btn:hover {
+    transform: translateY(-1px);
+    border-color: #60a5fa;
+    color: #ffffff;
+}
+.sb-action-btn.primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border-color: #3b82f6;
+    color: #ffffff;
+}
+.sb-action-btn.calc {
+    background: rgba(16, 185, 129, 0.16);
+    border-color: rgba(16, 185, 129, 0.45);
+    color: #34d399;
+}
+.sb-action-btn.calc:hover {
+    background: #059669;
+    color: #ffffff;
+}
+.sb-action-btn.star {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.45);
+    color: #fbbf24;
+}
+.sb-close-btn {
+    background: transparent;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    color: #94a3b8;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+.sb-close-btn:hover {
+    background: rgba(239, 68, 68, 0.18);
+    color: #f87171;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.sb-modal-body {
+    padding: 18px 22px 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* AI 매수/매도 핵심 타점 4단 카드 */
+.sb-target-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+.sb-target-box {
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+.sb-target-box .lbl {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #94a3b8;
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.sb-target-box .val {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #f8fafc;
+}
+.sb-target-box .sub {
+    font-size: 11.5px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* 미니 인터랙티브 캔들 차트 영역 */
+.sb-chart-panel {
+    background: #090e1a;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+.sb-chart-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.sb-tf-group {
+    display: inline-flex;
+    gap: 4px;
+    background: rgba(30, 41, 59, 0.7);
+    padding: 3px;
+    border-radius: 7px;
+}
+.sb-tf-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.sb-tf-btn.active {
+    background: #2563eb;
+    color: #ffffff;
+}
+.sb-chart-legend {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 11.5px;
+    color: #94a3b8;
+}
+.sb-canvas-wrap {
+    position: relative;
+    width: 100%;
+    height: 290px;
+}
+#sb-chart-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+}
+.sb-chart-tooltip {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11.5px;
+    color: #e2e8f0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+/* 하단 2단 그리드: 수급/테마 + 뉴스/리포트 */
+.sb-bottom-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 14px;
+}
+.sb-section-card {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+.sb-section-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.sb-theme-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sb-theme-card {
+    background: rgba(30, 41, 59, 0.75);
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 180px;
+    flex: 1;
+}
+.sb-flow-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.sb-flow-table th {
+    text-align: right;
+    padding: 6px 8px;
+    color: #94a3b8;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+    font-weight: 700;
+}
+.sb-flow-table th:first-child {
+    text-align: left;
+}
+.sb-flow-table td {
+    text-align: right;
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    font-variant-numeric: tabular-nums;
+}
+.sb-flow-table td:first-child {
+    text-align: left;
+    color: #94a3b8;
+}
+.sb-news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.sb-news-item {
+    display: block;
+    padding: 9px 11px;
+    border-radius: 8px;
+    background: rgba(30, 41, 59, 0.55);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    text-decoration: none;
+    color: #e2e8f0;
+    transition: all 0.15s ease;
+}
+.sb-news-item:hover {
+    border-color: #3b82f6;
+    background: rgba(37, 99, 235, 0.12);
+}
+@media (max-width: 960px) {
+    .sb-target-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .sb-bottom-grid {
+        grid-template-columns: 1fr;
+    }
+}
