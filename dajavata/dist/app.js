@@ -1899,31 +1899,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const pin = (adminPinInput ? adminPinInput.value : '').trim();
-            if (pin === '4537') {
-                sessionStorage.removeItem('dajavata_admin_fails');
-                sessionStorage.removeItem('dajavata_admin_lockout');
-                sessionStorage.setItem('dajavata_admin', '1');
-                updateAdminUI();
-                closeAuthModal();
-                showToast('관리자 인증이 완료되었습니다.');
-                if (currentMode === 'insights') {
-                    renderTable(window.allInsights, 'insights');
+            if (!pin) {
+                if (adminPinError) {
+                    adminPinError.textContent = 'PIN 번호를 입력해주세요.';
+                    adminPinError.style.display = 'block';
                 }
                 return;
             }
 
-            // 백엔드 API 보조 검증 (PIN 4537)
+            // 보안 백엔드 API 단방향 해시 검증 및 세션 토큰 수신
             try {
+                if (adminAuthSubmitBtn) adminAuthSubmitBtn.disabled = true;
                 const res = await fetch(`${API_BASE}/api/insights/verify-admin`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ pin: pin })
                 });
                 const data = await res.json();
-                if (data.valid) {
+                if (res.ok && data.success) {
                     sessionStorage.removeItem('dajavata_admin_fails');
                     sessionStorage.removeItem('dajavata_admin_lockout');
                     sessionStorage.setItem('dajavata_admin', '1');
+                    if (data.token) {
+                        sessionStorage.setItem('dajavata_admin_token', data.token);
+                    }
+                    sessionStorage.setItem('dajavata_admin_key', pin);
                     updateAdminUI();
                     closeAuthModal();
                     showToast('관리자 인증이 완료되었습니다.');
@@ -1931,25 +1931,30 @@ document.addEventListener('DOMContentLoaded', () => {
                         renderTable(window.allInsights, 'insights');
                     }
                     return;
+                } else {
+                    const errMsg = (data && (data.detail || data.message)) ? (data.detail || data.message) : 'PIN 번호가 일치하지 않습니다.';
+                    throw new Error(errMsg);
                 }
-            } catch (e) {}
-
-            // 실패 카운트 증가 및 5회 실패 시 5분 차단
-            let fails = parseInt(sessionStorage.getItem('dajavata_admin_fails') || '0', 10) + 1;
-            if (fails >= 5) {
-                sessionStorage.setItem('dajavata_admin_lockout', String(Date.now() + 5 * 60 * 1000));
-                sessionStorage.setItem('dajavata_admin_fails', '0');
-                if (adminPinError) {
-                    adminPinError.textContent = '비밀번호를 5회 연속 잘못 입력하여 5분간 입력이 제한됩니다.';
-                    adminPinError.style.display = 'block';
+            } catch (e) {
+                let fails = parseInt(sessionStorage.getItem('dajavata_admin_fails') || '0', 10) + 1;
+                const isServerLockout = e.message && e.message.includes('차단');
+                if (fails >= 5 || isServerLockout) {
+                    sessionStorage.setItem('dajavata_admin_lockout', String(Date.now() + 5 * 60 * 1000));
+                    sessionStorage.setItem('dajavata_admin_fails', '0');
+                    if (adminPinError) {
+                        adminPinError.textContent = isServerLockout ? e.message : '비밀번호를 5회 연속 잘못 입력하여 5분간 입력이 제한됩니다.';
+                        adminPinError.style.display = 'block';
+                    }
+                } else {
+                    sessionStorage.setItem('dajavata_admin_fails', String(fails));
+                    if (adminPinError) {
+                        adminPinError.textContent = e.message || `PIN 번호가 일치하지 않습니다. (실패 ${fails}/5회)`;
+                        adminPinError.style.display = 'block';
+                    }
+                    if (adminPinInput) adminPinInput.focus();
                 }
-            } else {
-                sessionStorage.setItem('dajavata_admin_fails', String(fails));
-                if (adminPinError) {
-                    adminPinError.textContent = `PIN 번호가 일치하지 않습니다. (실패 ${fails}/5회)`;
-                    adminPinError.style.display = 'block';
-                }
-                if (adminPinInput) adminPinInput.focus();
+            } finally {
+                if (adminAuthSubmitBtn) adminAuthSubmitBtn.disabled = false;
             }
         }
 
@@ -1974,6 +1979,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.isDajavataAdmin) {
                     if (confirm('현재 관리자 모드입니다.\n관리자 모드를 종료(로그아웃)하시겠습니까?')) {
                         sessionStorage.removeItem('dajavata_admin');
+                        sessionStorage.removeItem('dajavata_admin_token');
+                        sessionStorage.removeItem('dajavata_admin_key');
                         updateAdminUI();
                         showToast('관리자 모드가 종료되었습니다.');
                         if (currentMode === 'insights') {
@@ -2329,11 +2336,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 3단계: 백엔드 API 영구 저장 시도
                 try {
                     showToast('서버에 칼럼 저장 중...');
+                    const adminToken = sessionStorage.getItem('dajavata_admin_token') || '';
+                    const adminKey = sessionStorage.getItem('dajavata_admin_key') || '';
                     const res = await fetch(`${API_BASE}/api/insights/save`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            pin: '4537',
+                            token: adminToken,
+                            pin: adminKey,
                             post: newPost
                         })
                     });
@@ -2371,10 +2381,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 3단계: 백엔드 API 삭제 호출
             try {
+                const adminToken = sessionStorage.getItem('dajavata_admin_token') || '';
+                const adminKey = sessionStorage.getItem('dajavata_admin_key') || '';
                 await fetch(`${API_BASE}/api/insights/delete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pin: '4537', id: id })
+                    body: JSON.stringify({
+                        token: adminToken,
+                        pin: adminKey,
+                        id: id
+                    })
                 });
                 showToast('칼럼이 삭제되었습니다.');
             } catch (e) {

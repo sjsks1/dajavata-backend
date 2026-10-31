@@ -1,7 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from typing import Optional
+import hashlib
+import hmac
+import secrets
+import re
+import shutil
 import requests
 import xml.etree.ElementTree as ET
 import json
@@ -184,7 +190,82 @@ def get_page_blocks(page_id: str) -> list:
         return []
 
 INSIGHTS_DB_PATH = os.path.join(os.path.dirname(__file__), "data", "insights_db.json")
-ADMIN_PIN = os.getenv("ADMIN_PIN", "4537")
+
+# 관리자 PIN SHA-256 단방향 해시 (기본 PIN 해시값, 소스코드 평문 노출 방지)
+DEFAULT_ADMIN_PIN_HASH = "131927c002782b5d68ee2f9519ff55a72f9b969b9afaf37cc39127486d01af2e"
+env_pin = os.getenv("ADMIN_PIN")
+if env_pin:
+    TARGET_ADMIN_PIN_HASH = hashlib.sha256(env_pin.encode("utf-8")).hexdigest()
+else:
+    TARGET_ADMIN_PIN_HASH = os.getenv("ADMIN_PIN_HASH", DEFAULT_ADMIN_PIN_HASH)
+
+# 서버 측 무차별 대입(Brute-force) 방어 상태 저장소 (IP별 5회 실패 시 5분 차단)
+ADMIN_AUTH_ATTEMPTS = {}
+
+# 인증 완료된 1회용 세션 토큰 저장소 (유효시간 4시간)
+ACTIVE_ADMIN_TOKENS = {}
+
+def get_client_ip(request: Request) -> str:
+    """프록시(Render / Nginx 등) 환경을 고려한 클라이언트 실제 IP 추출"""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+def verify_pin_secure(input_pin: str) -> bool:
+    if not input_pin:
+        return False
+    input_hash = hashlib.sha256(input_pin.encode("utf-8")).hexdigest()
+    return hmac.compare_digest(input_hash, TARGET_ADMIN_PIN_HASH)
+
+def is_authorized_admin(token: Optional[str] = None, pin: Optional[str] = None) -> bool:
+    """세션 토큰 또는 PIN 해시를 통한 관리자 인가 확인"""
+    now = time.time()
+    if token and token in ACTIVE_ADMIN_TOKENS:
+        if now < ACTIVE_ADMIN_TOKENS[token]:
+            return True
+        else:
+            del ACTIVE_ADMIN_TOKENS[token]
+            
+    if pin and verify_pin_secure(pin):
+        return True
+        
+    return False
+
+def sanitize_html_content(raw_html: str) -> str:
+    """Stored XSS 방어를 위한 위험 태그 및 이벤트 핸들러 살균"""
+    if not raw_html:
+        return ""
+    cleaned = re.sub(r'<\s*(script|iframe|object|embed|applet)[^>]*>.*?<\s*/\s*\1\s*>', '', str(raw_html), flags=re.IGNORECASE | re.DOTALL)
+    cleaned = re.sub(r'<\s*(script|iframe|object|embed|applet)[^>]*>', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\bon\w+\s*=\s*(["\']).*?\1', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\bon\w+\s*=\s*[^\s>]+', '', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'href\s*=\s*(["\'])\s*javascript:[^"\']*\1', 'href="#"', cleaned, flags=re.IGNORECASE)
+    return cleaned
+
+def sanitize_insight_post(post: dict) -> dict:
+    """칼럼 데이터 내 텍스트/HTML 및 블록 XSS 살균"""
+    if not isinstance(post, dict):
+        return post
+    post["title"] = sanitize_html_content(str(post.get("title", ""))).strip()
+    blocks = post.get("blocks", [])
+    if isinstance(blocks, list):
+        sanitized_blocks = []
+        for b in blocks:
+            if not isinstance(b, dict):
+                continue
+            b_copy = dict(b)
+            if "text" in b_copy:
+                b_copy["text"] = sanitize_html_content(str(b_copy["text"]))
+            if "url" in b_copy:
+                url_str = str(b_copy["url"]).strip()
+                if not (url_str.startswith("http://") or url_str.startswith("https://") or url_str.startswith("data:image/")):
+                    b_copy["url"] = ""
+                else:
+                    b_copy["url"] = url_str
+            sanitized_blocks.append(b_copy)
+        post["blocks"] = sanitized_blocks
+    return post
 
 def load_local_insights_db():
     """로컬 insights_db.json에서 칼럼 목록을 즉각 로드 (0ms 초고속 캐시)"""
@@ -275,32 +356,65 @@ class AdminVerifyRequest(BaseModel):
     pin: str
 
 class AdminSavePostRequest(BaseModel):
-    pin: str
+    pin: Optional[str] = None
+    token: Optional[str] = None
     post: dict
 
 class AdminDeletePostRequest(BaseModel):
-    pin: str
+    pin: Optional[str] = None
+    token: Optional[str] = None
     id: str
 
 @app.post("/api/insights/verify-admin")
-def verify_admin(req: AdminVerifyRequest):
-    if req.pin == ADMIN_PIN:
-        return {"success": True, "message": "Admin authenticated"}
-    return {"success": False, "message": "Invalid PIN"}
+def verify_admin(req: AdminVerifyRequest, request: Request):
+    ip = get_client_ip(request)
+    now = time.time()
+    
+    # 1. IP 기반 무차별 대입(Brute-force) 락아웃 검사
+    attempt = ADMIN_AUTH_ATTEMPTS.get(ip, {"fails": 0, "lockout_until": 0.0})
+    if now < attempt["lockout_until"]:
+        remain = int(attempt["lockout_until"] - now)
+        raise HTTPException(
+            status_code=429, 
+            detail=f"비밀번호 연속 5회 오류로 차단되었습니다. {remain}초 후 다시 시도해주세요."
+        )
+        
+    # 2. PIN 해시 비교
+    if verify_pin_secure(req.pin):
+        ADMIN_AUTH_ATTEMPTS[ip] = {"fails": 0, "lockout_until": 0.0}
+        token = secrets.token_hex(24)
+        ACTIVE_ADMIN_TOKENS[token] = now + (4 * 3600)
+        return {"success": True, "token": token, "message": "Admin authenticated"}
+        
+    # 3. 실패 시 카운트 증가
+    fails = attempt["fails"] + 1
+    if fails >= 5:
+        ADMIN_AUTH_ATTEMPTS[ip] = {"fails": 0, "lockout_until": now + 300.0}
+        raise HTTPException(
+            status_code=429, 
+            detail="비밀번호를 5회 연속 잘못 입력하여 5분간 입력이 제한됩니다."
+        )
+    else:
+        ADMIN_AUTH_ATTEMPTS[ip] = {"fails": fails, "lockout_until": 0.0}
+        raise HTTPException(
+            status_code=401, 
+            detail=f"PIN 번호가 일치하지 않습니다. (실패 {fails}/5회)"
+        )
 
 @app.post("/api/insights/save")
 def save_insight_post(req: AdminSavePostRequest):
-    if req.pin != ADMIN_PIN:
+    if not is_authorized_admin(token=req.token, pin=req.pin):
         raise HTTPException(status_code=403, detail="Unauthorized")
     
     post = req.post
     if not post or not post.get("title"):
         raise HTTPException(status_code=400, detail="Title is required")
 
+    post = sanitize_insight_post(post)
+
     db = load_local_insights_db() or {"posts": []}
     posts = db.get("posts", [])
 
-    # 기존 글 수정 여부 확인 (id 기준)
     post_id = post.get("id")
     if not post_id:
         post_id = f"post_{int(time.time())}"
@@ -310,17 +424,28 @@ def save_insight_post(req: AdminSavePostRequest):
     if existing_idx >= 0:
         posts[existing_idx] = post
     else:
-        posts.insert(0, post) # 최신 글을 맨 위에 추가
+        posts.insert(0, post)
 
     db["posts"] = posts
     db["updated_at"] = datetime.datetime.now().isoformat()
     save_local_insights_db(db)
 
+    # 3개 디렉터리 동기화 (루트 data, dist data)
+    try:
+        root_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "insights_db.json"))
+        dist_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dajavata", "dist", "data", "insights_db.json"))
+        for target_p in [root_data_path, dist_data_path]:
+            if os.path.exists(os.path.dirname(target_p)):
+                with open(target_p, "w", encoding="utf-8") as f:
+                    json.dump(db, f, ensure_ascii=False, indent=2)
+    except Exception as sync_e:
+        print(f"Error syncing insights_db: {sync_e}")
+
     return {"success": True, "post": post, "total": len(posts)}
 
 @app.post("/api/insights/delete")
 def delete_insight_post(req: AdminDeletePostRequest):
-    if req.pin != ADMIN_PIN:
+    if not is_authorized_admin(token=req.token, pin=req.pin):
         raise HTTPException(status_code=403, detail="Unauthorized")
 
     db = load_local_insights_db() or {"posts": []}
@@ -330,6 +455,17 @@ def delete_insight_post(req: AdminDeletePostRequest):
     db["posts"] = posts
     db["updated_at"] = datetime.datetime.now().isoformat()
     save_local_insights_db(db)
+
+    # 3개 디렉터리 동기화
+    try:
+        root_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "insights_db.json"))
+        dist_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dajavata", "dist", "data", "insights_db.json"))
+        for target_p in [root_data_path, dist_data_path]:
+            if os.path.exists(os.path.dirname(target_p)):
+                with open(target_p, "w", encoding="utf-8") as f:
+                    json.dump(db, f, ensure_ascii=False, indent=2)
+    except Exception as sync_e:
+        print(f"Error syncing insights_db: {sync_e}")
 
     return {"success": True, "deleted_id": req.id, "total": len(posts)}
 
