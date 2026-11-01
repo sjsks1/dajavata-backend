@@ -1108,6 +1108,7 @@ tr.stock-clickable-row:hover .stock-briefing-pill {
     padding: 18px;
 }
 .sb-modal-card {
+    position: relative;
     width: min(1180px, 96vw);
     max-height: 92vh;
     background: #0b1120;
@@ -1125,7 +1126,7 @@ tr.stock-clickable-row:hover .stock-briefing-pill {
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
-    padding: 16px 22px;
+    padding: 16px 64px 16px 22px;
     background: linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
     border-bottom: 1px solid rgba(148, 163, 184, 0.16);
 }
@@ -1218,22 +1219,28 @@ tr.stock-clickable-row:hover .stock-briefing-pill {
     color: #fbbf24;
 }
 .sb-close-btn {
-    background: transparent;
-    border: 1px solid rgba(148, 163, 184, 0.25);
-    color: #94a3b8;
-    width: 34px;
-    height: 34px;
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    z-index: 50;
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    color: #cbd5e1;
+    width: 36px;
+    height: 36px;
     border-radius: 8px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 20px;
+    transition: all 0.15s ease;
 }
 .sb-close-btn:hover {
-    background: rgba(239, 68, 68, 0.18);
+    background: rgba(239, 68, 68, 0.25);
     color: #f87171;
-    border-color: rgba(239, 68, 68, 0.4);
+    border-color: rgba(239, 68, 68, 0.5);
+    transform: scale(1.08);
 }
 
 .sb-modal-body {

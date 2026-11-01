@@ -256,9 +256,17 @@ def sanitize_insight_post(post: dict) -> dict:
                 continue
             b_copy = dict(b)
             if "text" in b_copy:
-                b_copy["text"] = sanitize_html_content(str(b_copy["text"]))
+                raw_text = b_copy.get("text")
+                if raw_text is not None and str(raw_text).strip() not in ("None", "null"):
+                    b_copy["text"] = sanitize_html_content(str(raw_text))
+                elif raw_text is None:
+                    b_copy["text"] = ""
             if "html" in b_copy:
-                b_copy["html"] = sanitize_html_content(str(b_copy["html"]))
+                raw_html = b_copy.get("html")
+                if raw_html is not None and str(raw_html).strip() not in ("None", "null", ""):
+                    b_copy["html"] = sanitize_html_content(str(raw_html))
+                else:
+                    b_copy.pop("html", None)
             if "url" in b_copy:
                 url_str = str(b_copy["url"]).strip()
                 if not (url_str.startswith("http://") or url_str.startswith("https://") or url_str.startswith("data:image/")):

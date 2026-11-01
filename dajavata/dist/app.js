@@ -823,6 +823,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (searchInput) searchInput.value = ''; // 탭 전환 시 검색어 초기화
         updateHeaderBadge();
         renderCurrentPage();
+        if (typeof window.updateAdminUI === 'function') window.updateAdminUI();
     }
 
     // Helper functions for Notion Blocks
@@ -830,6 +831,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const div = document.createElement('div');
         div.textContent = str || '';
         return div.innerHTML;
+    }
+
+    function getSafeBlockHtml(block) {
+        if (block && block.html && typeof block.html === 'string') {
+            const trimmed = block.html.trim();
+            if (trimmed !== '' && trimmed.toLowerCase() !== 'none' && trimmed.toLowerCase() !== 'null') {
+                return block.html;
+            }
+        }
+        return null;
     }
 
     function blocksToHtml(blocks) {
@@ -848,15 +859,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         blocks.forEach(block => {
+            const safeH = getSafeBlockHtml(block);
+            const safeText = (block.text && block.text !== 'None' && block.text !== 'null') ? block.text : '';
+
             if (block.type === 'bulleted_list_item') {
                 if (listBuffer !== 'ul') { closeList(); html += '<ul style="margin:8px 0 16px 20px; padding:0;">'; listBuffer = 'ul'; }
-                const content = block.html || escapeHtml(block.text);
+                const content = safeH || escapeHtml(safeText);
                 html += `<li style="margin-bottom:6px; color:var(--text-main);">${content}</li>`;
                 return;
             }
             if (block.type === 'numbered_list_item') {
                 if (listBuffer !== 'ol') { closeList(); html += '<ol style="margin:8px 0 16px 20px; padding:0;">'; listBuffer = 'ol'; }
-                const content = block.html || escapeHtml(block.text);
+                const content = safeH || escapeHtml(safeText);
                 html += `<li style="margin-bottom:6px; color:var(--text-main);">${content}</li>`;
                 return;
             }
@@ -865,10 +879,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (block.type === 'heading') {
                 const sizes = { 1: '24px', 2: '20px', 3: '17px' };
-                const content = block.html || escapeHtml(block.text);
+                const content = safeH || escapeHtml(safeText);
                 html += `<h${block.level} style="font-size:${sizes[block.level] || '17px'}; margin:24px 0 12px; color:white;">${content}</h${block.level}>`;
             } else if (block.type === 'paragraph') {
-                const content = block.html || escapeHtml(block.text).replace(/\n/g, '<br>');
+                const content = safeH || escapeHtml(safeText).replace(/\n/g, '<br>');
                 html += `<p style="margin-bottom:14px; line-height:1.7; color: var(--text-main);">${content}</p>`;
             } else if (block.type === 'image') {
                 html += `<figure style="margin:16px 0;">
@@ -889,10 +903,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 html += '</table></div>';
             } else if (block.type === 'callout') {
-                const content = block.html || escapeHtml(block.text).replace(/\n/g, '<br>');
+                const content = safeH || escapeHtml(safeText).replace(/\n/g, '<br>');
                 html += `<div class="editor-callout-box" style="background: rgba(59,130,246,0.08); border-left: 4px solid var(--primary); padding: 14px 16px; border-radius: 6px; margin: 18px 0; font-size: 14px; line-height: 1.6; color: var(--text-main);">${content}</div>`;
             } else if (block.type === 'quote') {
-                const content = block.html || escapeHtml(block.text).replace(/\n/g, '<br>');
+                const content = safeH || escapeHtml(safeText).replace(/\n/g, '<br>');
                 html += `<blockquote style="border-left: 3px solid var(--accent); padding: 8px 16px; margin: 16px 0; color: var(--text-muted); background: rgba(255,255,255,0.02); border-radius: 0 4px 4px 0;">${content}</blockquote>`;
             } else if (block.type === 'divider') {
                 html += '<hr style="border:none; border-top:1px solid var(--border); margin:24px 0;">';
@@ -907,7 +921,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!blocks) return '';
         return blocks
             .filter(b => b.type === 'paragraph' || b.type === 'heading')
-            .map(b => b.text)
+            .map(b => (b.text && b.text !== 'None' && b.text !== 'null') ? b.text : '')
             .join(' ');
     }
 
@@ -1461,6 +1475,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderSingleInsight(post, updateHistory = true) {
         if (!post) return;
+        currentMode = 'insights';
+        if (typeof window.updateAdminUI === 'function') window.updateAdminUI();
         
         headerTitle.textContent = post.title;
         themeBadge.textContent = "칼럼 전문";
@@ -1601,6 +1617,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     function renderSingleCompany(post, updateHistory = true) {
         if (!post) return;
+        currentMode = 'company';
+        if (typeof window.updateAdminUI === 'function') window.updateAdminUI();
         
         headerTitle.textContent = post.title;
         themeBadge.textContent = "기업분석";
@@ -1730,6 +1748,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     function renderSingleLearning(post, updateHistory = true) {
         if (!post) return;
+        currentMode = 'learning';
+        if (typeof window.updateAdminUI === 'function') window.updateAdminUI();
         
         headerTitle.textContent = post.title;
         themeBadge.textContent = "학습 자료";
@@ -2255,6 +2275,8 @@ document.addEventListener('DOMContentLoaded', () => {
     scannerMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
             e.preventDefault();
+            currentMode = 'scanner';
+            if (window.updateAdminUI) window.updateAdminUI();
             updateUrlState({ view: 'scanner', id: null, name: null, tab: null, action: null });
             setPageSeo("AI 차트 스캐너", "다자바타 AI 실시간 차트 분석 및 시그널 랩");
             if (window.ChartScanner) {
@@ -2268,6 +2290,8 @@ document.addEventListener('DOMContentLoaded', () => {
     quantMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
             e.preventDefault();
+            currentMode = 'quant';
+            if (window.updateAdminUI) window.updateAdminUI();
             const action = menu.getAttribute('data-action');
             const mkt = (window.QuantHub && window.QuantHub.market) ? window.QuantHub.market : 'KR';
             updateUrlState({ view: 'quant', tab: action, market: mkt, id: null, name: null, action: null });
@@ -2286,6 +2310,8 @@ document.addEventListener('DOMContentLoaded', () => {
     traderMenus.forEach(menu => {
         menu.addEventListener('click', (e) => {
             e.preventDefault();
+            currentMode = 'trader';
+            if (window.updateAdminUI) window.updateAdminUI();
             const action = menu.getAttribute('data-action');
             updateUrlState({ view: 'trader', tab: action, id: null, name: null, action: null });
             setPageSeo("트레이더 룸", "다자바타 트레이더 맞춤형 매매 시나리오 및 리스크 관리 도구");
@@ -2420,7 +2446,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const rawHtml = canvasEl.innerHTML.trim();
             if (raw.length > 0) {
                 const hasFormatting = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(rawHtml);
-                blocks.push({ type: 'paragraph', text: raw, html: hasFormatting ? rawHtml : null });
+                const b = { type: 'paragraph', text: raw };
+                if (hasFormatting && rawHtml) b.html = rawHtml;
+                blocks.push(b);
             }
             return blocks;
         }
@@ -2430,34 +2458,45 @@ document.addEventListener('DOMContentLoaded', () => {
             const txt = child.innerText ? child.innerText.trim() : '';
             const innerHtml = child.innerHTML ? child.innerHTML.trim() : '';
 
-            // 서식(색상, 폰트, 크기, 볼드 등)이 적용되었는지 판단하여 html 필드 보존
+            // 서식(색상, 폰트, 크기, 볼드 등)이 적용되었는지 판단하여 유효한 html만 보존
             const hasFormatting = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(innerHtml);
-            const htmlToSave = hasFormatting ? innerHtml : null;
+            const htmlToSave = (hasFormatting && innerHtml) ? innerHtml : null;
 
-            if (tag === 'h1') {
-                blocks.push({ type: 'heading', level: 1, text: txt, html: htmlToSave });
-            } else if (tag === 'h2') {
-                blocks.push({ type: 'heading', level: 2, text: txt, html: htmlToSave });
-            } else if (tag === 'h3') {
-                blocks.push({ type: 'heading', level: 3, text: txt, html: htmlToSave });
+            if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
+                const lvl = tag === 'h1' ? 1 : (tag === 'h2' ? 2 : 3);
+                const b = { type: 'heading', level: lvl, text: txt };
+                if (htmlToSave) b.html = htmlToSave;
+                blocks.push(b);
             } else if (tag === 'hr') {
                 blocks.push({ type: 'divider' });
             } else if (tag === 'ul') {
                 child.querySelectorAll('li').forEach(li => {
                     const liTxt = li.innerText.trim();
                     const liHtml = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(li.innerHTML) ? li.innerHTML.trim() : null;
-                    if (liTxt) blocks.push({ type: 'bulleted_list_item', text: liTxt, html: liHtml });
+                    if (liTxt) {
+                        const b = { type: 'bulleted_list_item', text: liTxt };
+                        if (liHtml) b.html = liHtml;
+                        blocks.push(b);
+                    }
                 });
             } else if (tag === 'ol') {
                 child.querySelectorAll('li').forEach(li => {
                     const liTxt = li.innerText.trim();
                     const liHtml = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(li.innerHTML) ? li.innerHTML.trim() : null;
-                    if (liTxt) blocks.push({ type: 'numbered_list_item', text: liTxt, html: liHtml });
+                    if (liTxt) {
+                        const b = { type: 'numbered_list_item', text: liTxt };
+                        if (liHtml) b.html = liHtml;
+                        blocks.push(b);
+                    }
                 });
             } else if (tag === 'blockquote') {
-                blocks.push({ type: 'quote', text: txt, html: htmlToSave });
+                const b = { type: 'quote', text: txt };
+                if (htmlToSave) b.html = htmlToSave;
+                blocks.push(b);
             } else if (child.classList && child.classList.contains('editor-callout-box')) {
-                blocks.push({ type: 'callout', text: txt, html: htmlToSave });
+                const b = { type: 'callout', text: txt };
+                if (htmlToSave) b.html = htmlToSave;
+                blocks.push(b);
             } else if (tag === 'table') {
                 const rows = [];
                 let hasHeader = false;
@@ -2486,7 +2525,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 blocks.push({ type: 'image', url: child.src, caption: '' });
             } else {
                 if (txt.length > 0 || innerHtml.length > 0) {
-                    blocks.push({ type: 'paragraph', text: txt, html: htmlToSave });
+                    const b = { type: 'paragraph', text: txt };
+                    if (htmlToSave) b.html = htmlToSave;
+                    blocks.push(b);
                 }
             }
         });
@@ -2529,12 +2570,27 @@ document.addEventListener('DOMContentLoaded', () => {
         function updateAdminUI() {
             const isAdmin = (sessionStorage.getItem('dajavata_admin') === '1');
             window.isDajavataAdmin = isAdmin;
-            if (adminNewPostBtn) adminNewPostBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+
+            // 글 작성 버튼은 실제 글을 작성하는 3대 카테고리(company, learning, insights)에서만 노출
+            const isWritingView = (currentMode === 'company' || currentMode === 'learning' || currentMode === 'insights');
+            if (adminNewPostBtn) {
+                adminNewPostBtn.style.display = (isAdmin && isWritingView) ? 'inline-flex' : 'none';
+                if (isAdmin && isWritingView) {
+                    if (currentMode === 'company') {
+                        adminNewPostBtn.innerHTML = '<i class="ph ph-pen-nib"></i> 기업분석 글 작성';
+                    } else if (currentMode === 'learning') {
+                        adminNewPostBtn.innerHTML = '<i class="ph ph-pen-nib"></i> 학습 자료 작성';
+                    } else {
+                        adminNewPostBtn.innerHTML = '<i class="ph ph-pen-nib"></i> 새 칼럼 작성';
+                    }
+                }
+            }
             if (adminActiveBadge) adminActiveBadge.style.display = isAdmin ? 'inline-flex' : 'none';
             if (footerAdminBtn) footerAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
             const footerAdminDot = document.getElementById('footer-admin-dot');
             if (footerAdminDot) footerAdminDot.style.display = isAdmin ? 'inline-block' : 'none';
         }
+        window.updateAdminUI = updateAdminUI;
         updateAdminUI();
 
         // 1. PIN 인증 모달 (보안 및 무차별 대입 방지)
@@ -3340,6 +3396,9 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.className = 'dajavata-modal-overlay';
         overlay.innerHTML = `
             <div class="sb-modal-card" id="sb-modal-card">
+                <button type="button" class="sb-close-btn" id="sb-btn-close" title="닫기 (ESC)" aria-label="닫기">
+                    <i class="ph ph-x"></i>
+                </button>
                 <div class="sb-modal-header">
                     <div class="sb-title-group">
                         <span class="sb-market-badge" id="sb-market-badge">KRX</span>
@@ -3358,9 +3417,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         </button>
                         <button type="button" class="sb-action-btn star" id="sb-btn-add-focus" title="트레이더 룸 [오늘의 매매] 관심종목 체크리스트에 즉시 추가">
                             <i class="ph ph-star"></i> 오늘의 관심종목 등록
-                        </button>
-                        <button type="button" class="sb-close-btn" id="sb-btn-close" title="닫기 (ESC)">
-                            <i class="ph ph-x"></i>
                         </button>
                     </div>
                 </div>
