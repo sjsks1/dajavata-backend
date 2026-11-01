@@ -406,6 +406,20 @@
                 </div>
             </div>
 
+            <!-- 에디터 카테고리 선택 탭 바 (발행 위치 직관적 선택) -->
+            <div class="editor-category-bar" id="editor-category-bar" style="padding: 10px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.28); flex-shrink: 0; flex-wrap: wrap;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-right: 4px;"><i class="ph ph-tag"></i> 발행 위치:</span>
+                <button type="button" class="editor-cat-tab active" data-cat="company" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid #3b82f6; background: rgba(59,130,246,0.18); color: #60a5fa; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="ph ph-chart-line-up"></i> 기업개요 및 차트분석
+                </button>
+                <button type="button" class="editor-cat-tab" data-cat="learning" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: #94a3b8; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="ph ph-book-open"></i> 학습 자료
+                </button>
+                <button type="button" class="editor-cat-tab" data-cat="insights" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: #94a3b8; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="ph ph-folder-simple-star"></i> 이것저것
+                </button>
+            </div>
+
             <!-- 에디터 메타 입력 바 -->
             <div style="padding: 14px 24px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; background: rgba(0,0,0,0.18); flex-shrink: 0;">
                 <input type="text" id="editor-post-title" placeholder="칼럼 제목 (예: 파이버프로(368770) 기업 분석 및 차트 전망)" style="flex: 1; min-width: 280px; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 10px 14px; border-radius: 6px; color: white; font-size: 15px; font-weight: 600; outline: none; font-family: inherit;">
@@ -504,6 +518,6 @@
     <script src="chart_scanner.js?v=19"></script>
     <script src="trader_room.js?v=8"></script>
     <script src="quant_hub.js?v=4"></script>
-    <script src="app.js?v=28"></script>
+    <script src="app.js?v=29"></script>
 </body>
 </html>
