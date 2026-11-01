@@ -904,13 +904,43 @@ tbody tr:hover td {
     display: none; /* 애드센스 광고가 채워지기 전에는 빈 여백을 노출하지 않음 */
 }
 
+/* Single Insight Article View Container & Table Overrides */
+#theme-table.single-insight-table {
+    min-width: 0 !important;
+    width: 100% !important;
+}
+
+#theme-table.single-insight-table td {
+    padding: 10px 0 40px 0 !important;
+    border: none !important;
+}
+
 .insight-article-container {
-    max-width: 820px;
+    max-width: 860px;
     margin: 0 auto;
     line-height: 1.85;
     color: var(--text-main);
     font-size: 1.05rem;
     word-break: keep-all;
+    overflow-wrap: break-word;
+}
+
+.insight-body-content {
+    width: 100%;
+}
+
+.insight-body-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+.insight-body-content table {
+    min-width: 0 !important;
+    width: 100% !important;
+    margin: 18px 0;
+    border-collapse: collapse;
 }
 
 .insight-meta-bar {

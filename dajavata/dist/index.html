@@ -28,7 +28,7 @@
     <!-- Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Styles -->
-    <link rel="stylesheet" href="style.css?v=6">
+    <link rel="stylesheet" href="style.css?v=7">
     <link rel="stylesheet" href="trader_room.css?v=7">
     <link rel="stylesheet" href="chart_scanner.css?v=9">
     <link rel="stylesheet" href="quant_hub.css?v=1">
@@ -81,7 +81,9 @@
                 <div class="menu-section">
                     <h3>종목 소개</h3>
                     <ul id="insight-menu-list">
-                        <li data-action="insights"><a href="#"><i class="ph ph-article"></i> 기업 개요 및 차트 분석</a></li>
+                        <li data-action="insights"><a href="#"><i class="ph ph-folder-simple-star"></i> 이것저것</a></li>
+                        <li data-action="company"><a href="#"><i class="ph ph-chart-line-up"></i> 기업개요 및 차트분석</a></li>
+                        <li data-action="learning"><a href="#"><i class="ph ph-book-open"></i> 학습 자료</a></li>
                     </ul>
                 </div>
 
@@ -413,6 +415,42 @@
 
             <!-- 에디터 툴바 -->
             <div class="editor-toolbar" id="editor-toolbar" style="padding: 8px 24px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: rgba(255,255,255,0.02); flex-shrink: 0;">
+                <!-- 서체 변경 -->
+                <select id="editor-font-family" class="editor-select-tool" title="서체 변경" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; font-family: inherit;">
+                    <option value="" style="background:#1e293b; color:#fff;">기본 서체 (Pretendard)</option>
+                    <option value="'Pretendard', sans-serif" style="background:#1e293b; color:#fff;">Pretendard (기본 고딕)</option>
+                    <option value="'Noto Sans KR', sans-serif" style="background:#1e293b; color:#fff;">본고딕 (Noto Sans KR)</option>
+                    <option value="'Nanum Gothic', sans-serif" style="background:#1e293b; color:#fff;">나눔고딕 (Nanum Gothic)</option>
+                    <option value="'Nanum Myeongjo', serif" style="background:#1e293b; color:#fff;">나눔명조 (신문·리포트체)</option>
+                    <option value="'Gmarket Sans', sans-serif" style="background:#1e293b; color:#fff;">지마켓산스 (헤드라인체)</option>
+                    <option value="'Consolas', 'Courier New', monospace" style="background:#1e293b; color:#fff;">고정폭 (코딩·데이터체)</option>
+                </select>
+
+                <!-- 글자 크기 변경 -->
+                <select id="editor-font-size" class="editor-select-tool" title="글자 크기" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; font-family: inherit;">
+                    <option value="" style="background:#1e293b; color:#fff;">크기 선택</option>
+                    <option value="12px" style="background:#1e293b; color:#fff;">12px (작은 각주/출처)</option>
+                    <option value="14px" style="background:#1e293b; color:#fff;">14px (보조 설명)</option>
+                    <option value="16px" style="background:#1e293b; color:#fff;">16px (기본 본문)</option>
+                    <option value="18px" style="background:#1e293b; color:#fff;">18px (본문 강조)</option>
+                    <option value="20px" style="background:#1e293b; color:#fff;">20px (소제목)</option>
+                    <option value="24px" style="background:#1e293b; color:#fff;">24px (중제목)</option>
+                    <option value="28px" style="background:#1e293b; color:#fff;">28px (대제목)</option>
+                </select>
+
+                <!-- 글자 색상 선택 도구 (프리셋 + 컬러피커) -->
+                <div class="editor-color-group" style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px;">
+                    <span style="font-size: 11px; color: var(--text-muted); margin-right: 2px;" title="글자 색상 선택"><i class="ph-bold ph-palette"></i></span>
+                    <button type="button" class="editor-color-btn" data-color="#e2e8f0" title="기본 흰색/연회색" style="width: 14px; height: 14px; border-radius: 3px; border: 1px solid #64748b; background: #e2e8f0; cursor: pointer; padding: 0;"></button>
+                    <button type="button" class="editor-color-btn" data-color="#ef4444" title="상승 / 매수 / 강조 빨강" style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #ef4444; cursor: pointer; padding: 0;"></button>
+                    <button type="button" class="editor-color-btn" data-color="#3b82f6" title="하락 / 매도 / 지지 파랑" style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #3b82f6; cursor: pointer; padding: 0;"></button>
+                    <button type="button" class="editor-color-btn" data-color="#eab308" title="주의 / 관망 노랑" style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #eab308; cursor: pointer; padding: 0;"></button>
+                    <button type="button" class="editor-color-btn" data-color="#10b981" title="호재 / 목표가 초록" style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #10b981; cursor: pointer; padding: 0;"></button>
+                    <button type="button" class="editor-color-btn" data-color="#a855f7" title="수급 / 리포트 보라" style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #a855f7; cursor: pointer; padding: 0;"></button>
+                    <input type="color" id="editor-color-picker" title="사용자 직접 지정 색상" value="#3b82f6" style="width: 18px; height: 18px; padding: 0; border: none; background: transparent; cursor: pointer; vertical-align: middle;">
+                </div>
+
+                <span class="editor-tool-sep"></span>
                 <button type="button" class="editor-tool-btn" data-cmd="formatBlock" data-val="h2" title="소제목 1 (H2)"><b>H2</b></button>
                 <button type="button" class="editor-tool-btn" data-cmd="formatBlock" data-val="h3" title="소제목 2 (H3)"><b>H3</b></button>
                 <button type="button" class="editor-tool-btn" data-cmd="formatBlock" data-val="p" title="일반 본문">본문</button>
@@ -466,6 +504,6 @@
     <script src="chart_scanner.js?v=19"></script>
     <script src="trader_room.js?v=8"></script>
     <script src="quant_hub.js?v=4"></script>
-    <script src="app.js?v=23"></script>
+    <script src="app.js?v=26"></script>
 </body>
 </html>

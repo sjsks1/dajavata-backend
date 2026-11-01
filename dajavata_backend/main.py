@@ -257,6 +257,8 @@ def sanitize_insight_post(post: dict) -> dict:
             b_copy = dict(b)
             if "text" in b_copy:
                 b_copy["text"] = sanitize_html_content(str(b_copy["text"]))
+            if "html" in b_copy:
+                b_copy["html"] = sanitize_html_content(str(b_copy["html"]))
             if "url" in b_copy:
                 url_str = str(b_copy["url"]).strip()
                 if not (url_str.startswith("http://") or url_str.startswith("https://") or url_str.startswith("data:image/")):
@@ -466,6 +468,175 @@ def delete_insight_post(req: AdminDeletePostRequest):
                     json.dump(db, f, ensure_ascii=False, indent=2)
     except Exception as sync_e:
         print(f"Error syncing insights_db: {sync_e}")
+
+    return {"success": True, "deleted_id": req.id, "total": len(posts)}
+
+# ==============================================================================
+# 기업 개요 및 차트 분석 전용 독립 DB & API (자체 CMS & 3-디렉터리 동기화)
+# ==============================================================================
+COMPANY_DB_PATH = os.path.join(os.path.dirname(__file__), "data", "company_db.json")
+
+def load_local_company_db():
+    """로컬 company_db.json에서 기업개요/차트분석 목록을 즉각 로드 (0ms 초고속 캐시)"""
+    if os.path.exists(COMPANY_DB_PATH):
+        try:
+            with open(COMPANY_DB_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data and isinstance(data.get("posts"), list):
+                    return data
+        except Exception as e:
+            print(f"Error loading company_db.json: {e}")
+    return {"posts": []}
+
+def save_local_company_db(data):
+    """company_db.json에 기업개요 데이터를 안전하게 원자적 저장 및 3개 디렉터리 동기화"""
+    os.makedirs(os.path.dirname(COMPANY_DB_PATH), exist_ok=True)
+    temp_path = COMPANY_DB_PATH + ".tmp"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    shutil.move(temp_path, COMPANY_DB_PATH)
+
+    try:
+        root_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "company_db.json"))
+        dist_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dajavata", "dist", "data", "company_db.json"))
+        for target_p in [root_data_path, dist_data_path]:
+            if os.path.exists(os.path.dirname(target_p)):
+                with open(target_p, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as sync_e:
+        print(f"Error syncing company_db: {sync_e}")
+
+@app.get("/api/company")
+def get_company():
+    return load_local_company_db()
+
+@app.post("/api/company/save")
+def save_company_post(req: AdminSavePostRequest):
+    if not is_authorized_admin(token=req.token, pin=req.pin):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    post = req.post
+    if not post or not post.get("title"):
+        raise HTTPException(status_code=400, detail="Title is required")
+
+    post = sanitize_insight_post(post)
+
+    db = load_local_company_db()
+    posts = db.get("posts", [])
+
+    post_id = post.get("id")
+    if not post_id:
+        post_id = f"comp_{int(time.time())}"
+        post["id"] = post_id
+
+    existing_idx = next((i for i, p in enumerate(posts) if str(p.get("id")) == str(post_id)), -1)
+    if existing_idx >= 0:
+        posts[existing_idx] = post
+    else:
+        posts.insert(0, post)
+
+    db["posts"] = posts
+    db["updated_at"] = datetime.datetime.now().isoformat()
+    save_local_company_db(db)
+
+    return {"success": True, "post": post, "total": len(posts)}
+
+@app.post("/api/company/delete")
+def delete_company_post(req: AdminDeletePostRequest):
+    if not is_authorized_admin(token=req.token, pin=req.pin):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    db = load_local_company_db()
+    posts = db.get("posts", [])
+    posts = [p for p in posts if str(p.get("id")) != str(req.id)]
+    db["posts"] = posts
+    db["updated_at"] = datetime.datetime.now().isoformat()
+    save_local_company_db(db)
+
+    return {"success": True, "deleted_id": req.id, "total": len(posts)}
+
+# ==============================================================================
+# 학습 자료 (Learning Hub) 전용 독립 DB & API (노션 완전 분리)
+# ==============================================================================
+LEARNING_DB_PATH = os.path.join(os.path.dirname(__file__), "data", "learning_db.json")
+
+def load_local_learning_db():
+    """로컬 learning_db.json에서 학습 자료 목록을 즉각 로드 (0ms 초고속 캐시)"""
+    if os.path.exists(LEARNING_DB_PATH):
+        try:
+            with open(LEARNING_DB_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if data and isinstance(data.get("posts"), list):
+                    return data
+        except Exception as e:
+            print(f"Error loading learning_db.json: {e}")
+    return {"posts": []}
+
+def save_local_learning_db(data):
+    """learning_db.json에 학습 자료 데이터를 안전하게 원자적 저장 및 3개 디렉터리 동기화"""
+    os.makedirs(os.path.dirname(LEARNING_DB_PATH), exist_ok=True)
+    temp_path = LEARNING_DB_PATH + ".tmp"
+    with open(temp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    shutil.move(temp_path, LEARNING_DB_PATH)
+
+    try:
+        root_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "learning_db.json"))
+        dist_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dajavata", "dist", "data", "learning_db.json"))
+        for target_p in [root_data_path, dist_data_path]:
+            if os.path.exists(os.path.dirname(target_p)):
+                with open(target_p, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as sync_e:
+        print(f"Error syncing learning_db: {sync_e}")
+
+@app.get("/api/learning")
+def get_learning():
+    return load_local_learning_db()
+
+@app.post("/api/learning/save")
+def save_learning_post(req: AdminSavePostRequest):
+    if not is_authorized_admin(token=req.token, pin=req.pin):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    post = req.post
+    if not post or not post.get("title"):
+        raise HTTPException(status_code=400, detail="Title is required")
+
+    post = sanitize_insight_post(post)
+
+    db = load_local_learning_db()
+    posts = db.get("posts", [])
+
+    post_id = post.get("id")
+    if not post_id:
+        post_id = f"learn_{int(time.time())}"
+        post["id"] = post_id
+
+    existing_idx = next((i for i, p in enumerate(posts) if str(p.get("id")) == str(post_id)), -1)
+    if existing_idx >= 0:
+        posts[existing_idx] = post
+    else:
+        posts.insert(0, post)
+
+    db["posts"] = posts
+    db["updated_at"] = datetime.datetime.now().isoformat()
+    save_local_learning_db(db)
+
+    return {"success": True, "post": post, "total": len(posts)}
+
+@app.post("/api/learning/delete")
+def delete_learning_post(req: AdminDeletePostRequest):
+    if not is_authorized_admin(token=req.token, pin=req.pin):
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    db = load_local_learning_db()
+    posts = db.get("posts", [])
+    posts = [p for p in posts if str(p.get("id")) != str(req.id)]
+
+    db["posts"] = posts
+    db["updated_at"] = datetime.datetime.now().isoformat()
+    save_local_learning_db(db)
 
     return {"success": True, "deleted_id": req.id, "total": len(posts)}
 
