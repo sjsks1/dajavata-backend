@@ -28,7 +28,7 @@
     <!-- Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Styles -->
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css?v=9">
     <link rel="stylesheet" href="trader_room.css?v=7">
     <link rel="stylesheet" href="chart_scanner.css?v=9">
     <link rel="stylesheet" href="quant_hub.css?v=1">
@@ -38,13 +38,19 @@
 <body>
     <!-- 모바일 전용 상단바 (PC에서는 CSS로 숨김) -->
     <div class="mobile-topbar">
-        <button id="menu-toggle-btn" class="menu-toggle-btn" aria-label="메뉴 열기">
-            <i class="ph ph-list"></i>
-        </button>
-        <div class="mobile-logo">
-            <i class="ph-fill ph-trend-up"></i>
-            <span>DAJAVATA</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button id="menu-toggle-btn" class="menu-toggle-btn" aria-label="메뉴 열기">
+                <i class="ph ph-list"></i>
+            </button>
+            <div class="mobile-logo">
+                <i class="ph-fill ph-trend-up"></i>
+                <span>DAJAVATA</span>
+            </div>
         </div>
+        <button id="mobile-lang-btn" class="mobile-lang-btn notranslate" title="언어 변경 (KO / EN)">
+            <i class="ph ph-globe"></i>
+            <span id="mobile-lang-label">EN</span>
+        </button>
     </div>
 
     <!-- 사이드바 열렸을 때 뒤 배경 어둡게 처리 (탭하면 닫힘) -->
@@ -165,6 +171,12 @@
                             <i class="ph-fill ph-check-circle"></i> ADMIN
                         </span>
 
+                        <!-- 언어 전환 토글 버튼 (한글 / 영어) -->
+                        <button id="header-lang-btn" class="header-lang-btn notranslate" title="언어 변경 (KO / EN)">
+                            <i class="ph ph-globe"></i>
+                            <span id="header-lang-label">EN</span>
+                        </button>
+
                         <span class="header-update-badge" id="header-update-badge" title="최근 데이터 동기화 시간 (한국시간 기준)">
                             <i class="ph ph-clock"></i>
                             <span id="header-update-text">최근 업데이트: 실시간 동기화 중...</span>
@@ -222,6 +234,11 @@
                     <span class="footer-dot" id="footer-admin-dot" style="display: none;">·</span>
                     <button type="button" class="footer-admin-logout-btn" id="footer-admin-btn" style="display: none; background: transparent; border: none; color: #f87171; font-size: 11px; cursor: pointer; align-items: center; gap: 4px;" title="관리자 모드 종료"><i class="ph ph-sign-out"></i> 관리자 로그아웃</button>
                     
+                    <button type="button" class="footer-lang-toggle notranslate" id="footer-lang-btn" title="언어 전환 / Language Switch">
+                        <i class="ph ph-globe"></i>
+                        <span id="footer-lang-label">English로 보기</span>
+                    </button>
+
                     <button type="button" class="footer-theme-toggle" id="footer-theme-toggle" title="화면 테마 전환">
                         <i class="ph ph-sun"></i>
                         <span id="footer-theme-label">라이트 테마로</span>
@@ -518,6 +535,21 @@
     <script src="chart_scanner.js?v=19"></script>
     <script src="trader_room.js?v=8"></script>
     <script src="quant_hub.js?v=4"></script>
-    <script src="app.js?v=30"></script>
+    <script src="app.js?v=31"></script>
+
+    <!-- Hidden Google Translate Element -->
+    <div id="google_translate_element" style="display:none;" class="notranslate"></div>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            if (window.google && window.google.translate) {
+                new window.google.translate.TranslateElement({
+                    pageLanguage: 'ko',
+                    includedLanguages: 'ko,en',
+                    autoDisplay: false
+                }, 'google_translate_element');
+            }
+        }
+    </script>
+    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
 </body>
 </html>

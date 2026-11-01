@@ -470,6 +470,7 @@ tbody tr:hover td {
     .mobile-topbar {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 12px;
         position: sticky;
         top: 0;
@@ -1441,3 +1442,65 @@ tr.stock-clickable-row:hover .stock-briefing-pill {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================================================
+   다국어(KR / EN) 원클릭 실시간 전체 번역 토글 스타일 & 구글 프레임 숨김
+   ========================================================================== */
+.header-lang-btn,
+.footer-lang-toggle,
+.mobile-lang-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 5px 11px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+.header-lang-btn:hover,
+.footer-lang-toggle:hover,
+.mobile-lang-btn:hover {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: #3b82f6;
+    color: #60a5fa;
+}
+.header-lang-btn.active-en,
+.footer-lang-toggle.active-en,
+.mobile-lang-btn.active-en {
+    background: rgba(59, 130, 246, 0.22);
+    border-color: #3b82f6;
+    color: #93c5fd;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+}
+
+/* 구글 번역 상단 바 및 강제 여백 제거 (레이아웃 보호) */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+#goog-gt-tt,
+.goog-te-balloon-frame {
+    display: none !important;
+    visibility: hidden !important;
+}
+body {
+    top: 0px !important;
+    position: static !important;
+}
+.goog-text-highlight {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+#google_translate_element {
+    display: none !important;
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    width: 0;
+    height: 0;
+}
+

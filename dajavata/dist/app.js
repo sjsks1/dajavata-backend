@@ -4577,4 +4577,109 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // CMS 초기화 실행
     initAdminCMS();
+
+    // =========================================================================
+    // 🌐 실시간 한글 / 영어 (KO / EN) 원클릭 전체 번역 시스템 (Google Translate 연동)
+    // =========================================================================
+    function initLanguageSwitcher() {
+        const headerBtn = document.getElementById('header-lang-btn');
+        const headerLabel = document.getElementById('header-lang-label');
+        const mobileBtn = document.getElementById('mobile-lang-btn');
+        const mobileLabel = document.getElementById('mobile-lang-label');
+        const footerBtn = document.getElementById('footer-lang-btn');
+        const footerLabel = document.getElementById('footer-lang-label');
+
+        function getCookie(name) {
+            const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+            return v ? v[2] : null;
+        }
+
+        function isEnglishActive() {
+            const saved = localStorage.getItem('dajavata_user_lang');
+            if (saved === 'en') return true;
+            if (saved === 'ko') return false;
+            const transCookie = getCookie('googtrans');
+            return !!(transCookie && transCookie.includes('/en'));
+        }
+
+        function updateUI(isEn) {
+            if (headerBtn) headerBtn.classList.toggle('active-en', isEn);
+            if (mobileBtn) mobileBtn.classList.toggle('active-en', isEn);
+            if (footerBtn) footerBtn.classList.toggle('active-en', isEn);
+
+            if (headerLabel) headerLabel.textContent = isEn ? 'KO' : 'EN';
+            if (mobileLabel) mobileLabel.textContent = isEn ? 'KO' : 'EN';
+            if (footerLabel) footerLabel.textContent = isEn ? '한국어로 보기' : 'English로 보기';
+
+            const titleText = isEn ? '한국어로 전환 (Switch to Korean)' : '영어로 전환 (Switch to English)';
+            if (headerBtn) headerBtn.title = titleText;
+            if (mobileBtn) mobileBtn.title = titleText;
+            if (footerBtn) footerBtn.title = titleText;
+        }
+
+        // 초기 UI 상태 반영
+        updateUI(isEnglishActive());
+
+        function switchLanguage(targetLang) {
+            const host = window.location.hostname;
+            const parts = host.split('.');
+            const rootDomain = parts.length > 2 ? '.' + parts.slice(-2).join('.') : '.' + host;
+
+            if (targetLang === 'ko') {
+                // 한국어 원복: googtrans 쿠키 완전 제거 및 원래 페이지 복원
+                const domains = ['', host, '.' + host, rootDomain];
+                const paths = ['/', ''];
+                domains.forEach(d => {
+                    paths.forEach(p => {
+                        document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${p};${d ? ' domain=' + d + ';' : ''}`;
+                        document.cookie = `googtrans=/ko/ko; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=${p};${d ? ' domain=' + d + ';' : ''}`;
+                    });
+                });
+                localStorage.setItem('dajavata_user_lang', 'ko');
+                showToast('한국어 모드로 전환되었습니다.');
+
+                const combo = document.querySelector('.goog-te-combo');
+                if (combo) {
+                    combo.value = 'ko';
+                    combo.dispatchEvent(new Event('change'));
+                }
+                setTimeout(() => {
+                    window.location.reload();
+                }, 200);
+            } else {
+                // 영어 전환
+                document.cookie = `googtrans=/ko/en; path=/;`;
+                document.cookie = `googtrans=/ko/en; domain=${host}; path=/;`;
+                if (rootDomain !== host) {
+                    document.cookie = `googtrans=/ko/en; domain=${rootDomain}; path=/;`;
+                }
+                localStorage.setItem('dajavata_user_lang', 'en');
+                showToast('영어로 전환 중입니다. (English Mode Activated)');
+
+                const combo = document.querySelector('.goog-te-combo');
+                if (combo) {
+                    combo.value = 'en';
+                    combo.dispatchEvent(new Event('change'));
+                    updateUI(true);
+                } else {
+                    // 구글 위젯이 아직 로딩 중이면 250ms 후 새로고침하여 적용
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 250);
+                }
+            }
+        }
+
+        function handleToggle() {
+            const nextLang = isEnglishActive() ? 'ko' : 'en';
+            switchLanguage(nextLang);
+        }
+
+        if (headerBtn) headerBtn.addEventListener('click', handleToggle);
+        if (mobileBtn) mobileBtn.addEventListener('click', handleToggle);
+        if (footerBtn) footerBtn.addEventListener('click', handleToggle);
+    }
+
+    // 언어 전환기 초기화 실행
+    initLanguageSwitcher();
 });
