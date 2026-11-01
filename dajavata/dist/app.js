@@ -113,6 +113,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2200);
     }
 
+    // 브라우저 5MB 쿼터 초과(QuotaExceededError) 방지 안전 로컬스토리지 헬퍼
+    function safeSetLocalStorage(key, val) {
+        try {
+            localStorage.setItem(key, val);
+        } catch (e) {
+            console.warn(`[LocalStorage] Failed to set ${key} (QuotaExceededError):`, e);
+        }
+    }
+
     // KST(한국시간 UTC+9) 변환 및 평일 08:15~20:15 매시 15분 정기 슬롯 동기화 헬퍼 함수
     function getRawKstDate(d) {
         if (typeof d === 'string') {
@@ -2465,9 +2474,190 @@ document.addEventListener('DOMContentLoaded', () => {
     // =========================================================================
     function canvasToBlocks(canvasEl) {
         const blocks = [];
-        const children = Array.from(canvasEl.children);
-        
-        if (children.length === 0) {
+
+        function parseNode(node) {
+            if (!node) return;
+
+            // 1. 순수 텍스트 노드
+            if (node.nodeType === Node.TEXT_NODE) {
+                const t = node.textContent.trim();
+                if (t.length > 0) {
+                    blocks.push({ type: 'paragraph', text: t });
+                }
+                return;
+            }
+
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+            const el = node;
+            const tag = el.tagName ? el.tagName.toLowerCase() : '';
+            const txt = el.innerText ? el.innerText.trim() : '';
+            const innerHtml = el.innerHTML ? el.innerHTML.trim() : '';
+
+            // 서식(색상, 폰트, 크기, 볼드 등)이 적용되었는지 판단하여 유효한 html 보존
+            const hasFormatting = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(innerHtml);
+            const htmlToSave = (hasFormatting && innerHtml) ? innerHtml : null;
+
+            // 2. 단일 IMG 태그
+            if (tag === 'img') {
+                if (el.src) {
+                    let cap = el.alt || '';
+                    if (cap === '[사진 설명 입력]') cap = '';
+                    blocks.push({
+                        type: 'image',
+                        url: el.src,
+                        caption: cap
+                    });
+                }
+                return;
+            }
+
+            // 3. 단일 FIGURE 태그 (이미지 + 캡션)
+            if (tag === 'figure') {
+                const img = el.querySelector('img');
+                const figcaption = el.querySelector('figcaption');
+                if (img && img.src) {
+                    let cap = figcaption ? figcaption.innerText.trim() : '';
+                    if (cap === '[사진 설명 입력]') cap = '';
+                    blocks.push({
+                        type: 'image',
+                        url: img.src,
+                        caption: cap
+                    });
+                }
+                return;
+            }
+
+            // 4. 제목 태그 (H1, H2, H3)
+            if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
+                const lvl = tag === 'h1' ? 1 : (tag === 'h2' ? 2 : 3);
+                const b = { type: 'heading', level: lvl, text: txt };
+                if (htmlToSave) b.html = htmlToSave;
+                blocks.push(b);
+                return;
+            }
+
+            // 5. 구분선 (HR)
+            if (tag === 'hr') {
+                blocks.push({ type: 'divider' });
+                return;
+            }
+
+            // 6. 비순서형 리스트 (UL)
+            if (tag === 'ul') {
+                el.querySelectorAll('li').forEach(li => {
+                    const liTxt = li.innerText.trim();
+                    const liHtml = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(li.innerHTML) ? li.innerHTML.trim() : null;
+                    if (liTxt) {
+                        const b = { type: 'bulleted_list_item', text: liTxt };
+                        if (liHtml) b.html = liHtml;
+                        blocks.push(b);
+                    }
+                });
+                return;
+            }
+
+            // 7. 순서형 리스트 (OL)
+            if (tag === 'ol') {
+                el.querySelectorAll('li').forEach(li => {
+                    const liTxt = li.innerText.trim();
+                    const liHtml = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(li.innerHTML) ? li.innerHTML.trim() : null;
+                    if (liTxt) {
+                        const b = { type: 'numbered_list_item', text: liTxt };
+                        if (liHtml) b.html = liHtml;
+                        blocks.push(b);
+                    }
+                });
+                return;
+            }
+
+            // 8. 인용구 (BLOCKQUOTE)
+            if (tag === 'blockquote') {
+                const b = { type: 'quote', text: txt };
+                if (htmlToSave) b.html = htmlToSave;
+                blocks.push(b);
+                return;
+            }
+
+            // 9. 콜아웃 박스
+            if (el.classList && el.classList.contains('editor-callout-box')) {
+                const b = { type: 'callout', text: txt };
+                if (htmlToSave) b.html = htmlToSave;
+                blocks.push(b);
+                return;
+            }
+
+            // 10. 테이블 (TABLE)
+            if (tag === 'table') {
+                const rows = [];
+                let hasHeader = false;
+                el.querySelectorAll('tr').forEach(tr => {
+                    const rowCells = [];
+                    tr.querySelectorAll('th, td').forEach(c => {
+                        if (c.tagName.toLowerCase() === 'th') hasHeader = true;
+                        rowCells.push(c.innerText.trim());
+                    });
+                    if (rowCells.length > 0) rows.push(rowCells);
+                });
+                if (rows.length > 0) {
+                    blocks.push({ type: 'table', has_header: hasHeader || true, rows: rows });
+                }
+                return;
+            }
+
+            // 🌟 11. 복합 컨테이너 (DIV, P, SECTION 등) 내부에 이미지(IMG)나 FIGURE 또는 블록 요소가 포함된 경우!!
+            // (핵심 버그 수정: 여러 장의 이미지나 이미지 뒤의 텍스트가 첫 이미지에 의해 무시되던 문제 완전 해결)
+            const subImages = el.querySelectorAll('img, figure');
+            const subHeaders = el.querySelectorAll('h1, h2, h3, table, ul, ol, blockquote');
+            if (subImages.length > 0 || subHeaders.length > 0) {
+                // 인라인 노드들을 문단 단위로 깔끔하게 묶어주고 블록 요소는 순차 분해
+                let inlineBuffer = [];
+                function flushInline() {
+                    if (inlineBuffer.length === 0) return;
+                    const tempSpan = document.createElement('span');
+                    inlineBuffer.forEach(n => tempSpan.appendChild(n.cloneNode(true)));
+                    const t = tempSpan.innerText ? tempSpan.innerText.trim() : '';
+                    const h = tempSpan.innerHTML ? tempSpan.innerHTML.trim() : '';
+                    if (t.length > 0 || (h.length > 0 && h !== '<br>')) {
+                        const hasFmt = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(h);
+                        const b = { type: 'paragraph', text: t };
+                        if (hasFmt && h) b.html = h;
+                        blocks.push(b);
+                    }
+                    inlineBuffer = [];
+                }
+
+                Array.from(el.childNodes).forEach(childNode => {
+                    if (childNode.nodeType === Node.TEXT_NODE) {
+                        inlineBuffer.push(childNode);
+                    } else if (childNode.nodeType === Node.ELEMENT_NODE) {
+                        const cTag = childNode.tagName.toLowerCase();
+                        const isBlock = /^(h1|h2|h3|h4|h5|h6|p|div|figure|img|ul|ol|table|blockquote|hr|section|article)$/i.test(cTag);
+                        if (isBlock) {
+                            flushInline();
+                            parseNode(childNode);
+                        } else {
+                            inlineBuffer.push(childNode);
+                        }
+                    }
+                });
+                flushInline();
+                return;
+            }
+
+            // 12. 순수 텍스트 문단 (P, DIV, SPAN 등)
+            if (txt.length > 0 || innerHtml.length > 0) {
+                if (txt.length === 0 && (innerHtml === '<br>' || innerHtml === '')) {
+                    return; // 빈 줄 스킵
+                }
+                const b = { type: 'paragraph', text: txt };
+                if (htmlToSave) b.html = htmlToSave;
+                blocks.push(b);
+            }
+        }
+
+        const rootNodes = Array.from(canvasEl.childNodes);
+        if (rootNodes.length === 0) {
             const raw = canvasEl.innerText.trim();
             const rawHtml = canvasEl.innerHTML.trim();
             if (raw.length > 0) {
@@ -2479,83 +2669,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return blocks;
         }
 
-        children.forEach(child => {
-            const tag = child.tagName ? child.tagName.toLowerCase() : '';
-            const txt = child.innerText ? child.innerText.trim() : '';
-            const innerHtml = child.innerHTML ? child.innerHTML.trim() : '';
-
-            // 서식(색상, 폰트, 크기, 볼드 등)이 적용되었는지 판단하여 유효한 html만 보존
-            const hasFormatting = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(innerHtml);
-            const htmlToSave = (hasFormatting && innerHtml) ? innerHtml : null;
-
-            if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
-                const lvl = tag === 'h1' ? 1 : (tag === 'h2' ? 2 : 3);
-                const b = { type: 'heading', level: lvl, text: txt };
-                if (htmlToSave) b.html = htmlToSave;
-                blocks.push(b);
-            } else if (tag === 'hr') {
-                blocks.push({ type: 'divider' });
-            } else if (tag === 'ul') {
-                child.querySelectorAll('li').forEach(li => {
-                    const liTxt = li.innerText.trim();
-                    const liHtml = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(li.innerHTML) ? li.innerHTML.trim() : null;
-                    if (liTxt) {
-                        const b = { type: 'bulleted_list_item', text: liTxt };
-                        if (liHtml) b.html = liHtml;
-                        blocks.push(b);
-                    }
-                });
-            } else if (tag === 'ol') {
-                child.querySelectorAll('li').forEach(li => {
-                    const liTxt = li.innerText.trim();
-                    const liHtml = /style=|color=|font-|<span|<strong|<b|<em|<i|<u|<s/i.test(li.innerHTML) ? li.innerHTML.trim() : null;
-                    if (liTxt) {
-                        const b = { type: 'numbered_list_item', text: liTxt };
-                        if (liHtml) b.html = liHtml;
-                        blocks.push(b);
-                    }
-                });
-            } else if (tag === 'blockquote') {
-                const b = { type: 'quote', text: txt };
-                if (htmlToSave) b.html = htmlToSave;
-                blocks.push(b);
-            } else if (child.classList && child.classList.contains('editor-callout-box')) {
-                const b = { type: 'callout', text: txt };
-                if (htmlToSave) b.html = htmlToSave;
-                blocks.push(b);
-            } else if (tag === 'table') {
-                const rows = [];
-                let hasHeader = false;
-                child.querySelectorAll('tr').forEach(tr => {
-                    const rowCells = [];
-                    tr.querySelectorAll('th, td').forEach(c => {
-                        if (c.tagName.toLowerCase() === 'th') hasHeader = true;
-                        rowCells.push(c.innerText.trim());
-                    });
-                    if (rowCells.length > 0) rows.push(rowCells);
-                });
-                if (rows.length > 0) {
-                    blocks.push({ type: 'table', has_header: hasHeader || true, rows: rows });
-                }
-            } else if (tag === 'figure' || child.querySelector('img')) {
-                const img = tag === 'img' ? child : child.querySelector('img');
-                const figcaption = child.querySelector('figcaption');
-                if (img && img.src) {
-                    blocks.push({
-                        type: 'image',
-                        url: img.src,
-                        caption: figcaption ? figcaption.innerText.trim() : ''
-                    });
-                }
-            } else if (tag === 'img') {
-                blocks.push({ type: 'image', url: child.src, caption: '' });
-            } else {
-                if (txt.length > 0 || innerHtml.length > 0) {
-                    const b = { type: 'paragraph', text: txt };
-                    if (htmlToSave) b.html = htmlToSave;
-                    blocks.push(b);
-                }
-            }
+        rootNodes.forEach(node => {
+            parseNode(node);
         });
 
         return blocks;
@@ -3125,7 +3240,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 html: editorContentCanvas ? editorContentCanvas.innerHTML : '',
                 savedAt: new Date().toLocaleTimeString('ko-KR')
             };
-            localStorage.setItem(draftKey, JSON.stringify(draft));
+            safeSetLocalStorage(draftKey, JSON.stringify(draft));
             if (editorDraftStatus) {
                 editorDraftStatus.textContent = `자동 임시저장 (${draft.savedAt})`;
             }
@@ -3250,7 +3365,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     const localDb = { posts: window.allCompanyPosts, updated_at: new Date().toISOString() };
-                    localStorage.setItem('dajavata_local_company_db', JSON.stringify(localDb));
+                    safeSetLocalStorage('dajavata_local_company_db', JSON.stringify(localDb));
                     localStorage.removeItem('dajavata_company_draft');
 
                     try {
@@ -3289,7 +3404,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     const localDb = { posts: window.allLearningPosts, updated_at: new Date().toISOString() };
-                    localStorage.setItem('dajavata_local_learning_db', JSON.stringify(localDb));
+                    safeSetLocalStorage('dajavata_local_learning_db', JSON.stringify(localDb));
                     localStorage.removeItem('dajavata_learning_draft');
 
                     try {
@@ -3328,7 +3443,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     const localDb = { posts: window.allInsights, updated_at: new Date().toISOString() };
-                    localStorage.setItem('dajavata_local_insights_db', JSON.stringify(localDb));
+                    safeSetLocalStorage('dajavata_local_insights_db', JSON.stringify(localDb));
                     localStorage.removeItem('dajavata_post_draft');
 
                     try {
@@ -3369,7 +3484,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             window.allInsights = (window.allInsights || []).filter(p => String(p.id) !== String(id));
             const localDb = { posts: window.allInsights, updated_at: new Date().toISOString() };
-            localStorage.setItem('dajavata_local_insights_db', JSON.stringify(localDb));
+            safeSetLocalStorage('dajavata_local_insights_db', JSON.stringify(localDb));
 
             try {
                 const adminToken = sessionStorage.getItem('dajavata_admin_token') || '';
@@ -3397,7 +3512,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             window.allCompanyPosts = (window.allCompanyPosts || []).filter(p => String(p.id) !== String(id));
             const localDb = { posts: window.allCompanyPosts, updated_at: new Date().toISOString() };
-            localStorage.setItem('dajavata_local_company_db', JSON.stringify(localDb));
+            safeSetLocalStorage('dajavata_local_company_db', JSON.stringify(localDb));
 
             try {
                 const adminToken = sessionStorage.getItem('dajavata_admin_token') || '';
@@ -3425,7 +3540,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             window.allLearningPosts = (window.allLearningPosts || []).filter(p => String(p.id) !== String(id));
             const localDb = { posts: window.allLearningPosts, updated_at: new Date().toISOString() };
-            localStorage.setItem('dajavata_local_learning_db', JSON.stringify(localDb));
+            safeSetLocalStorage('dajavata_local_learning_db', JSON.stringify(localDb));
 
             try {
                 const adminToken = sessionStorage.getItem('dajavata_admin_token') || '';
