@@ -283,19 +283,29 @@ def load_local_insights_db():
         try:
             with open(INSIGHTS_DB_PATH, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                if data and isinstance(data.get("posts"), list) and len(data["posts"]) > 0:
+                if data and isinstance(data.get("posts"), list):
                     return data
         except Exception as e:
             print(f"Error loading insights_db.json: {e}")
     return None
 
 def save_local_insights_db(data):
-    """insights_db.json에 칼럼 데이터를 안전하게 원자적 저장"""
+    """insights_db.json에 칼럼 데이터를 안전하게 원자적 저장 및 3개 디렉터리 동기화"""
     os.makedirs(os.path.dirname(INSIGHTS_DB_PATH), exist_ok=True)
     temp_path = INSIGHTS_DB_PATH + ".tmp"
     with open(temp_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     shutil.move(temp_path, INSIGHTS_DB_PATH)
+
+    try:
+        root_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "insights_db.json"))
+        dist_data_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "dajavata", "dist", "data", "insights_db.json"))
+        for target_p in [root_data_path, dist_data_path]:
+            if os.path.exists(os.path.dirname(target_p)):
+                with open(target_p, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as sync_e:
+        print(f"Error syncing insights_db: {sync_e}")
 
 @app.get("/api/insights")
 def get_insights():

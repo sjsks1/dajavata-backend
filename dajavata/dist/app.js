@@ -280,16 +280,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadInsights() {
-        if (window.allInsights && window.allInsights.length > 0) {
+        if (window.allInsights && Array.isArray(window.allInsights) && window.allInsights.length > 0) {
             return window.allInsights;
         }
 
-        // 1. 백엔드 실시간 API 최우선 호출 (새로고침 시 최신글 덮어쓰기 방지)
+        // 1. 백엔드 실시간 API 최우선 호출 (노션 및 백엔드 최신 상태 최우선 신뢰)
         try {
             const response = await fetch(INSIGHTS_API_URL, { cache: 'no-cache' });
             if (response.ok) {
                 const data = await response.json();
-                if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+                if (data && Array.isArray(data.posts)) {
                     window.allInsights = data.posts;
                     localStorage.setItem('dajavata_local_insights_db', JSON.stringify(data));
                     return window.allInsights;
@@ -302,14 +302,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const localSaved = localStorage.getItem('dajavata_local_insights_db');
             if (localSaved) {
                 const parsed = JSON.parse(localSaved);
-                if (parsed && Array.isArray(parsed.posts) && parsed.posts.length > 0) {
+                if (parsed && Array.isArray(parsed.posts)) {
                     window.allInsights = parsed.posts;
                     return window.allInsights;
                 }
             }
         } catch (e) {}
 
-        // 3. 정적 JSON (data/insights_db.json) Fallback
+        // 3. 정적 JSON (data/insights_db.json) Fallback (서버 다운 시만 최후 실행)
         const staticUrls = [
             'data/insights_db.json',
             '/data/insights_db.json',
@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const text = await res.text();
                     if (!text.trim().startsWith('<')) {
                         const data = JSON.parse(text);
-                        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+                        if (data && Array.isArray(data.posts)) {
                             window.allInsights = data.posts;
                             return window.allInsights;
                         }
@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.allCompanyPosts = [];
 
     async function loadCompanyPosts() {
-        if (window.allCompanyPosts && window.allCompanyPosts.length > 0) {
+        if (window.allCompanyPosts && Array.isArray(window.allCompanyPosts) && window.allCompanyPosts.length > 0) {
             return window.allCompanyPosts;
         }
 
@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`${API_BASE}/api/company`, { cache: 'no-cache' });
             if (res.ok) {
                 const data = await res.json();
-                if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+                if (data && Array.isArray(data.posts)) {
                     window.allCompanyPosts = data.posts;
                     localStorage.setItem('dajavata_local_company_db', JSON.stringify(data));
                     return window.allCompanyPosts;
@@ -362,7 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const localSaved = localStorage.getItem('dajavata_local_company_db');
             if (localSaved) {
                 const parsed = JSON.parse(localSaved);
-                if (parsed && Array.isArray(parsed.posts) && parsed.posts.length > 0) {
+                if (parsed && Array.isArray(parsed.posts)) {
                     window.allCompanyPosts = parsed.posts;
                     return window.allCompanyPosts;
                 }
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const text = await res.text();
                     if (!text.trim().startsWith('<')) {
                         const data = JSON.parse(text);
-                        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+                        if (data && Array.isArray(data.posts)) {
                             window.allCompanyPosts = data.posts;
                             return window.allCompanyPosts;
                         }
@@ -400,7 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.allLearningPosts = [];
 
     async function loadLearningPosts() {
-        if (window.allLearningPosts && window.allLearningPosts.length > 0) {
+        if (window.allLearningPosts && Array.isArray(window.allLearningPosts) && window.allLearningPosts.length > 0) {
             return window.allLearningPosts;
         }
 
@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`${API_BASE}/api/learning`, { cache: 'no-cache' });
             if (res.ok) {
                 const data = await res.json();
-                if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+                if (data && Array.isArray(data.posts)) {
                     window.allLearningPosts = data.posts;
                     localStorage.setItem('dajavata_local_learning_db', JSON.stringify(data));
                     return window.allLearningPosts;
@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const localSaved = localStorage.getItem('dajavata_local_learning_db');
             if (localSaved) {
                 const parsed = JSON.parse(localSaved);
-                if (parsed && Array.isArray(parsed.posts) && parsed.posts.length > 0) {
+                if (parsed && Array.isArray(parsed.posts)) {
                     window.allLearningPosts = parsed.posts;
                     return window.allLearningPosts;
                 }
@@ -442,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const text = await res.text();
                     if (!text.trim().startsWith('<')) {
                         const data = JSON.parse(text);
-                        if (data && Array.isArray(data.posts) && data.posts.length > 0) {
+                        if (data && Array.isArray(data.posts)) {
                             window.allLearningPosts = data.posts;
                             return window.allLearningPosts;
                         }
