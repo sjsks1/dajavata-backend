@@ -1073,10 +1073,21 @@ def get_effective_kst_slot(file_kst_dt):
             target_hr = now_kst.hour if now_kst.minute >= 15 else (now_kst.hour - 1)
             candidate_slot = now_kst.replace(hour=target_hr, minute=15, second=0, microsecond=0)
         else:
-            candidate_slot = file_kst_dt
+            # 평일 00:00 ~ 08:14 사이: 전 영업일 20:15 최종 마감 정산 슬롯 반영
+            days_back = 3 if now_kst.weekday() == 0 else 1
+            prev_date = now_kst - datetime.timedelta(days=days_back)
+            candidate_slot = prev_date.replace(hour=20, minute=15, second=0, microsecond=0)
 
         if candidate_slot > slot_dt:
             slot_dt = candidate_slot
+    else:
+        # 주말(토, 일): 직전 금요일 20:15 마감 슬롯 적용
+        days_back = 2 if now_kst.weekday() == 6 else 1
+        prev_date = now_kst - datetime.timedelta(days=days_back)
+        candidate_slot = prev_date.replace(hour=20, minute=15, second=0, microsecond=0)
+        if candidate_slot > slot_dt:
+            slot_dt = candidate_slot
+
     return slot_dt
 
 @app.get("/api/themes")

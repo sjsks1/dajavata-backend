@@ -153,7 +153,22 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (hr > 8 || (hr === 8 && mi >= 15)) {
                 const slotHr = mi >= 15 ? hr : (hr - 1);
                 slotKst = new Date(nowKst.getFullYear(), nowKst.getMonth(), nowKst.getDate(), slotHr, 15, 0);
+            } else {
+                // 평일 00:00 ~ 08:14 사이: 전 영업일 20:15(마감 정산) 슬롯으로 동기화
+                const prevDay = new Date(nowKst);
+                const daysBack = (day === 1) ? 3 : 1; // 월요일이면 금요일, 화~금이면 전일
+                prevDay.setDate(prevDay.getDate() - daysBack);
+                slotKst = new Date(prevDay.getFullYear(), prevDay.getMonth(), prevDay.getDate(), 20, 15, 0);
             }
+            if (slotKst && slotKst.getTime() > parsed.getTime()) {
+                return slotKst;
+            }
+        } else {
+            // 주말(토, 일): 직전 금요일 20:15 마감 정산 슬롯으로 동기화
+            const prevFri = new Date(nowKst);
+            const daysBack = (day === 0) ? 2 : 1; // 일요일이면 2일 전, 토요일이면 1일 전
+            prevFri.setDate(prevFri.getDate() - daysBack);
+            const slotKst = new Date(prevFri.getFullYear(), prevFri.getMonth(), prevFri.getDate(), 20, 15, 0);
             if (slotKst && slotKst.getTime() > parsed.getTime()) {
                 return slotKst;
             }
@@ -259,12 +274,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 2. 로컬 및 CDN 정적 JSON 폴백
+        const cacheBuster = Date.now();
         const fallbackUrls = [
+            `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/all_stocks.json?t=${cacheBuster}`,
+            `https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/all_stocks.json?t=${cacheBuster}`,
             'data/all_stocks.json',
-            '/data/all_stocks.json',
-            'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/all_stocks.json',
-            'https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/all_stocks.json',
-            'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/dajavata_backend/data/all_stocks.json'
+            '/data/all_stocks.json'
         ];
 
         for (const url of fallbackUrls) {
@@ -756,9 +771,12 @@ document.addEventListener('DOMContentLoaded', () => {
         let bestThemes = [];
         let bestUpdatedAt = null;
 
-        // 1. 백엔드 API 호출 (no-cache)
+        // 1. 백엔드 API 호출 (4.5초 타임아웃: Render 콜드 슬립 시 UI 지연 방지)
         try {
-            const response = await fetch(API_URL, { cache: 'no-cache' });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 4500);
+            const response = await fetch(API_URL, { cache: 'no-cache', signal: controller.signal });
+            clearTimeout(timeoutId);
             if (response.ok) {
                 const serverDate = response.headers.get('date');
                 const data = await response.json();
@@ -768,13 +786,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } catch (err) {
-            console.warn('Primary API_URL fetch failed, checking static/GitHub CDN...', err);
+            console.warn('Primary API_URL fetch failed/timeout, checking live GitHub Raw/CDN...', err);
         }
 
-        // 2. 로컬/GitHub Raw 최신 theme_cache.json 병행 비교 (더 최신 데이터가 있으면 즉시 교체)
+        // 2. GitHub Raw 최신 theme_cache.json 병행 비교 (캐시버스팅 + 최신 타임스탬프 우선 채택)
+        const cacheBuster = Date.now();
         const rawUrls = [
-            'data/theme_cache.json',
-            'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/theme_cache.json'
+            `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/theme_cache.json?t=${cacheBuster}`,
+            `https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/theme_cache.json?t=${cacheBuster}`,
+            'data/theme_cache.json'
         ];
         for (const rUrl of rawUrls) {
             try {
@@ -791,7 +811,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 bestThemes = rawArr.map(item => normalizeRawTheme(item, sampleUpd)).filter(Boolean);
                                 if (rawDt) bestUpdatedAt = rawDt;
                             }
-                            break;
                         }
                     }
                 }
