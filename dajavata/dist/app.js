@@ -2044,11 +2044,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 const info = realtimeMap[code];
                 if (!info || info.current_price == null) return;
 
-                // 1. 메모리 데이터 갱신
-                const stock = currentDataList.find(s => s.code === code);
-                if (stock) {
-                    stock.current_price = info.current_price;
-                    if (info.day1 != null) stock.day1 = info.day1;
+                                // 1. 메모리 객체 갱신 (list, currentDataList, window.allStocks 모두 갱신)
+                const updateItem = (item) => {
+                    if (item && item.code === code) {
+                        item.current_price = info.current_price;
+                        if (info.day1 != null) item.day1 = info.day1;
+                    }
+                };
+                if (Array.isArray(list)) list.forEach(updateItem);
+                if (Array.isArray(currentDataList)) currentDataList.forEach(updateItem);
+                if (Array.isArray(window.allStocks)) window.allStocks.forEach(updateItem);
+
+                // 모달이 열려 있다면 모달 상단 시세도 실시간 동기화
+                if (typeof window.updateModalHeroPrice === 'function') {
+                    window.updateModalHeroPrice(code, info.current_price, info.day1);
                 }
 
                 // 2. 화면 행(Row) DOM 갱신
@@ -3869,6 +3878,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (parsed.length > 0) {
                         activeCandles = parsed.slice(-75);
+                        const last = activeCandles[activeCandles.length - 1];
+                        const prev = activeCandles.length >= 2 ? activeCandles[activeCandles.length - 2] : last;
+
+                        // 일봉 모드일 경우: 차트의 오늘자 최신 캔들 종가 및 등락률로 모달 상단 헤더 실시간 동기화
+                        if (tf === 'dayCandle' && last && last.close > 0) {
+                            const candleChg = (prev && prev.close > 0) ? (((last.close - prev.close) / prev.close) * 100) : (stock.day1 || 0);
+                            stock.current_price = last.close;
+                            stock.day1 = candleChg;
+                            updateModalHeroPrice(last.close, candleChg, stock.day3);
+                        }
+
                         if (tf === 'dayCandle') {
                             computeAndRenderTargets(stock, activeCandles);
                             renderChartFallbackFlowsIfNeeded(activeCandles);
@@ -4400,6 +4420,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
+            if (briefingData) {
+                // 네이버 실시간 체결가 및 등락률로 모달 상단 및 당일 캔들 즉시 동기화
+                const ti = briefingData.totalInfos || {};
+                const rawClose = briefingData.closePrice || (ti.now && ti.now.value) || (ti.closePrice && ti.closePrice.value);
+                const rawRatio = briefingData.fluctuationsRatio || (ti.fluctuationsRatio && ti.fluctuationsRatio.value);
+                if (rawClose) {
+                    const liveP = parseFloat(String(rawClose).replace(/,/g, ''));
+                    const liveR = rawRatio != null ? parseFloat(String(rawRatio).replace(/,/g, '').replace(/%/g, '')) : null;
+                    if (liveP > 0) {
+                        stock.current_price = liveP;
+                        if (liveR != null) stock.day1 = liveR;
+                        updateModalHeroPrice(liveP, liveR != null ? liveR : stock.day1, stock.day3);
+
+                        // 일봉 모드이고 오늘 날짜 캔들이라면, 실시간 체결가로 캔들 종가 및 지지/저항/손절 라인 동기화
+                        if (activeTimeframe === 'dayCandle' && activeCandles && activeCandles.length > 0) {
+                            const lastCandle = activeCandles[activeCandles.length - 1];
+                            lastCandle.close = liveP;
+                            if (liveP > lastCandle.high) lastCandle.high = liveP;
+                            if (liveP < lastCandle.low) lastCandle.low = liveP;
+                            computeAndRenderTargets(stock, activeCandles);
+                            drawBriefingCanvas();
+                        }
+                    }
+                }
+            }
+
             if (!briefingData) return;
 
             // 시장 배지 업데이트
@@ -4507,27 +4553,55 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+                function updateModalHeroPrice(price, day1, day3) {
+            const fmt = (n) => new Intl.NumberFormat('ko-KR').format(Math.round(n || 0));
+            const heroPriceEl = document.getElementById('sb-price-hero');
+            if (heroPriceEl && price > 0) {
+                heroPriceEl.textContent = `${fmt(price)}원`;
+                if (day1 != null) {
+                    heroPriceEl.style.color = Number(day1) >= 0 ? '#f87171' : '#60a5fa';
+                }
+            }
+            const chgEl = document.getElementById('sb-change-hero');
+            if (chgEl && day1 != null) {
+                const num1 = Number(day1);
+                const s1 = num1 > 0 ? '+' : '';
+                const d3 = (day3 !== undefined && day3 !== null) ? Number(day3) : null;
+                const s3 = (d3 !== null) ? (d3 > 0 ? `+${d3.toFixed(2)}` : d3.toFixed(2)) : '';
+                chgEl.innerHTML = `<span class="${num1 >= 0 ? 'pos' : 'neg'}">${s1}${num1.toFixed(2)}%</span> ${s3 ? `<span style="color:#94a3b8; font-size:12px; font-weight:600; margin-left:4px;">(3일합산 ${s3}%)</span>` : ''}`;
+            }
+        }
+        window.updateModalHeroPrice = function(code, price, day1) {
+            if (activeStock && activeStock.code === code) {
+                activeStock.current_price = price;
+                if (day1 != null) activeStock.day1 = day1;
+                updateModalHeroPrice(price, day1, activeStock.day3);
+            }
+        };
+
         window.openStockBriefingModal = function(stock) {
             if (!stock || !stock.code) return;
+                        // 0. 최신 실시간 시세가 메모리 풀에 있으면 우선 반영
+            const pool = [...(window.allStocks || []), ...(currentDataList || [])];
+            const fresh = pool.find(s => s && s.code === stock.code && s.current_price > 0);
+            if (fresh && fresh.current_price > 0) {
+                stock = {
+                    ...stock,
+                    current_price: fresh.current_price,
+                    day1: fresh.day1 != null ? fresh.day1 : stock.day1
+                };
+            }
+
             activeStock = stock;
             hoverIndex = -1;
 
-            const fmt = (n) => new Intl.NumberFormat('ko-KR').format(Math.round(n || 0));
             const day1 = stock.day1 !== undefined ? Number(stock.day1) : 0;
             const day3 = stock.day3 !== undefined ? Number(stock.day3) : 0;
 
             document.getElementById('sb-stock-name').textContent = stock.name || stock.code;
             document.getElementById('sb-stock-code').textContent = stock.code;
             document.getElementById('sb-market-badge').textContent = stock.market || 'KRX';
-            document.getElementById('sb-price-hero').textContent = `${fmt(stock.current_price)}원`;
-            document.getElementById('sb-price-hero').style.color = day1 >= 0 ? '#f87171' : '#60a5fa';
-
-            const chgEl = document.getElementById('sb-change-hero');
-            if (chgEl) {
-                const s1 = day1 > 0 ? '+' : '';
-                const s3 = day3 > 0 ? '+' : '';
-                chgEl.innerHTML = `<span class="${day1 >= 0 ? 'pos' : 'neg'}">${s1}${day1.toFixed(2)}%</span> <span style="color:#94a3b8; font-size:12px; font-weight:600; margin-left:4px;">(3일합산 ${s3}${day3.toFixed(2)}%)</span>`;
-            }
+            updateModalHeroPrice(stock.current_price, day1, day3);
 
             const extLink = document.getElementById('sb-naver-External-link');
             if (extLink) {
