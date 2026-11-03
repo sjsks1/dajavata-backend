@@ -37,6 +37,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'http://localhost:8001' : 'https://dajavata-backend.onrender.com';
     const API_URL = `${API_BASE}/api/themes`;
     const INSIGHTS_API_URL = `${API_BASE}/api/insights`;
+
+    function fetchWithTimeout(url, options = {}, timeoutMs = 2500) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        const opts = { ...options, signal: controller.signal };
+        return fetch(url, opts).finally(() => clearTimeout(timeoutId));
+    }
     
     // Store fetched data globally for filtering
     window.allThemes = [];
@@ -178,48 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function formatKstTime(rawVal, fallbackDate) {
         const activeDate = fallbackDate || window._themeUpdatedAt || window._stockUpdatedAt;
-        if (!rawVal || rawVal === '오늘' || rawVal === '-') {
-            const kst = getKstDate(activeDate);
-            const mm = String(kst.getMonth() + 1).padStart(2, '0');
-            const dd = String(kst.getDate()).padStart(2, '0');
-            const hh = String(kst.getHours()).padStart(2, '0');
-            const mi = String(kst.getMinutes()).padStart(2, '0');
-            return `${mm}.${dd} ${hh}:${mi}`;
-        }
-        if (/^\d{2}\.\d{2} \d{2}:\d{2}$/.test(rawVal)) {
-            if (activeDate) {
-                const kstActive = getKstDate(activeDate);
-                const rawParsed = getKstDate(rawVal);
-                if (kstActive.getTime() > rawParsed.getTime()) {
-                    const mm = String(kstActive.getMonth() + 1).padStart(2, '0');
-                    const dd = String(kstActive.getDate()).padStart(2, '0');
-                    const hh = String(kstActive.getHours()).padStart(2, '0');
-                    const mi = String(kstActive.getMinutes()).padStart(2, '0');
-                    return `${mm}.${dd} ${hh}:${mi}`;
-                }
-            }
-            return rawVal;
-        }
-        const parsed = new Date(rawVal);
-        if (!isNaN(parsed.getTime())) {
-            const kst = getKstDate(parsed);
-            if (activeDate) {
-                const kstActive = getKstDate(activeDate);
-                if (kstActive.getTime() > kst.getTime()) {
-                    const mm = String(kstActive.getMonth() + 1).padStart(2, '0');
-                    const dd = String(kstActive.getDate()).padStart(2, '0');
-                    const hh = String(kstActive.getHours()).padStart(2, '0');
-                    const mi = String(kstActive.getMinutes()).padStart(2, '0');
-                    return `${mm}.${dd} ${hh}:${mi}`;
-                }
-            }
-            const mm = String(kst.getMonth() + 1).padStart(2, '0');
-            const dd = String(kst.getDate()).padStart(2, '0');
-            const hh = String(kst.getHours()).padStart(2, '0');
-            const mi = String(kst.getMinutes()).padStart(2, '0');
-            return `${mm}.${dd} ${hh}:${mi}`;
-        }
-        const kst = getKstDate(activeDate);
+        const target = activeDate || rawVal;
+        const kst = getKstDate(target);
         const mm = String(kst.getMonth() + 1).padStart(2, '0');
         const dd = String(kst.getDate()).padStart(2, '0');
         const hh = String(kst.getHours()).padStart(2, '0');
@@ -254,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadAllStocks() {
         // 1. 백엔드 API 시도
         try {
-            const response = await fetch(`${API_BASE}/api/stocks/fundamentals`);
+            const response = await fetchWithTimeout(`${API_BASE}/api/stocks/fundamentals`, {}, 2000);
             if (response.ok) {
                 const serverDate = response.headers.get('date');
                 const data = await response.json();
@@ -276,10 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. 로컬 및 CDN 정적 JSON 폴백
         const cacheBuster = Date.now();
         const fallbackUrls = [
-            `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/all_stocks.json?t=${cacheBuster}`,
-            `https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/all_stocks.json?t=${cacheBuster}`,
             'data/all_stocks.json',
-            '/data/all_stocks.json'
+            '/data/all_stocks.json',
+            `https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/all_stocks.json?t=${cacheBuster}`,
+            `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/all_stocks.json?t=${cacheBuster}`
         ];
 
         for (const url of fallbackUrls) {
@@ -292,6 +259,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const list = Array.isArray(parsed) ? parsed : (parsed.stocks || []);
                         if (list && list.length > 50) {
                             window.allStocks = list;
+                            const sampleUpd = list[0] && list[0].update ? list[0].update : null;
+                            window._stockUpdatedAt = getKstDate(sampleUpd || new Date());
                             updateHeaderBadge();
                             return window.allStocks;
                         }
@@ -310,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 1. 백엔드 실시간 API 최우선 호출 (노션 및 백엔드 최신 상태 최우선 신뢰)
         try {
-            const response = await fetch(INSIGHTS_API_URL, { cache: 'no-cache' });
+            const response = await fetchWithTimeout(INSIGHTS_API_URL, { cache: 'no-cache' }, 2000);
             if (response.ok) {
                 const data = await response.json();
                 if (data && Array.isArray(data.posts)) {
@@ -370,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 1. 백엔드 실시간 API 최우선 호출 (새로고침 시 최신 작성글 100% 영구 보존)
         try {
-            const res = await fetch(`${API_BASE}/api/company`, { cache: 'no-cache' });
+            const res = await fetchWithTimeout(`${API_BASE}/api/company`, { cache: 'no-cache' }, 2000);
             if (res.ok) {
                 const data = await res.json();
                 if (data && Array.isArray(data.posts)) {
@@ -430,7 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 1. 백엔드 실시간 API 최우선 호출 (새로고침 시 최신 작성글 100% 영구 보존)
         try {
-            const res = await fetch(`${API_BASE}/api/learning`, { cache: 'no-cache' });
+            const res = await fetchWithTimeout(`${API_BASE}/api/learning`, { cache: 'no-cache' }, 2000);
             if (res.ok) {
                 const data = await res.json();
                 if (data && Array.isArray(data.posts)) {
@@ -774,7 +743,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 1. 백엔드 API 호출 (4.5초 타임아웃: Render 콜드 슬립 시 UI 지연 방지)
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 4500);
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
             const response = await fetch(API_URL, { cache: 'no-cache', signal: controller.signal });
             clearTimeout(timeoutId);
             if (response.ok) {
@@ -792,9 +761,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. GitHub Raw 최신 theme_cache.json 병행 비교 (캐시버스팅 + 최신 타임스탬프 우선 채택)
         const cacheBuster = Date.now();
         const rawUrls = [
-            `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/theme_cache.json?t=${cacheBuster}`,
+            'data/theme_cache.json',
+            '/data/theme_cache.json',
             `https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/theme_cache.json?t=${cacheBuster}`,
-            'data/theme_cache.json'
+            `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/theme_cache.json?t=${cacheBuster}`
         ];
         for (const rUrl of rawUrls) {
             try {
@@ -1943,60 +1913,55 @@ document.addEventListener('DOMContentLoaded', () => {
         let stocks = null;
 
         // 1단계: 백엔드 API 시도
-        const candidateUrls = [
-            `${API_BASE}/api/themes/detail?name=${encodeURIComponent(themeName)}`,
-            `${API_URL}/${encodeURIComponent(themeName)}`
-        ];
-
-        for (const url of candidateUrls) {
-            try {
-                const res = await fetch(url);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data && data.stocks && data.stocks.length > 0) {
-                        stocks = data.stocks;
-                        break;
+        // 1단계: 초고속 정적 CDN / 로컬 theme_details.json 최우선 매칭 (0~30ms 로딩)
+        try {
+            const store = await getThemeDetailsStore();
+            if (store) {
+                if (store[themeName]) {
+                    stocks = store[themeName];
+                } else if (store[themeName.trim()]) {
+                    stocks = store[themeName.trim()];
+                } else {
+                    const cleanStr = s => (s || '').replace(/[\s\/\(\)\[\]\-_]/g, '').toLowerCase();
+                    const normTarget = cleanStr(themeName);
+                    for (const [key, val] of Object.entries(store)) {
+                        if (cleanStr(key) === normTarget) {
+                            stocks = val;
+                            break;
+                        }
                     }
-                }
-            } catch (e) {
-                // 다음 시도
-            }
-        }
-
-        // 2단계: 글로벌 프리페치 저장소 및 다단계 CDN 풀백
-        if (!stocks) {
-            try {
-                const store = await getThemeDetailsStore();
-                if (store) {
-                    // 1) 정확한 키 일치
-                    if (store[themeName]) {
-                        stocks = store[themeName];
-                    } else if (store[themeName.trim()]) {
-                        stocks = store[themeName.trim()];
-                    } else {
-                        // 2) 공백/슬래시/특수문자/대소문자 정규화 일치
-                        const cleanStr = s => (s || '').replace(/[\s\/\(\)\[\]\-_]/g, '').toLowerCase();
-                        const normTarget = cleanStr(themeName);
+                    if (!stocks) {
                         for (const [key, val] of Object.entries(store)) {
-                            if (cleanStr(key) === normTarget) {
+                            const normKey = cleanStr(key);
+                            if (normKey.includes(normTarget) || normTarget.includes(normKey)) {
                                 stocks = val;
                                 break;
                             }
                         }
-                        // 3) 부분 포함 일치 (예: 미디어(방송/신문) vs 미디어)
-                        if (!stocks) {
-                            for (const [key, val] of Object.entries(store)) {
-                                const normKey = cleanStr(key);
-                                if (normKey.includes(normTarget) || normTarget.includes(normKey)) {
-                                    stocks = val;
-                                    break;
-                                }
-                            }
-                        }
                     }
                 }
-            } catch (cdnErr) {
-                console.warn('CDN theme details fallback error:', cdnErr);
+            }
+        } catch (cdnErr) {
+            console.warn('CDN theme details store error:', cdnErr);
+        }
+
+        // 2단계: 정적 캐시에 없는 신규 테마인 경우에만 백엔드 API 시도 (2초 타임아웃)
+        if (!stocks) {
+            const candidateUrls = [
+                `${API_BASE}/api/themes/detail?name=${encodeURIComponent(themeName)}`,
+                `${API_URL}/${encodeURIComponent(themeName)}`
+            ];
+            for (const url of candidateUrls) {
+                try {
+                    const res = await fetchWithTimeout(url, {}, 2000);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.stocks && data.stocks.length > 0) {
+                            stocks = data.stocks;
+                            break;
+                        }
+                    }
+                } catch (e) {}
             }
         }
 
