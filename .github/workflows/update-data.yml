@@ -2,12 +2,14 @@ name: Update Theme Data
 
 on:
   schedule:
-    # 1) 평일 장중 1시간 단위 집중 갱신 (월~금 KST 09:15 ~ 16:15, 매시 15분 총 8회)
-    - cron: '15 0-7 * * 1-5'
-    # 2) 평일 장 마감 후 저녁 정산 2회 (월~금 KST 18:15, 21:15)
-    - cron: '15 9,12 * * 1-5'
-    # 3) 주말 최소화 점검 1회 (토~일 KST 10:15)
-    - cron: '15 1 * * 0,6'
+    # 1) 평일 아침 08:18 KST (일~목 UTC 23:18 = 월~금 KST 08:18)
+    - cron: '18 23 * * 0-4'
+    # 2) 평일 장전·장중 09:18 ~ 14:18 KST (월~금 UTC 00:18 ~ 05:18, 매시 18분)
+    - cron: '18 0,1,2,3,4,5 * * 1-5'
+    # 3) 평일 장마감·시간외·야간 15:18 ~ 20:18 KST + 21:18 최종 정산 (월~금 UTC 06:18 ~ 12:18, 매시 18분)
+    - cron: '18 6,7,8,9,10,11,12 * * 1-5'
+    # 4) 주말 정기 점검 2회 (토~일 KST 10:18, 18:18)
+    - cron: '18 1,9 * * 0,6'
   workflow_dispatch:       # 수동으로도 실행 가능하게
 
 permissions:
@@ -31,7 +33,9 @@ jobs:
 
       - name: Run update script
         working-directory: dajavata_backend
-        run: python update_themes.py
+        run: |
+          python update_themes.py
+          python update_quant_hub.py || true
 
       - name: Sync data to all directories
         run: |
