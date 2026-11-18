@@ -40,24 +40,54 @@ stock_list = []
 
 def load_stocks_sync():
     global stock_list
-    print("Loading KRX stock list...")
+    print("Loading KRX stock list...", flush=True)
+    # 1차: 로컬 all_stocks.json 캐시에서 0.01초 만에 초고속 로드 (Render 부팅 시 포트 바인딩 지연 원천 차단)
+    for cand in [
+        os.path.join(os.path.dirname(__file__), "data", "all_stocks.json"),
+        "data/all_stocks.json",
+        "dajavata_backend/data/all_stocks.json",
+        "../data/all_stocks.json"
+    ]:
+        if os.path.exists(cand) and os.path.getsize(cand) > 1000:
+            try:
+                with open(cand, "r", encoding="utf-8") as f:
+                    cached_stocks = json.load(f)
+                if isinstance(cached_stocks, list) and len(cached_stocks) > 100:
+                    stock_list = [
+                        {
+                            "code": str(s.get("code", "")),
+                            "name": str(s.get("name", "")),
+                            "market": str(s.get("market", "KRX"))
+                        }
+                        for s in cached_stocks if s.get("code")
+                    ]
+                    print(f"Loaded {len(stock_list)} stocks instantly from local cache ({cand}).", flush=True)
+                    return
+            except Exception as ce:
+                print(f"Local stock cache read warning ({cand}): {ce}", flush=True)
+
+    # 2차: 캐시 파일이 없을 때만 네트워크 API 폴백
     try:
         from fdr_fallback import StockListing
         df = StockListing('KRX')
-        # Keep only standard stocks (filter out spacc, etc if needed, but for now take all)
         for _, row in df.iterrows():
             stock_list.append({
                 "code": str(row['Code']),
                 "name": str(row['Name']),
                 "market": str(row['Market'])
             })
-        print(f"Loaded {len(stock_list)} stocks.")
+        print(f"Loaded {len(stock_list)} stocks from API.", flush=True)
     except Exception as e:
-        print("Failed to load stocks:", e)
+        print("Failed to load stocks:", e, flush=True)
 
 async def periodic_update():
-    print("!!! periodic_update 시작됨 (평일 08:15~20:15 매시 15분 자동 갱신) !!!", flush=True)
-    await asyncio.sleep(5)
+    print("!!! periodic_update 대기 시작 (Render 포트 스캔 통과를 위해 부팅 후 180초 대기) !!!", flush=True)
+    await asyncio.sleep(180)
+    # Render 무료 인스턴스(512MB RAM)에서는 무거운 전체 크롤링(update_themes.py)을 GitHub Actions에 위임하여 OOM 및 타임아웃 방지
+    if os.getenv("RENDER"):
+        print("[Render Mode] Heavy batch updates are delegated to GitHub Actions; keeping web worker lightweight.", flush=True)
+        return
+
     last_run_hour_key = None
     while True:
         try:

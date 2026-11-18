@@ -30,11 +30,11 @@ def StockListing(market='KRX'):
         page_size = 100
         while True:
             url = f'https://m.stock.naver.com/api/stocks/marketValue/{m}?page={page}&pageSize={page_size}'
-            r = requests.get(url, headers=headers)
             try:
+                r = requests.get(url, headers=headers, timeout=5)
                 res = r.json()
             except Exception as e:
-                print(f"Error fetching Naver API page {page}: {r.text[:200]}")
+                print(f"Error fetching Naver API page {page}: {e}")
                 break
                 
             stocks = res.get('stocks', [])
