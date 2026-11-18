@@ -12,19 +12,10 @@ import requests
 import xml.etree.ElementTree as ET
 import json
 import os
-import pandas as pd
-import numpy as np
-import io
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
-import FinanceDataReader as fdr
 import datetime
 import time
 import asyncio
 from dotenv import load_dotenv
-
-from update_themes import main as update_themes_main
 
 load_dotenv()
 
@@ -119,6 +110,7 @@ async def periodic_update():
             if should_run:
                 last_run_hour_key = hour_key
                 print(f"[{kst_now.strftime('%Y-%m-%d %H:%M:%S')} KST] Starting scheduled background update (themes, stocks & quant hub)...", flush=True)
+                from update_themes import main as update_themes_main
                 await update_themes_main()
                 try:
                     from update_quant_hub import main as update_quant_hub_main
@@ -135,8 +127,9 @@ async def periodic_update():
 @app.on_event("startup")
 async def startup_event():
     global background_task_ref
+    print(">>> DAJAVATA FastAPI Server Ready & Listening on Port! <<<", flush=True)
     loop = asyncio.get_running_loop()
-    loop.run_in_executor(None, load_stocks_sync)
+    loop.call_later(2.0, lambda: loop.run_in_executor(None, load_stocks_sync))
     background_task_ref = asyncio.create_task(periodic_update())
 
 app.add_middleware(
@@ -701,7 +694,18 @@ def delete_learning_post(req: AdminDeletePostRequest):
 
     return {"success": True, "deleted_id": req.id, "total": len(posts)}
 
+def is_valid_num(val):
+    if val is None:
+        return False
+    try:
+        f = float(val)
+        return not (math.isnan(f) or math.isinf(f))
+    except Exception:
+        return False
+
 def setup_korean_font():
+    import matplotlib.pyplot as plt
+    import matplotlib.font_manager as fm
     font_names = ['Malgun Gothic', '맑은 고딕', 'NanumGothic', '나눔고딕', 'AppleGothic', 'DejaVu Sans']
     system_fonts = [f.name for f in fm.fontManager.ttflist]
     selected_font = None
@@ -717,6 +721,7 @@ def setup_korean_font():
     return selected_font
 
 def fetch_stock_data(symbol: str, count: int = 300):
+    import pandas as pd
     url = f"https://fchart.stock.naver.com/sise.nhn?symbol={symbol}&timeframe=day&count={count}&requestType=0"
     res = requests.get(url, timeout=5)
     res.raise_for_status()
@@ -756,6 +761,7 @@ def compute_hts_rsi(series, period=14):
 
 @app.get("/api/chart/smc")
 def get_smc_data(symbol: str):
+    import numpy as np
     df = fetch_stock_data(symbol, count=300)
     if df is None:
         raise HTTPException(status_code=404, detail="Stock not found")
@@ -857,6 +863,9 @@ def get_zigzags(df, pct_change=0.15):
 
 @app.get("/api/chart/auto")
 def get_auto_chart(symbol: str):
+    import io
+    import matplotlib
+    import matplotlib.pyplot as plt
     df = fetch_stock_data(symbol, count=400)
     if df is None:
         raise HTTPException(status_code=404, detail="Stock not found")
@@ -952,6 +961,8 @@ def calculate_theme_metrics():
     """
     Fetches data using FinanceDataReader (No API Key Required) and calculates metrics for the frontend table.
     """
+    import pandas as pd
+    import FinanceDataReader as fdr
     results = []
     
     # Fetch 3 years of data
@@ -1036,9 +1047,9 @@ def calculate_theme_metrics():
                 "low3yPos": bool(low_3y_pct >= 0),
                 "neglect3y": str(neglect_3y),
                 "expReturn": f"{exp_return:.0f}%",
-                "rsi_d": f"{rsi_d:.1f}" if pd.notna(rsi_d) else "-",
-                "rsi_w": f"{rsi_w:.1f}" if pd.notna(rsi_w) else "-",
-                "rsi_m": f"{rsi_m:.1f}" if pd.notna(rsi_m) else "-",
+                "rsi_d": f"{rsi_d:.1f}" if is_valid_num(rsi_d) else "-",
+                "rsi_w": f"{rsi_w:.1f}" if is_valid_num(rsi_w) else "-",
+                "rsi_m": f"{rsi_m:.1f}" if is_valid_num(rsi_m) else "-",
                 "update": datetime.datetime.now().strftime("%m.%d")
             })
         except Exception as e:
@@ -1187,21 +1198,21 @@ def get_themes():
                             "name": t.get("name", ""),
                             "theme_id": t.get("theme_id", ""),
                             "desc": f"{t.get('name', '')} 테마 구성종목 평균 데이터입니다.",
-                            "day1": f"{d1:+.2f}%" if pd.notna(d1) else "-",
-                            "day1Pos": bool(d1 >= 0) if pd.notna(d1) else True,
-                            "day3": f"{d3:+.2f}%" if pd.notna(d3) else "-",
-                            "day3Pos": bool(d3 >= 0) if pd.notna(d3) else True,
-                            "high52": f"{h52:+.1f}%" if pd.notna(h52) else "-",
-                            "high52Pos": bool(h52 >= 0) if pd.notna(h52) else True,
-                            "low52": f"{l52:+.1f}%" if pd.notna(l52) else "-",
-                            "low52Pos": bool(l52 >= 0) if pd.notna(l52) else True,
-                            "neglect52": f"{n52:.0f}" if pd.notna(n52) else "-",
-                            "high3y": f"{h3y:+.1f}%" if pd.notna(h3y) else "-",
-                            "high3yPos": bool(h3y >= 0) if pd.notna(h3y) else True,
-                            "low3y": f"{l3y:+.1f}%" if pd.notna(l3y) else "-",
-                            "low3yPos": bool(l3y >= 0) if pd.notna(l3y) else True,
-                            "neglect3y": f"{n3y:.0f}" if pd.notna(n3y) else "-",
-                            "expReturn": f"{exp:.0f}%" if pd.notna(exp) else "-",
+                            "day1": f"{d1:+.2f}%" if is_valid_num(d1) else "-",
+                            "day1Pos": bool(d1 >= 0) if is_valid_num(d1) else True,
+                            "day3": f"{d3:+.2f}%" if is_valid_num(d3) else "-",
+                            "day3Pos": bool(d3 >= 0) if is_valid_num(d3) else True,
+                            "high52": f"{h52:+.1f}%" if is_valid_num(h52) else "-",
+                            "high52Pos": bool(h52 >= 0) if is_valid_num(h52) else True,
+                            "low52": f"{l52:+.1f}%" if is_valid_num(l52) else "-",
+                            "low52Pos": bool(l52 >= 0) if is_valid_num(l52) else True,
+                            "neglect52": f"{n52:.0f}" if is_valid_num(n52) else "-",
+                            "high3y": f"{h3y:+.1f}%" if is_valid_num(h3y) else "-",
+                            "high3yPos": bool(h3y >= 0) if is_valid_num(h3y) else True,
+                            "low3y": f"{l3y:+.1f}%" if is_valid_num(l3y) else "-",
+                            "low3yPos": bool(l3y >= 0) if is_valid_num(l3y) else True,
+                            "neglect3y": f"{n3y:.0f}" if is_valid_num(n3y) else "-",
+                            "expReturn": f"{exp:.0f}%" if is_valid_num(exp) else "-",
                             "rsi_d": "-",
                             "rsi_w": "-",
                             "rsi_m": "-",
@@ -1232,6 +1243,7 @@ def get_themes():
                     theme_details_map = json.load(f)
                 if theme_details_map and len(theme_details_map) > 0:
                     formatted_themes = []
+                    import pandas as pd
                     for t_name, stocks in theme_details_map.items():
                         if not stocks:
                             continue
@@ -1249,21 +1261,21 @@ def get_themes():
                             "name": t_name,
                             "theme_id": "",
                             "desc": f"{t_name} 테마 구성종목 평균 데이터입니다.",
-                            "day1": f"{d1:+.2f}%" if pd.notna(d1) else "-",
-                            "day1Pos": bool(d1 >= 0) if pd.notna(d1) else True,
-                            "day3": f"{d3:+.2f}%" if pd.notna(d3) else "-",
-                            "day3Pos": bool(d3 >= 0) if pd.notna(d3) else True,
-                            "high52": f"{h52:+.1f}%" if pd.notna(h52) else "-",
-                            "high52Pos": bool(h52 >= 0) if pd.notna(h52) else True,
-                            "low52": f"{l52:+.1f}%" if pd.notna(l52) else "-",
-                            "low52Pos": bool(l52 >= 0) if pd.notna(l52) else True,
-                            "neglect52": f"{n52:.0f}" if pd.notna(n52) else "-",
-                            "high3y": f"{h3y:+.1f}%" if pd.notna(h3y) else "-",
-                            "high3yPos": bool(h3y >= 0) if pd.notna(h3y) else True,
-                            "low3y": f"{l3y:+.1f}%" if pd.notna(l3y) else "-",
-                            "low3yPos": bool(l3y >= 0) if pd.notna(l3y) else True,
-                            "neglect3y": f"{n3y:.0f}" if pd.notna(n3y) else "-",
-                            "expReturn": f"{exp:.0f}%" if pd.notna(exp) else "-",
+                            "day1": f"{d1:+.2f}%" if is_valid_num(d1) else "-",
+                            "day1Pos": bool(d1 >= 0) if is_valid_num(d1) else True,
+                            "day3": f"{d3:+.2f}%" if is_valid_num(d3) else "-",
+                            "day3Pos": bool(d3 >= 0) if is_valid_num(d3) else True,
+                            "high52": f"{h52:+.1f}%" if is_valid_num(h52) else "-",
+                            "high52Pos": bool(h52 >= 0) if is_valid_num(h52) else True,
+                            "low52": f"{l52:+.1f}%" if is_valid_num(l52) else "-",
+                            "low52Pos": bool(l52 >= 0) if is_valid_num(l52) else True,
+                            "neglect52": f"{n52:.0f}" if is_valid_num(n52) else "-",
+                            "high3y": f"{h3y:+.1f}%" if is_valid_num(h3y) else "-",
+                            "high3yPos": bool(h3y >= 0) if is_valid_num(h3y) else True,
+                            "low3y": f"{l3y:+.1f}%" if is_valid_num(l3y) else "-",
+                            "low3yPos": bool(l3y >= 0) if is_valid_num(l3y) else True,
+                            "neglect3y": f"{n3y:.0f}" if is_valid_num(n3y) else "-",
+                            "expReturn": f"{exp:.0f}%" if is_valid_num(exp) else "-",
                             "rsi_d": "-",
                             "rsi_w": "-",
                             "rsi_m": "-",
