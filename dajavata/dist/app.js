@@ -240,13 +240,13 @@ document.addEventListener('DOMContentLoaded', () => {
             console.warn('API fundamentals fetch failed, trying static fallbacks...', e);
         }
 
-        // 2. 로컬 및 CDN 정적 JSON 폴백
-        const cacheBuster = Date.now();
+        // 2. GitHub Raw 최신 자동 갱신 캐시 최우선 조회 (GitHub Actions가 매시간 갱신하는 최신본 우선 적용)
+        const cacheBuster = Math.floor(Date.now() / 180000);
         const fallbackUrls = [
+            `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/all_stocks.json?t=${cacheBuster}`,
             'data/all_stocks.json',
             '/data/all_stocks.json',
-            `https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/all_stocks.json?t=${cacheBuster}`,
-            `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/all_stocks.json?t=${cacheBuster}`
+            `https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/all_stocks.json?t=${cacheBuster}`
         ];
 
         for (const url of fallbackUrls) {
@@ -458,10 +458,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (themeDetailsStorePromise) return themeDetailsStorePromise;
 
         themeDetailsStorePromise = (async () => {
+            const cb = Math.floor(Date.now() / 180000);
             const cdnUrls = [
+                `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/theme_details.json?t=${cb}`,
                 'data/theme_details.json',
                 '/data/theme_details.json',
-                'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/theme_details.json',
                 'https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/theme_details.json',
                 'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/dajavata_backend/data/theme_details.json',
                 'https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/dajavata_backend/data/theme_details.json'

@@ -169,33 +169,178 @@
         }
     };
 
-    // 데이터 로드 (정적 JSON 캐시 -> 백엔드 API 순차 폴백)
-    async function ensureDataLoaded() {
-        if (state.cache) return state.cache;
-        state.loading = true;
-        const urls = [
-            'data/quant_hub_cache.json',
-            '/data/quant_hub_cache.json',
-            `${API_BASE}/api/quant/hub`,
-            'https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/quant_hub_cache.json',
-            'https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/quant_hub_cache.json'
-        ];
-        for (const u of urls) {
-            try {
-                const res = await fetch(u, { cache: 'no-cache' });
-                if (res.ok) {
-                    const txt = await res.text();
-                    if (!txt.trim().startsWith('<')) {
-                        const parsed = JSON.parse(txt);
-                        if (parsed && parsed.rising) {
-                            state.cache = parsed;
-                            state.loading = false;
-                            return state.cache;
-                        }
-                    }
+    // KST 기준 현재 슬롯 시각 포맷 헬퍼 (평일 08:15 ~ 20:15 매시 15분 정기 슬롯 동기화)
+    function formatEffectiveQuantUpdateTime(rawUpdatedStr) {
+        const nowBase = new Date();
+        const nowUtc = nowBase.getTime() + (nowBase.getTimezoneOffset() * 60000);
+        const nowKst = new Date(nowUtc + (9 * 3600000));
+        const day = nowKst.getDay();
+
+        let slotKst = null;
+        if (day >= 1 && day <= 5) {
+            const hr = nowKst.getHours();
+            const mi = nowKst.getMinutes();
+            if (hr > 20 || (hr === 20 && mi >= 15)) {
+                slotKst = new Date(nowKst.getFullYear(), nowKst.getMonth(), nowKst.getDate(), 20, 15, 0);
+            } else if (hr > 8 || (hr === 8 && mi >= 15)) {
+                const slotHr = mi >= 15 ? hr : (hr - 1);
+                slotKst = new Date(nowKst.getFullYear(), nowKst.getMonth(), nowKst.getDate(), slotHr, 15, 0);
+            } else {
+                const prevDay = new Date(nowKst);
+                const daysBack = (day === 1) ? 3 : 1;
+                prevDay.setDate(prevDay.getDate() - daysBack);
+                slotKst = new Date(prevDay.getFullYear(), prevDay.getMonth(), prevDay.getDate(), 20, 15, 0);
+            }
+        } else {
+            const prevFri = new Date(nowKst);
+            const daysBack = (day === 0) ? 2 : 1;
+            prevFri.setDate(prevFri.getDate() - daysBack);
+            slotKst = new Date(prevFri.getFullYear(), prevFri.getMonth(), prevFri.getDate(), 20, 15, 0);
+        }
+
+        let targetDt = slotKst || nowKst;
+        if (rawUpdatedStr) {
+            const parsed = new Date(String(rawUpdatedStr).replace(' ', 'T'));
+            if (!isNaN(parsed.getTime()) && parsed.getTime() > targetDt.getTime()) {
+                targetDt = parsed;
+            }
+        }
+        const yyyy = targetDt.getFullYear();
+        const mm = String(targetDt.getMonth() + 1).padStart(2, '0');
+        const dd = String(targetDt.getDate()).padStart(2, '0');
+        const hh = String(targetDt.getHours()).padStart(2, '0');
+        const mi = String(targetDt.getMinutes()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd} ${hh}:${mi} (KST)`;
+    }
+
+    // 최신 window.allStocks가 로드되어 있으면 국내(KR) 퀀트 종목들의 현재가/등락률/지표를 실시간 최신화
+    function syncKrQuantWithLatestStocks(cacheObj) {
+        if (!cacheObj) return;
+        const stocks = window.allStocks || [];
+        if (!Array.isArray(stocks) || stocks.length < 50) return;
+
+        const smap = new Map();
+        stocks.forEach(s => {
+            if (s && s.code) smap.set(String(s.code), s);
+        });
+
+        // 1) KR Rising
+        const krRising = cacheObj.rising && cacheObj.rising.kr;
+        if (krRising) {
+            const patchRisingRow = (r) => {
+                const st = smap.get(String(r.s || r.code || ''));
+                if (st && st.current_price > 0) {
+                    r.price = st.current_price;
+                    if (st.day1 != null) r.day1 = Number(st.day1);
+                    if (st.day3 != null) r.day3 = Number(st.day3);
+                    if (st.marcap > 0) r.marcap = st.marcap;
+                    if (st.PER != null) r.PER = Number(st.PER);
+                    if (st.PBR != null) r.PBR = Number(st.PBR);
                 }
+            };
+            (krRising.top || []).forEach(patchRisingRow);
+            Object.values(krRising.lists || {}).forEach(arr => {
+                if (Array.isArray(arr)) arr.forEach(patchRisingRow);
+            });
+        }
+
+        // 2) KR Promising
+        const krProm = cacheObj.promising && cacheObj.promising.kr;
+        if (Array.isArray(krProm)) {
+            krProm.forEach(r => {
+                const st = smap.get(String(r.s || ''));
+                if (st && st.current_price > 0) {
+                    r.px = st.current_price;
+                    if (st.day1 != null) r.chg = Number(st.day1);
+                    if (st.marcap > 0) r.mc = st.marcap;
+                    if (st.low52 != null && st.low52 < 0) r.fh = Number(st.low52);
+                }
+            });
+        }
+
+        // 3) KR Market View
+        const krMv = cacheObj.market_view && cacheObj.market_view.kr;
+        if (Array.isArray(krMv)) {
+            krMv.forEach(r => {
+                const st = smap.get(String(r.ticker || ''));
+                if (st && st.current_price > 0) {
+                    r.price = st.current_price;
+                    if (st.day1 != null) r.chg = Number(st.day1);
+                    if (st.marcap > 0) r.marketCap = st.marcap;
+                }
+            });
+        }
+
+        // 4) KR Guru Holdings
+        const krGurus = cacheObj.guru && cacheObj.guru.kr;
+        if (Array.isArray(krGurus)) {
+            krGurus.forEach(g => {
+                (g.holdings || []).forEach(h => {
+                    const st = smap.get(String(h.symbol || ''));
+                    if (st && st.current_price > 0) {
+                        h.price = st.current_price;
+                        if (st.day1 != null) h.chg = Number(st.day1);
+                    }
+                });
+            });
+        }
+    }
+
+    // 데이터 로드 (로컬/GitHub Raw/백엔드 중 updated_at이 가장 최신인 캐시를 자동 선택 + 실시간 주가 패치)
+    async function ensureDataLoaded() {
+        if (state.cache) {
+            syncKrQuantWithLatestStocks(state.cache);
+            return state.cache;
+        }
+        state.loading = true;
+        const cb = Math.floor(Date.now() / 180000); // 3분 단위 캐시 버스터
+        const urls = [
+            `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/quant_hub_cache.json?t=${cb}`,
+            `data/quant_hub_cache.json?t=${cb}`,
+            `/data/quant_hub_cache.json?t=${cb}`,
+            `${API_BASE}/api/quant/hub`,
+            `https://cdn.jsdelivr.net/gh/sjsks1/dajavata-backend@main/data/quant_hub_cache.json?t=${cb}`
+        ];
+
+        const fetchCandidate = async (u) => {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 3500);
+            try {
+                const res = await fetch(u, { cache: 'no-cache', signal: ctrl.signal });
+                if (!res.ok) return null;
+                const txt = await res.text();
+                if (txt.trim().startsWith('<')) return null;
+                const parsed = JSON.parse(txt);
+                if (parsed && parsed.rising) return parsed;
             } catch (e) {
-                // 다음 폴백 시도
+                return null;
+            } finally {
+                clearTimeout(tid);
+            }
+            return null;
+        };
+
+        // 상위 2개 소스(GitHub Raw 최신본 vs 로컬 정적 파일)를 병렬 조회하여 updated_at이 더 최신인 데이터를 채택
+        try {
+            const fastResults = await Promise.all([fetchCandidate(urls[0]), fetchCandidate(urls[1])]);
+            const validFast = fastResults.filter(Boolean);
+            if (validFast.length > 0) {
+                validFast.sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+                state.cache = validFast[0];
+                syncKrQuantWithLatestStocks(state.cache);
+                state.loading = false;
+                return state.cache;
+            }
+        } catch (e) {}
+
+        // 만약 상위 2개가 모두 실패하면 나머지 폴백 순차 시도
+        for (let i = 2; i < urls.length; i++) {
+            const parsed = await fetchCandidate(urls[i]);
+            if (parsed) {
+                state.cache = parsed;
+                syncKrQuantWithLatestStocks(state.cache);
+                state.loading = false;
+                return state.cache;
             }
         }
         state.loading = false;
@@ -205,7 +350,8 @@
     // 상단 공통 헤더 및 8대 모듈 네비게이션 렌더링
     function renderTopHeader() {
         const meta = MODULE_META[state.currentTab] || MODULE_META['quant-rising'];
-        const updatedStr = (state.cache && state.cache.updated_at) ? state.cache.updated_at : '실시간 연동';
+        const rawUpd = (state.cache && state.cache.updated_at) ? state.cache.updated_at : '';
+        const updatedStr = formatEffectiveQuantUpdateTime(rawUpd);
 
         const tabs = [
             { id: 'quant-rising', icon: 'ph-lightning', label: '급등 초입 포착' },
@@ -938,6 +1084,46 @@
         return `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     }
 
+    // 오늘 KST 날짜 문자열 ('YYYY-MM-DD') 반환 헬퍼
+    function getTodayKstDateStr() {
+        const nowBase = new Date();
+        const nowUtc = nowBase.getTime() + (nowBase.getTimezoneOffset() * 60000);
+        const nowKst = new Date(nowUtc + (9 * 3600000));
+        return `${nowKst.getFullYear()}-${String(nowKst.getMonth() + 1).padStart(2, '0')}-${String(nowKst.getDate()).padStart(2, '0')}`;
+    }
+
+    // 미국 거시경제(Economic) 서머타임 중복 행 자동 병합 헬퍼 (actual 발표치가 있는 행 우선)
+    function deduplicateEconomicRows(rows) {
+        if (!Array.isArray(rows)) return [];
+        const dedupMap = new Map();
+        const orderKeys = [];
+        rows.forEach(r => {
+            const dtPart = String(r.t || '').slice(0, 10);
+            const evName = String(r.event || '').trim();
+            if (!dtPart || !evName) return;
+            const key = `${dtPart}|${evName}`;
+            if (!dedupMap.has(key)) {
+                dedupMap.set(key, { ...r });
+                orderKeys.push(key);
+            } else {
+                const existing = dedupMap.get(key);
+                if (r.actual != null && existing.actual == null) {
+                    dedupMap.set(key, {
+                        ...r,
+                        previous: r.previous != null ? r.previous : existing.previous,
+                        estimate: r.estimate != null ? r.estimate : existing.estimate,
+                        unit: r.unit || existing.unit
+                    });
+                } else {
+                    if (existing.previous == null && r.previous != null) existing.previous = r.previous;
+                    if (existing.estimate == null && r.estimate != null) existing.estimate = r.estimate;
+                    if (!existing.unit && r.unit) existing.unit = r.unit;
+                }
+            }
+        });
+        return orderKeys.map(k => dedupMap.get(k));
+    }
+
     function buildKrCalendarForMonth(year, month) {
         // 연도와 월에 맞춰 자동으로 날짜(평일/옵션만기일 등)를 계산하여 국내 5대 증시 일정을 동적 생성
         const qLabel = month <= 3 ? '4Q/연간' : (month <= 6 ? '1Q' : (month <= 9 ? '2Q' : '3Q'));
@@ -946,6 +1132,46 @@
         const bokDay = getNthWeekdayOfMonth(year, month, 4, 3); // 세 번째 목요일 = 금통위/통화정책 점검
         const dtOpt = `${year}-${String(month).padStart(2, '0')}-${String(optDay).padStart(2, '0')}`;
         const dtBok = `${year}-${String(month).padStart(2, '0')}-${String(bokDay).padStart(2, '0')}`;
+        const todayStr = getTodayKstDateStr();
+
+        // window.allStocks가 로드되어 있으면 발표일 지난 국내 종목에 실제 확정 지표(현재가, 등락률, PER, PBR, EPS) 자동 병합
+        const stockMap = new Map();
+        if (Array.isArray(window.allStocks)) {
+            window.allStocks.forEach(s => {
+                if (s && s.code) stockMap.set(String(s.code), s);
+            });
+        }
+        const enrichKrEvent = (ev) => {
+            const isPast = ev.date < todayStr;
+            if (ev.code && ev.code !== 'MACRO') {
+                const st = stockMap.get(String(ev.code));
+                if (isPast && st) {
+                    const pxStr = st.current_price ? Math.round(st.current_price).toLocaleString('ko-KR') + '원' : '';
+                    const perStr = st.PER ? `PER ${Number(st.PER).toFixed(1)}배` : '';
+                    const pbrStr = st.PBR ? `PBR ${Number(st.PBR).toFixed(2)}배` : '';
+                    const epsStr = st.EPS ? `확정 EPS ${Math.round(Number(st.EPS)).toLocaleString('ko-KR')}원` : '';
+                    const metrics = [pxStr ? `종가 ${pxStr}` : '', epsStr, perStr, pbrStr].filter(Boolean).join(' · ');
+                    return {
+                        ...ev,
+                        badge: `${ev.badge} (발표완료)`,
+                        sub: metrics ? `[발표 완료] ${metrics} | ${ev.sub}` : `[발표 완료] ${ev.sub}`
+                    };
+                } else if (isPast) {
+                    return {
+                        ...ev,
+                        badge: `${ev.badge} (발표완료)`,
+                        sub: `[발표 완료] ${ev.sub}`
+                    };
+                }
+            } else if (isPast) {
+                return {
+                    ...ev,
+                    badge: `${ev.badge} (발표완료)`,
+                    sub: `[일정 완료] ${ev.sub}`
+                };
+            }
+            return ev;
+        };
 
         const earnings = [
             { date: clampBusinessDay(year, month, 7), code: '005930', name: '삼성전자', when: 'pre', title: `삼성전자 (005930) ${qLabel} 잠정실적 및 가이던스`, sub: '반도체(DS)·디스플레이·MX 부문 영업이익 컨센서스 점검', badge: '잠정실적', key: true },
@@ -963,7 +1189,7 @@
             { date: clampBusinessDay(year, month, 30), code: '005930', name: '삼성전자', when: 'pre', title: `삼성전자 (005930) 사업부별 확정 실적 및 컨퍼런스콜`, sub: 'DS(반도체)·SDC·MX 사업부별 세부 손익 및 CAPEX 발표', badge: '컨퍼런스콜', key: true },
             { date: clampBusinessDay(year, month, 30), code: '034020', name: '두산에너빌리티', when: 'post', title: `두산에너빌리티 (034020) ${qLabel} 실적 및 원전/SMR 수주 점검`, sub: '체코 원전 및 북미 SMR 기자재 수주 파이프라인 발표', badge: '확정실적', key: true },
             { date: clampBusinessDay(year, month, 31), code: '035420', name: 'NAVER', when: 'pre', title: `NAVER (035420) ${qLabel} 경영실적 컨퍼런스콜`, sub: '서치플랫폼 AI 광고 효율 개선 및 커머스 성장률 점검', badge: '장전발표', key: true }
-        ];
+        ].map(enrichKrEvent);
 
         const ipos = [
             { date: clampBusinessDay(year, month, 6), code: '475150', title: 'SK이터닉스 / 에너지 인프라 기관 의무보유 확약 점검', sub: '코스피 신재생·ESS·전력 테마 수급 이벤트', badge: '수급일정', key: true },
@@ -972,21 +1198,21 @@
             { date: clampBusinessDay(year, month, 24), code: '478440', title: '씨메스 (478440) AI 3D 비전 로봇 솔루션 상장 일정', sub: '지능형 로봇 솔루션 전문기업 (SKT·쿠팡 파트너)', badge: 'IPO상장', key: true },
             { date: clampBusinessDay(year, month, 28), code: '479880', title: '클로봇 (479880) 실내 자율주행 로봇 플랫폼 상장 일정', sub: '현대차·네이버 투자 자율주행 로봇 소프트웨어 기업', badge: 'IPO상장', key: true },
             { date: clampBusinessDay(year, month, 30), code: '481850', title: '에이럭스 / 탑런토탈솔루션 신규 상장 및 공모 일정', sub: '드론·로봇 에듀테크 및 전장 디스플레이 부품 공모주', badge: 'IPO상장', key: true }
-        ];
+        ].map(enrichKrEvent);
 
         const splits = [
             { date: clampBusinessDay(year, month, 10), code: '105560', title: 'KB금융 (105560) 자사주 매입·소각 이행 공시', sub: '코리아 밸류업 지수 핵심 편입 종목 주주환원 실행', badge: '자사주소각', key: true },
             { date: clampBusinessDay(year, month, 17), code: '138040', title: '메리츠금융지주 (138040) 주주환원 및 자사주 소각 점검', sub: '총주주수익률(TSR) 극대화 정책 기반 자사주 매입·소각', badge: '자사주소각', key: true },
             { date: clampBusinessDay(year, month, 23), code: '068270', title: '셀트리온 (068270) 자사주 추가 소각 및 주주가치 제고', sub: '주주가치 제고를 위한 자사주 소각 일정', badge: '자사주소각', key: true },
             { date: clampBusinessDay(year, month, 29), code: '086790', title: '하나금융지주 (086790) 자사주 소각 및 밸류업 공시', sub: '실적 발표와 함께 대규모 자사주 소각 결의', badge: '밸류업', key: true }
-        ];
+        ].map(enrichKrEvent);
 
         const dividends = [
             { date: clampBusinessDay(year, month, 4), code: '005930', title: '삼성전자 (005930) 분기배당 기준일 / 배당금 지급 점검', sub: '보통주 및 우선주(005935) 분기 정규 배당 일정', badge: '분기배당', key: true },
             { date: clampBusinessDay(year, month, 16), code: '005380', title: '현대차 (005380) 분기배당 기준일 및 우선주 배당 점검', sub: '배당성향 25% 이상 주주환원 정책 이행', badge: '분기배당', key: true },
             { date: clampBusinessDay(year, month, 21), code: '017670', title: 'SK텔레콤 (017670) 분기배당 및 고배당 통신주 배당 일정', sub: '고배당 대표 통신주 분기 배당 기준일 점검', badge: '고배당', key: true },
             { date: clampBusinessDay(year, month, 28), code: '105560', title: '4대 금융지주(KB·신한·하나·우리) 분기 균등배당 점검', sub: '분기 배당락 및 배당금 지급 예정일 확인', badge: '금융배당', key: true }
-        ];
+        ].map(enrichKrEvent);
 
         const economic = [
             { date: clampBusinessDay(year, month, 1), code: 'MACRO', title: `한국 ${prevMonth}월 수출입동향 발표 (산업통상자원부)`, sub: '반도체·자동차·선박 수출 증가율 및 무역수지 흑자 규모 확인', badge: '수출입지표', key: true },
@@ -995,15 +1221,15 @@
             { date: dtBok, code: 'MACRO', title: '한국은행 금융통화위원회 통화정책방향 / 기준금리 점검', sub: '국내 기준금리 및 가계부채·환율 관련 한은 총재 코멘트 확인', badge: '금통위(BOK)', key: true },
             { date: clampBusinessDay(year, month, 24), code: 'MACRO', title: '한국 실질 GDP 성장률 및 소비자동향지수(CSI) 발표', sub: '수출 및 설비투자 성장 기여도 점검', badge: 'GDP/경기', key: true },
             { date: clampBusinessDay(year, month, 30), code: 'MACRO', title: `한국 ${prevMonth}월 산업활동동향 및 반도체 재고순환지표`, sub: '광공업 생산 및 반도체 출하/재고 비율 확인', badge: '산업동향', key: true }
-        ];
+        ].map(enrichKrEvent);
 
         return { earnings, ipos, splits, dividends, economic };
     }
 
-    async function ensureCalendarMonthLoaded(year, month) {
+    async function ensureCalendarMonthLoaded(year, month, forceRefresh = false) {
         const ym = `${year}-${String(month).padStart(2, '0')}`;
         const calCache = (state.cache && state.cache.calendar && state.cache.calendar.months) || {};
-        if (calCache[ym] || state.calDynamicMonths[ym]) {
+        if (!forceRefresh && (calCache[ym] || state.calDynamicMonths[ym])) {
             render();
             return calCache[ym] || state.calDynamicMonths[ym];
         }
@@ -1014,7 +1240,13 @@
             if (res.ok) {
                 const data = await res.json();
                 if (data && data.ym) {
+                    if (Array.isArray(data.economic)) {
+                        data.economic = deduplicateEconomicRows(data.economic);
+                    }
                     state.calDynamicMonths[ym] = data;
+                    if (calCache[ym]) {
+                        calCache[ym] = data;
+                    }
                 }
             }
         } catch (e) {
@@ -1022,7 +1254,7 @@
         }
         state.calLoadingMonth = false;
         render();
-        return state.calDynamicMonths[ym] || null;
+        return state.calDynamicMonths[ym] || calCache[ym] || null;
     }
 
     function renderCalendarView() {
@@ -1030,6 +1262,7 @@
         const year = state.calYear;
         const month = state.calMonth;
         const ym = `${year}-${String(month).padStart(2, '0')}`;
+        const todayStr = getTodayKstDateStr();
         const monthNamesEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         const monthHeaderTitle = `${monthNamesEn[month - 1]} ${year} (${year}년 ${month}월)`;
 
@@ -1043,7 +1276,7 @@
 
         const calRoot = (state.cache && state.cache.calendar) || {};
         const monthsMap = calRoot.months || {};
-        const usMonthObj = monthsMap[ym] || state.calDynamicMonths[ym] || (calRoot.month === ym ? {
+        const usMonthObj = state.calDynamicMonths[ym] || monthsMap[ym] || (calRoot.month === ym ? {
             earnings: calRoot.us_earnings || [],
             ipos: calRoot.us_ipos || [],
             splits: calRoot.us_splits || [],
@@ -1051,10 +1284,21 @@
             economic: calRoot.us_economic || []
         } : null);
 
-        // 만약 US 모드에서 아직 캐시에 없는 연/월이면 백그라운드 자동 로드 트리거
-        if (mkt === 'US' && !usMonthObj && !state.calLoadingMonth && !state.calDynamicMonths[ym]) {
-            state.calDynamicMonths[ym] = { earnings: [], ipos: [], splits: [], dividends: [], economic: [], _fetching: true };
-            setTimeout(() => ensureCalendarMonthLoaded(year, month), 10);
+        // 1) 아직 캐시에 없는 연/월이면 백그라운드 자동 로드
+        // 2) 캐시에 있더라도 과거 날짜(date < todayStr)의 주요 실적(key && epsAct==null)이 미반영된 상태면 1회 실시간 갱신 호출
+        if (mkt === 'US' && !state.calLoadingMonth) {
+            if (!usMonthObj && !state.calDynamicMonths[ym]) {
+                state.calDynamicMonths[ym] = { earnings: [], ipos: [], splits: [], dividends: [], economic: [], _fetching: true };
+                setTimeout(() => ensureCalendarMonthLoaded(year, month, true), 10);
+            } else if (usMonthObj && !usMonthObj._liveSynced) {
+                const hasStalePastEarnings = (usMonthObj.earnings || []).some(
+                    e => e.key && e.date && e.date < todayStr && e.epsAct == null
+                );
+                if (hasStalePastEarnings) {
+                    usMonthObj._liveSynced = true;
+                    setTimeout(() => ensureCalendarMonthLoaded(year, month, true), 20);
+                }
+            }
         }
 
         const krMonthObj = buildKrCalendarForMonth(year, month);
@@ -1079,21 +1323,38 @@
         } else if (usMonthObj) {
             if (state.calCategory === 'earnings') {
                 exactDayCounts = usMonthObj.earnings_counts || {};
-                rawList = (usMonthObj.earnings || []).map(e => ({
-                    date: e.date,
-                    code: e.symbol,
-                    name: e.name || e.symbol,
-                    exchange: e.exchange || 'US',
-                    when: e.when || '',
-                    epsEst: e.epsEst,
-                    epsAct: e.epsAct,
-                    revEst: e.revEst,
-                    revAct: e.revAct,
-                    isKey: Boolean(e.key),
-                    title: `${e.name || e.symbol} (${e.symbol})`,
-                    sub: `EPS 예상: ${e.epsEst != null ? '$' + e.epsEst : '-'} / 실제: ${e.epsAct != null ? '$' + e.epsAct : '발표예정'} · 매출 예상: ${e.revEst ? fmtUSD(e.revEst) : '-'}`,
-                    badge: e.when === 'pre' ? 'Pre Market (장전)' : (e.when === 'post' ? 'Post Market (장후)' : 'Earnings')
-                }));
+                rawList = (usMonthObj.earnings || []).map(e => {
+                    const isPast = Boolean(e.date && e.date < todayStr);
+                    const estStr = e.epsEst != null ? '$' + e.epsEst : '-';
+                    let actStr = '발표예정';
+                    if (e.epsAct != null) {
+                        const beat = (e.epsEst != null && Number(e.epsAct) >= Number(e.epsEst));
+                        actStr = `$${e.epsAct}${e.epsEst != null ? (beat ? ' (Beat 🔥)' : ' (Miss ❄️)') : ''}`;
+                    } else if (isPast) {
+                        actStr = '집계완료 (공시참조)';
+                    }
+                    const revPart = e.revAct
+                        ? `매출 확정: ${fmtUSD(e.revAct)} (예상 ${e.revEst ? fmtUSD(e.revEst) : '-'})`
+                        : `매출 예상: ${e.revEst ? fmtUSD(e.revEst) : '-'}`;
+
+                    return {
+                        date: e.date,
+                        code: e.symbol,
+                        name: e.name || e.symbol,
+                        exchange: e.exchange || 'US',
+                        when: e.when || '',
+                        epsEst: e.epsEst,
+                        epsAct: e.epsAct,
+                        revEst: e.revEst,
+                        revAct: e.revAct,
+                        isKey: Boolean(e.key),
+                        title: `${e.name || e.symbol} (${e.symbol})`,
+                        sub: `EPS 예상: ${estStr} / 실제: ${actStr} · ${revPart}`,
+                        badge: e.epsAct != null
+                            ? (e.when === 'pre' ? '장전 (발표완료)' : (e.when === 'post' ? '장후 (발표완료)' : '발표완료'))
+                            : (e.when === 'pre' ? 'Pre Market (장전)' : (e.when === 'post' ? 'Post Market (장후)' : 'Earnings'))
+                    };
+                });
             } else if (state.calCategory === 'ipo') {
                 rawList = (usMonthObj.ipos || []).map(e => ({
                     date: e.date || e.d || '',
@@ -1129,17 +1390,31 @@
                     badge: e.yield ? `배당 ${Number(e.yield).toFixed(1)}%` : 'Dividend'
                 }));
             } else {
-                rawList = (usMonthObj.economic || []).map(e => {
+                const cleanEconomic = deduplicateEconomicRows(usMonthObj.economic || []);
+                rawList = cleanEconomic.map(e => {
                     const dtStr = String(e.t || '').slice(0, 10);
                     const tmStr = String(e.t || '').slice(11, 16);
+                    const isPast = Boolean(dtStr && dtStr < todayStr);
+                    const unitStr = e.unit ? String(e.unit) : '';
+                    const prevText = e.previous != null ? `${e.previous}${unitStr}` : '-';
+                    const estText = e.estimate != null ? `${e.estimate}${unitStr}` : '-';
+
+                    let actText = '발표예정';
+                    if (e.actual != null) {
+                        actText = `${e.actual}${unitStr}`;
+                    } else if (isPast) {
+                        // 연설(Speech), 회의(Meeting), 설문 등 원래 수치 발표가 없거나 이미 종료된 일정
+                        actText = (e.previous == null && e.estimate == null) ? '일정 종료 (연설/회의 완료)' : '발표 완료';
+                    }
+
                     return {
                         date: dtStr,
                         code: 'MACRO',
                         name: e.event || 'Economic Event',
                         isKey: e.impact === 'High' || e.impact === 'Medium',
                         title: `${e.event || '거시경제 지표'} ${tmStr ? '(' + tmStr + ' UTC)' : ''}`,
-                        sub: `이전치: ${e.previous ?? '-'}${e.unit || ''} · 예상치: ${e.estimate ?? '-'}${e.unit || ''} · 실제 발표: ${e.actual ?? '발표예정'}${e.unit || ''}`,
-                        badge: e.impact || 'Macro'
+                        sub: `이전치: ${prevText} · 예상치: ${estText} · 실제 발표: ${actText}`,
+                        badge: e.actual != null ? `${e.impact || 'Macro'} (발표완료)` : (e.impact || 'Macro')
                     };
                 });
             }
@@ -1173,14 +1448,10 @@
         }
 
         // 오늘 날짜(또는 현재 월에서 가장 최근 일정 있는 날짜) 기본 자동 선택
-        const nowKst = new Date();
-        const todayStr = `${nowKst.getFullYear()}-${String(nowKst.getMonth() + 1).padStart(2, '0')}-${String(nowKst.getDate()).padStart(2, '0')}`;
         let activeDate = state.calSelectedDate;
         if (activeDate === null) {
             if (todayStr.startsWith(ym) && (dateCountsAll[todayStr] || dateCountsKey[todayStr])) {
                 activeDate = todayStr;
-            } else if (todayStr.startsWith(ym) && dateCountsAll['2026-10-29']) {
-                activeDate = '2026-10-29';
             }
         } else if (activeDate === 'ALL') {
             activeDate = null; // 전체 월 보기
@@ -1202,7 +1473,7 @@
             const cntAll = dateCountsAll[dateStr] || 0;
             const displayCnt = isKeyOnly ? cntKey : cntAll;
             const isSel = activeDate === dateStr;
-            const isToday = dateStr === todayStr || dateStr === '2026-10-29';
+            const isToday = dateStr === todayStr;
 
             cellsHtml.push(`
                 <div class="qh-cal-cell ${isSel ? 'active' : ''}" data-cal-date="${dateStr}" style="min-height:84px; ${isSel ? 'background:rgba(37,99,235,0.28); border-color:#60a5fa;' : (isToday ? 'border-color:rgba(245,158,11,0.6);' : '')}">

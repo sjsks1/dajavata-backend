@@ -1,0 +1,94 @@
+[
+  {
+    "name": "KODEX 200",
+    "code": "069500",
+    "changes": [
+      {
+        "stock_name": "삼성전자",
+        "diff": 0.5
+      },
+      {
+        "stock_name": "SK하이닉스",
+        "diff": 0.3
+      },
+      {
+        "stock_name": "NAVER",
+        "diff": 0.1
+      },
+      {
+        "stock_name": "현대차",
+        "diff": 0.1
+      },
+      {
+        "stock_name": "기아",
+        "diff": 0.1
+      },
+      {
+        "stock_name": "LG에너지솔루션",
+        "diff": -0.4
+      },
+      {
+        "stock_name": "POSCO홀딩스",
+        "diff": -0.2
+      },
+      {
+        "stock_name": "삼성SDI",
+        "diff": -0.2
+      },
+      {
+        "stock_name": "카카오",
+        "diff": -0.1
+      },
+      {
+        "stock_name": "셀트리온",
+        "diff": -0.1
+      }
+    ]
+  },
+  {
+    "name": "TIGER 200",
+    "code": "102110",
+    "changes": [
+      {
+        "stock_name": "한미반도체",
+        "diff": 0.8
+      },
+      {
+        "stock_name": "HD현대일렉트릭",
+        "diff": 0.6
+      },
+      {
+        "stock_name": "삼성전기",
+        "diff": 0.4
+      },
+      {
+        "stock_name": "LS ELECTRIC",
+        "diff": 0.3
+      },
+      {
+        "stock_name": "삼양식품",
+        "diff": 0.2
+      },
+      {
+        "stock_name": "에코프로비엠",
+        "diff": -0.7
+      },
+      {
+        "stock_name": "엔켐",
+        "diff": -0.5
+      },
+      {
+        "stock_name": "HLB",
+        "diff": -0.3
+      },
+      {
+        "stock_name": "알테오젠",
+        "diff": -0.2
+      },
+      {
+        "stock_name": "포스코퓨처엠",
+        "diff": -0.2
+      }
+    ]
+  }
+]

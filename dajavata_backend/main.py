@@ -70,7 +70,7 @@ async def periodic_update():
             if is_weekday_active and kst_now.minute >= 15 and last_run_hour_key != hour_key:
                 should_run = True
 
-            # 캐시 파일 노후도 점검
+            # 캐시 파일 노후도 점검 (theme_cache.json 또는 quant_hub_cache.json 중 하나라도 55분 이상 경과 시 실행)
             if is_weekday_active and not should_run:
                 for cand in ['data/theme_cache.json', 'dajavata_backend/data/theme_cache.json', '../data/theme_cache.json']:
                     if os.path.exists(cand) and os.path.getsize(cand) > 100:
@@ -78,11 +78,24 @@ async def periodic_update():
                         if age_sec > 3500 and last_run_hour_key != hour_key:
                             should_run = True
                         break
+                if not should_run:
+                    for qcand in ['data/quant_hub_cache.json', 'dajavata_backend/data/quant_hub_cache.json', '../data/quant_hub_cache.json']:
+                        if os.path.exists(qcand) and os.path.getsize(qcand) > 500:
+                            q_age = time.time() - os.path.getmtime(qcand)
+                            if q_age > 7200 and last_run_hour_key != hour_key:
+                                should_run = True
+                            break
 
             if should_run:
                 last_run_hour_key = hour_key
-                print(f"[{kst_now.strftime('%Y-%m-%d %H:%M:%S')} KST] Starting scheduled background update (themes & stocks)...", flush=True)
+                print(f"[{kst_now.strftime('%Y-%m-%d %H:%M:%S')} KST] Starting scheduled background update (themes, stocks & quant hub)...", flush=True)
                 await update_themes_main()
+                try:
+                    from update_quant_hub import main as update_quant_hub_main
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(None, update_quant_hub_main)
+                except Exception as qe:
+                    print(f"[QuantHub] Background update warning: {qe}", flush=True)
                 print("Periodic background update finished.", flush=True)
         except Exception as e:
             print(f"Error during periodic background update: {e}", flush=True)
@@ -1839,6 +1852,39 @@ def get_quant_calendar_month(year: int = None, month: int = None):
         div_counts[dt] = {"all": len(day_rows), "key": len(key_rows)}
         compact_dividends.extend(key_rows + other_rows)
 
+    econ_dedup_map = {}
+    econ_order = []
+    for r in (econ_raw.get("rows") or []):
+        t_str = str(r.get("t") or "")
+        dt_part = t_str[:10]
+        ev_name = str(r.get("event") or "").strip()
+        if not dt_part or not ev_name:
+            continue
+        dedup_key = (dt_part, ev_name)
+        if dedup_key not in econ_dedup_map:
+            econ_dedup_map[dedup_key] = dict(r)
+            econ_order.append(dedup_key)
+        else:
+            existing = econ_dedup_map[dedup_key]
+            if r.get("actual") is not None and existing.get("actual") is None:
+                merged = dict(r)
+                if merged.get("previous") is None:
+                    merged["previous"] = existing.get("previous")
+                if merged.get("estimate") is None:
+                    merged["estimate"] = existing.get("estimate")
+                if not merged.get("unit"):
+                    merged["unit"] = existing.get("unit")
+                econ_dedup_map[dedup_key] = merged
+            else:
+                if existing.get("previous") is None and r.get("previous") is not None:
+                    existing["previous"] = r.get("previous")
+                if existing.get("estimate") is None and r.get("estimate") is not None:
+                    existing["estimate"] = r.get("estimate")
+                if not existing.get("unit") and r.get("unit"):
+                    existing["unit"] = r.get("unit")
+
+    deduped_economic = [econ_dedup_map[k] for k in econ_order]
+
     data = {
         "ym": ym_key,
         "from": m_start,
@@ -1849,7 +1895,7 @@ def get_quant_calendar_month(year: int = None, month: int = None):
         "splits": split_raw.get("rows") or [],
         "dividends_counts": div_counts,
         "dividends": compact_dividends,
-        "economic": econ_raw.get("rows") or []
+        "economic": deduped_economic
     }
     _calendar_month_cache[ym_key] = {"ts": time.time(), "data": data}
     return data

@@ -1,0 +1,104 @@
+[
+  {
+    "code": "226490",
+    "name": "KODEX 코스피",
+    "inst_net": 17.2,
+    "retail_net": -20.5
+  },
+  {
+    "code": "302450",
+    "name": "RISE 코스피",
+    "inst_net": 0.6,
+    "retail_net": -0.6
+  },
+  {
+    "code": "277630",
+    "name": "TIGER 코스피",
+    "inst_net": 5.2,
+    "retail_net": -6.7
+  },
+  {
+    "code": "487240",
+    "name": "KODEX AI전력핵심설비",
+    "inst_net": -38.6,
+    "retail_net": 7.2
+  },
+  {
+    "code": "395160",
+    "name": "KODEX AI반도체TOP2플러스",
+    "inst_net": 130.2,
+    "retail_net": -106.5
+  },
+  {
+    "code": "494890",
+    "name": "KODEX 200액티브",
+    "inst_net": 7.0,
+    "retail_net": -7.8
+  },
+  {
+    "code": "305540",
+    "name": "TIGER 2차전지테마",
+    "inst_net": -11.0,
+    "retail_net": 2.1
+  },
+  {
+    "code": "360750",
+    "name": "TIGER 미국S&P500",
+    "inst_net": -424.0,
+    "retail_net": 448.9
+  },
+  {
+    "code": "069500",
+    "name": "KODEX 200",
+    "inst_net": 1045.5,
+    "retail_net": -664.8
+  },
+  {
+    "code": "102110",
+    "name": "TIGER 200",
+    "inst_net": 330.3,
+    "retail_net": -146.3
+  },
+  {
+    "code": "229200",
+    "name": "KODEX 코스닥150",
+    "inst_net": -436.8,
+    "retail_net": 391.2
+  },
+  {
+    "code": "139260",
+    "name": "TIGER 200 IT",
+    "inst_net": 46.3,
+    "retail_net": -22.0
+  },
+  {
+    "code": "133690",
+    "name": "TIGER 미국나스닥100",
+    "inst_net": -418.0,
+    "retail_net": 176.3
+  },
+  {
+    "code": "019440",
+    "name": "KODEX 삼성전자단일종목",
+    "inst_net": 0.0,
+    "retail_net": -0.0
+  },
+  {
+    "code": "0167A0",
+    "name": "SOL AI반도체TOP2플러스",
+    "inst_net": 197.6,
+    "retail_net": -144.9
+  },
+  {
+    "code": "114800",
+    "name": "KODEX 인버스",
+    "inst_net": -194.0,
+    "retail_net": 156.4
+  },
+  {
+    "code": "252670",
+    "name": "KODEX 200선물인버스2X",
+    "inst_net": -303.6,
+    "retail_net": 539.3
+  }
+]

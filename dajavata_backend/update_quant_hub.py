@@ -14,13 +14,16 @@ _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(_SCRIPT_DIR) if os.path.basename(_SCRIPT_DIR) == "dajavata_backend" else _SCRIPT_DIR
 
 
-def fetch_json(url, timeout=10, default=None):
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=timeout)
-        if r.status_code == 200:
-            return r.json()
-    except Exception as e:
-        print(f"[WARN] Failed to fetch {url}: {e}")
+def fetch_json(url, timeout=14, default=None):
+    for attempt in range(2):
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=timeout)
+            if r.status_code == 200:
+                return r.json()
+        except Exception as e:
+            if attempt == 1:
+                print(f"[WARN] Failed to fetch {url}: {e}")
+            time.sleep(0.5)
     return default
 
 
@@ -539,6 +542,42 @@ def fetch_us_calendar_for_month(year: int, month: int):
         div_counts[dt] = {"all": len(day_rows), "key": len(key_rows)}
         compact_dividends.extend(key_rows + other_rows)
 
+    # 3. Economic: 서머타임(DST) 전환 등으로 동일 일자·동일 이벤트가 중복 등록된 경우
+    #    actual(실제 발표치)이 존재하는 행으로 자동 병합하여 '발표예정' 가짜 중복 행 제거
+    econ_dedup_map = {}
+    econ_order = []
+    for r in (econ_raw.get("rows") or []):
+        t_str = str(r.get("t") or "")
+        dt_part = t_str[:10]
+        ev_name = str(r.get("event") or "").strip()
+        if not dt_part or not ev_name:
+            continue
+        dedup_key = (dt_part, ev_name)
+        if dedup_key not in econ_dedup_map:
+            econ_dedup_map[dedup_key] = dict(r)
+            econ_order.append(dedup_key)
+        else:
+            existing = econ_dedup_map[dedup_key]
+            # 새 행에 actual 값이 있고 기존 행에 없으면 새 행으로 교체/보강
+            if r.get("actual") is not None and existing.get("actual") is None:
+                merged = dict(r)
+                if merged.get("previous") is None:
+                    merged["previous"] = existing.get("previous")
+                if merged.get("estimate") is None:
+                    merged["estimate"] = existing.get("estimate")
+                if not merged.get("unit"):
+                    merged["unit"] = existing.get("unit")
+                econ_dedup_map[dedup_key] = merged
+            else:
+                if existing.get("previous") is None and r.get("previous") is not None:
+                    existing["previous"] = r.get("previous")
+                if existing.get("estimate") is None and r.get("estimate") is not None:
+                    existing["estimate"] = r.get("estimate")
+                if not existing.get("unit") and r.get("unit"):
+                    existing["unit"] = r.get("unit")
+
+    deduped_economic = [econ_dedup_map[k] for k in econ_order]
+
     return {
         "ym": f"{year:04d}-{month:02d}",
         "from": m_start,
@@ -549,7 +588,7 @@ def fetch_us_calendar_for_month(year: int, month: int):
         "splits": (split_raw.get("rows") or []),
         "dividends_counts": div_counts,
         "dividends": compact_dividends,
-        "economic": (econ_raw.get("rows") or [])
+        "economic": deduped_economic
     }
 
 

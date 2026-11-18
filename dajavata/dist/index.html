@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,24 +8,26 @@
     <meta name="description" content="실시간 국내외 주식 테마 수급 분석, AI 차트 스캐너, ICT 스마트 머니 시그널 및 심층 기업 분석 칼럼 제공">
     <meta name="keywords" content="주식테마, 테마주, 수급분석, 기업분석, 주식차트, AI차트, 스마트머니, 트레이딩룸, 다자바타, DAJAVATA">
     <link rel="canonical" href="https://www.dajavata.com/">
-    
+
     <!-- Open Graph (SEO & SNS 공유) -->
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="DAJAVATA">
     <meta property="og:title" content="DAJAVATA(다자바타) - 주식 테마 수급 분석 & AI 차트 스캐너">
     <meta property="og:description" content="실시간 국내외 주식 테마 수급 분석, AI 차트 스캐너, ICT 스마트 머니 시그널 및 심층 기업 분석 칼럼 제공">
     <meta property="og:url" content="https://www.dajavata.com/">
-    
+
     <!-- Naver Search Advisor Verification -->
     <meta name="naver-site-verification" content="a1d0cd66cffb04852538f6e36f7de2f1aa10083a" />
-    
+
     <!-- Google AdSense Auto Ads Script (승인 후 클라이언트 ID 활성화) -->
     <!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin="anonymous" />
-    <link rel="preload" as="style" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+    <link rel="preload" as="style"
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
     <!-- Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Styles -->
@@ -35,6 +38,7 @@
     <!-- TradingView Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
 </head>
+
 <body>
     <!-- 모바일 전용 상단바 (PC에서는 CSS로 숨김) -->
     <div class="mobile-topbar">
@@ -67,7 +71,7 @@
                     </div>
                 </a>
             </div>
-            
+
             <div class="search-box">
                 <i class="ph ph-magnifying-glass"></i>
                 <input type="text" placeholder="검색어를 입력하세요">
@@ -77,7 +81,8 @@
                 <div class="menu-section">
                     <h3>테마 보기</h3>
                     <ul id="theme-menu-list">
-                        <li class="active" data-action="all"><a href="#"><i class="ph ph-squares-four"></i> 전체 테마</a></li>
+                        <li class="active" data-action="all"><a href="#"><i class="ph ph-squares-four"></i> 전체 테마</a>
+                        </li>
                         <li data-action="rising"><a href="#"><i class="ph ph-trend-up"></i> 상승중인 테마</a></li>
                         <li data-action="falling"><a href="#"><i class="ph ph-trend-down"></i> 하락중인 테마</a></li>
                         <li data-action="high-return"><a href="#"><i class="ph ph-rocket"></i> 기대수익률 높은 테마</a></li>
@@ -97,7 +102,8 @@
                     <h3>조건별 종목</h3>
                     <ul id="stock-menu-list">
                         <li data-action="stock-rising"><a href="#"><i class="ph ph-arrow-up-right"></i> 상승중인 종목</a></li>
-                        <li data-action="stock-falling"><a href="#"><i class="ph ph-arrow-down-right"></i> 하락중인 종목</a></li>
+                        <li data-action="stock-falling"><a href="#"><i class="ph ph-arrow-down-right"></i> 하락중인 종목</a>
+                        </li>
                         <li data-action="stock-low-pbr"><a href="#"><i class="ph ph-tag"></i> PBR 낮은 종목</a></li>
                         <li data-action="stock-low-per"><a href="#"><i class="ph ph-calculator"></i> PER 낮은 종목</a></li>
                         <li data-action="stock-high-marcap"><a href="#"><i class="ph ph-money"></i> 시가총액 높은 종목</a></li>
@@ -111,8 +117,9 @@
                     <ul id="scanner-menu-list">
                         <li data-action="chart-scanner">
                             <a href="#">
-                                <i class="ph-fill ph-trend-up" style="color: #3b82f6;"></i> AI 차트 스캐너 
-                                <span style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">NEW</span>
+                                <i class="ph-fill ph-trend-up" style="color: #3b82f6;"></i> AI 차트 스캐너
+                                <span
+                                    style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">NEW</span>
                             </a>
                         </li>
                     </ul>
@@ -124,16 +131,23 @@
                     <ul id="quant-menu-list">
                         <li data-action="quant-rising">
                             <a href="#"><i class="ph-fill ph-lightning" style="color: #f59e0b;"></i> 급등 초입 포착 (Rising)
-                                <span style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 4px;">HOT</span>
+                                <span
+                                    style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 4px;">HOT</span>
                             </a>
                         </li>
-                        <li data-action="quant-promising"><a href="#"><i class="ph ph-arrows-Clockwise"></i> 낙폭과대 우량주 랭킹</a></li>
-                        <li data-action="quant-market-view"><a href="#"><i class="ph ph-globe-hemisphere-west"></i> 글로벌 마켓 뷰 (수급/회전율)</a></li>
-                        <li data-action="quant-peer"><a href="#"><i class="ph ph-tree-structure"></i> 섹터·동종업계 비교 (Peer)</a></li>
+                        <li data-action="quant-promising"><a href="#"><i class="ph ph-arrows-Clockwise"></i> 낙폭과대 우량주
+                                랭킹</a></li>
+                        <li data-action="quant-market-view"><a href="#"><i class="ph ph-globe-hemisphere-west"></i> 글로벌
+                                마켓 뷰 (수급/회전율)</a></li>
+                        <li data-action="quant-peer"><a href="#"><i class="ph ph-tree-structure"></i> 섹터·동종업계 비교
+                                (Peer)</a></li>
                         <li data-action="quant-etf-finder"><a href="#"><i class="ph ph-funnel"></i> 한·미 ETF 파인더</a></li>
-                        <li data-action="quant-calendar"><a href="#"><i class="ph ph-calendar-check"></i> 증시 일정 캘린더</a></li>
-                        <li data-action="quant-guru"><a href="#"><i class="ph ph-Strategy"></i> 대가·큰손 포트폴리오 (Guru)</a></li>
-                        <li data-action="quant-money-flow"><a href="#"><i class="ph ph-currency-circle-dollar"></i> 머니 플로우 (IPO·금리·유동성)</a></li>
+                        <li data-action="quant-calendar"><a href="#"><i class="ph ph-calendar-check"></i> 증시 일정 캘린더</a>
+                        </li>
+                        <li data-action="quant-guru"><a href="#"><i class="ph ph-Strategy"></i> 대가·큰손 포트폴리오 (Guru)</a>
+                        </li>
+                        <li data-action="quant-money-flow"><a href="#"><i class="ph ph-currency-circle-dollar"></i> 머니
+                                플로우 (IPO·금리·유동성)</a></li>
                     </ul>
                 </div>
 
@@ -145,18 +159,20 @@
                         <li data-action="trader-plan"><a href="#"><i class="ph ph-notepad"></i> 매매 시나리오</a></li>
                         <li data-action="trader-calc"><a href="#"><i class="ph ph-calculator"></i> 리스크 & 비중 계산기</a></li>
                         <li data-action="trader-journal"><a href="#"><i class="ph ph-book-open"></i> 매매일지 & 복기</a></li>
-                        <li data-action="trader-analytics"><a href="#"><i class="ph ph-chart-line-up"></i> 성과 분석실</a></li>
+                        <li data-action="trader-analytics"><a href="#"><i class="ph ph-chart-line-up"></i> 성과 분석실</a>
+                        </li>
                         <li data-action="trader-vault"><a href="#"><i class="ph ph-hard-drive"></i> 데이터 보관함</a></li>
                     </ul>
                 </div>
             </nav>
-            
+
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
             <!-- 기존 테마/종목 뷰 (ID 부여하여 분리 관리) -->
-            <div id="default-view-container" style="display: flex; flex-direction: column; height: 100%; width: 100%; min-width: 0;">
+            <div id="default-view-container"
+                style="display: flex; flex-direction: column; height: 100%; width: 100%; min-width: 0;">
                 <header class="content-header">
                     <div class="header-title">
                         <span class="theme-badge">전체</span>
@@ -164,10 +180,12 @@
                     </div>
                     <div class="header-meta-group">
                         <!-- 관리자 전용 새 칼럼 작성 버튼 (관리자 로그인 시 노출) -->
-                        <button id="admin-new-post-btn" style="display: none; align-items: center; gap: 6px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,0.3); transition: all 0.2s ease;">
+                        <button id="admin-new-post-btn"
+                            style="display: none; align-items: center; gap: 6px; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 12px rgba(37,99,235,0.3); transition: all 0.2s ease;">
                             <i class="ph-bold ph-pencil-simple-line"></i> 새 칼럼 작성
                         </button>
-                        <span id="admin-active-badge" style="display: none; align-items: center; gap: 4px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #10b981; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">
+                        <span id="admin-active-badge"
+                            style="display: none; align-items: center; gap: 4px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #10b981; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700;">
                             <i class="ph-fill ph-check-circle"></i> ADMIN
                         </span>
 
@@ -232,9 +250,12 @@
                     <span class="footer-dot">·</span>
                     <button type="button" class="footer-link-btn" data-legal="sources">데이터 출처</button>
                     <span class="footer-dot" id="footer-admin-dot" style="display: none;">·</span>
-                    <button type="button" class="footer-admin-logout-btn" id="footer-admin-btn" style="display: none; background: transparent; border: none; color: #f87171; font-size: 11px; cursor: pointer; align-items: center; gap: 4px;" title="관리자 모드 종료"><i class="ph ph-sign-out"></i> 관리자 로그아웃</button>
-                    
-                    <button type="button" class="footer-lang-toggle notranslate" id="footer-lang-btn" title="언어 전환 / Language Switch">
+                    <button type="button" class="footer-admin-logout-btn" id="footer-admin-btn"
+                        style="display: none; background: transparent; border: none; color: #f87171; font-size: 11px; cursor: pointer; align-items: center; gap: 4px;"
+                        title="관리자 모드 종료"><i class="ph ph-sign-out"></i> 관리자 로그아웃</button>
+
+                    <button type="button" class="footer-lang-toggle notranslate" id="footer-lang-btn"
+                        title="언어 전환 / Language Switch">
                         <i class="ph ph-globe"></i>
                         <span id="footer-lang-label">English로 보기</span>
                     </button>
@@ -263,54 +284,74 @@
                     <i class="ph ph-x"></i>
                 </button>
             </div>
-            
+
             <!-- 5대 탭 버튼 -->
             <div class="dajavata-modal-tabs">
-                <button type="button" class="modal-tab-btn active" data-tab="terms"><i class="ph ph-scroll"></i> 이용약관</button>
-                <button type="button" class="modal-tab-btn" data-tab="privacy"><i class="ph ph-lock-key"></i> 개인정보처리방침</button>
-                <button type="button" class="modal-tab-btn" data-tab="disclaimer"><i class="ph ph-warning-circle"></i> 면책 고지</button>
-                <button type="button" class="modal-tab-btn" data-tab="support"><i class="ph ph-headset"></i> 고객 지원</button>
-                <button type="button" class="modal-tab-btn" data-tab="sources"><i class="ph ph-database"></i> 데이터 출처</button>
+                <button type="button" class="modal-tab-btn active" data-tab="terms"><i class="ph ph-scroll"></i>
+                    이용약관</button>
+                <button type="button" class="modal-tab-btn" data-tab="privacy"><i class="ph ph-lock-key"></i>
+                    개인정보처리방침</button>
+                <button type="button" class="modal-tab-btn" data-tab="disclaimer"><i class="ph ph-warning-circle"></i>
+                    면책 고지</button>
+                <button type="button" class="modal-tab-btn" data-tab="support"><i class="ph ph-headset"></i> 고객
+                    지원</button>
+                <button type="button" class="modal-tab-btn" data-tab="sources"><i class="ph ph-database"></i> 데이터
+                    출처</button>
             </div>
-            
+
             <div class="dajavata-modal-body">
                 <!-- 탭 1: 이용약관 -->
                 <div class="modal-tab-pane active" id="pane-terms">
                     <h3 class="legal-section-title"><i class="ph-bold ph-article"></i> 제1조 (목적 및 서비스 개요)</h3>
-                    <p>본 약관은 <strong>다자바타(DAJAVATA)</strong>가 웹사이트(www.dajavata.com)를 통해 제공하는 국내 코스피·코스닥 4,200+ 전종목 및 미국 대표 주식의 차트 분석, ICT 스마트 머니 시그널, 테마 수급 동향, 트레이더 룸 등의 제반 서비스 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.</p>
+                    <p>본 약관은 <strong>다자바타(DAJAVATA)</strong>가 웹사이트(www.dajavata.com)를 통해 제공하는 국내 코스피·코스닥 4,200+ 전종목 및 미국
+                        대표 주식의 차트 분석, ICT 스마트 머니 시그널, 테마 수급 동향, 트레이더 룸 등의 제반 서비스 이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을
+                        목적으로 합니다.</p>
 
-                    <h3 class="legal-section-title"><i class="ph-bold ph-shield-warning"></i> 제2조 (데이터 무단 자동 수집 및 재배포 엄격 금지)</h3>
+                    <h3 class="legal-section-title"><i class="ph-bold ph-shield-warning"></i> 제2조 (데이터 무단 자동 수집 및 재배포 엄격
+                        금지)</h3>
                     <div class="legal-box-danger">
                         <strong>[필독] 데이터 스크래핑 및 상업적 무단 도용 방지 규정</strong>
                         <ul style="margin: 8px 0 0 18px; line-height: 1.8;">
-                            <li>다자바타의 사전 서면 승인 없이 웹 크롤러, 스크래퍼, 봇(Bot), 스파이더 등 어떠한 자동화 소프트웨어를 통해서도 본 서비스의 화면 데이터, 캔들 차트, 알고리즘 연산값(FVG, OB, 지지선, RSI), 시그널 브리핑을 무단 대량 수집(Scraping)하는 행위를 엄격히 금지합니다.</li>
-                            <li>수집된 데이터를 상업적 목적으로 제3자에게 전송·배포·판매하거나 미러링 사이트 운영, 공개 API 제공 또는 2차 데이터베이스 형태로 재가공하는 행위는 일절 허용되지 않습니다.</li>
-                            <li>이를 위반할 경우 「부정경쟁방지 및 영업비밀보호에 관한 법률」 및 「저작권법」에 의거하여 사전 경고 없이 즉각적인 IP 차단, 서비스 영구 이용 제한 조치와 함께 일체의 민·형사상 법적 책임 및 손해배상 청구가 진행됩니다.</li>
+                            <li>다자바타의 사전 서면 승인 없이 웹 크롤러, 스크래퍼, 봇(Bot), 스파이더 등 어떠한 자동화 소프트웨어를 통해서도 본 서비스의 화면 데이터, 캔들 차트,
+                                알고리즘 연산값(FVG, OB, 지지선, RSI), 시그널 브리핑을 무단 대량 수집(Scraping)하는 행위를 엄격히 금지합니다.</li>
+                            <li>수집된 데이터를 상업적 목적으로 제3자에게 전송·배포·판매하거나 미러링 사이트 운영, 공개 API 제공 또는 2차 데이터베이스 형태로 재가공하는 행위는 일절
+                                허용되지 않습니다.</li>
+                            <li>이를 위반할 경우 「부정경쟁방지 및 영업비밀보호에 관한 법률」 및 「저작권법」에 의거하여 사전 경고 없이 즉각적인 IP 차단, 서비스 영구 이용 제한 조치와
+                                함께 일체의 민·형사상 법적 책임 및 손해배상 청구가 진행됩니다.</li>
                         </ul>
                     </div>
 
                     <h3 class="legal-section-title"><i class="ph-bold ph-cpu"></i> 제3조 (지식재산권)</h3>
-                    <p>다자바타가 개발한 고유 알고리즘(스마트 머니 콘셉트 8대 구름대 엔진, 스윙 로우 지지선 탐색, HTS 4대 급소, Wilder RSI 골든크로스 판별 로직) 및 웹 플랫폼의 모든 UI/UX 디자인, 텍스트, 브리핑 분석 리포트는 다자바타의 고유 지식재산권으로 보호됩니다.</p>
+                    <p>다자바타가 개발한 고유 알고리즘(스마트 머니 콘셉트 8대 구름대 엔진, 스윙 로우 지지선 탐색, HTS 4대 급소, Wilder RSI 골든크로스 판별 로직) 및 웹 플랫폼의
+                        모든 UI/UX 디자인, 텍스트, 브리핑 분석 리포트는 다자바타의 고유 지식재산권으로 보호됩니다.</p>
 
                     <h3 class="legal-section-title"><i class="ph-bold ph-warning"></i> 제4조 (서비스의 제공 및 면책)</h3>
-                    <p>다자바타는 기술적 분석 보조 및 시각화 도구를 무료 또는 유료로 제공하며, 거래소/증권 시세 피드 지연이나 네트워크 장애로 인한 서비스 중단에 대하여 고의 또는 중과실이 없는 한 책임을 부담하지 않습니다.</p>
+                    <p>다자바타는 기술적 분석 보조 및 시각화 도구를 무료 또는 유료로 제공하며, 거래소/증권 시세 피드 지연이나 네트워크 장애로 인한 서비스 중단에 대하여 고의 또는 중과실이 없는
+                        한 책임을 부담하지 않습니다.</p>
                 </div>
 
                 <!-- 탭 2: 개인정보처리방침 -->
                 <div class="modal-tab-pane" id="pane-privacy">
-                    <h3 class="legal-section-title"><i class="ph-bold ph-shield-check"></i> 다자바타의 로컬 퍼스트(Local-First) 프라이버시 헌장</h3>
+                    <h3 class="legal-section-title"><i class="ph-bold ph-shield-check"></i> 다자바타의 로컬 퍼스트(Local-First)
+                        프라이버시 헌장</h3>
                     <div class="legal-box-highlight">
                         <strong>🛡️ 회원의 금융 기밀과 매매 전략은 서버에 저장되지 않습니다.</strong>
-                        <p style="margin-top: 6px;">다자바타(DAJAVATA)는 사용자의 개인정보와 트레이딩 전략의 완전한 자유와 기밀 유지를 최우선 가치로 삼습니다. 불필요한 회원가입 절차 없이 익명으로 안전하게 활용하실 수 있습니다.</p>
+                        <p style="margin-top: 6px;">다자바타(DAJAVATA)는 사용자의 개인정보와 트레이딩 전략의 완전한 자유와 기밀 유지를 최우선 가치로 삼습니다.
+                            불필요한 회원가입 절차 없이 익명으로 안전하게 활용하실 수 있습니다.</p>
                     </div>
 
-                    <h3 class="legal-section-title"><i class="ph-bold ph-hard-drive"></i> 제1조 (트레이더 룸 데이터의 브라우저 로컬 격리)</h3>
-                    <p>이용자가 트레이더 룸(매매 시나리오, 손익 및 비중 계산기, 매매일지 및 복기, 관심종목 포커스 리스트)에 입력하는 일체의 투자 데이터는 <strong>오직 이용자의 기기 브라우저 로컬 저장소(localStorage: <code>dajavata_trader_db_v1</code>)에만 안전하게 보관</strong>됩니다. 다자바타의 중앙 서버나 제3자 데이터베이스로 결코 전송되지 않으므로, 데이터 유출이나 해킹 위험으로부터 100% 안전합니다.</p>
+                    <h3 class="legal-section-title"><i class="ph-bold ph-hard-drive"></i> 제1조 (트레이더 룸 데이터의 브라우저 로컬 격리)
+                    </h3>
+                    <p>이용자가 트레이더 룸(매매 시나리오, 손익 및 비중 계산기, 매매일지 및 복기, 관심종목 포커스 리스트)에 입력하는 일체의 투자 데이터는 <strong>오직 이용자의 기기
+                            브라우저 로컬 저장소(localStorage: <code>dajavata_trader_db_v1</code>)에만 안전하게 보관</strong>됩니다. 다자바타의
+                        중앙 서버나 제3자 데이터베이스로 결코 전송되지 않으므로, 데이터 유출이나 해킹 위험으로부터 100% 안전합니다.</p>
 
                     <h3 class="legal-section-title"><i class="ph-bold ph-database"></i> 제2조 (데이터의 보관 및 백업/삭제)</h3>
-                    <p>로컬 데이터는 사용자의 브라우저 캐시 삭제 시 함께 정리될 수 있습니다. 중요한 매매 기록의 영구 보존을 위해 트레이더 룸의 '데이터 보관함' 탭에서 언제든지 JSON 백업 파일을 다운로드하거나 복원하실 수 있습니다.</p>
+                    <p>로컬 데이터는 사용자의 브라우저 캐시 삭제 시 함께 정리될 수 있습니다. 중요한 매매 기록의 영구 보존을 위해 트레이더 룸의 '데이터 보관함' 탭에서 언제든지 JSON 백업
+                        파일을 다운로드하거나 복원하실 수 있습니다.</p>
 
-                    <h3 class="legal-section-title"><i class="ph-bold ph-sliders-horizontal"></i> 제3조 (화면 설정 및 필수 쿠키)</h3>
+                    <h3 class="legal-section-title"><i class="ph-bold ph-sliders-horizontal"></i> 제3조 (화면 설정 및 필수 쿠키)
+                    </h3>
                     <p>서비스 이용 편의를 위해 다크/라이트 테마 선택 상태, 마지막 조회 종목, 차트 높이 조절값 등 비식별 편의 정보만이 브라우저 단에서 사용됩니다.</p>
                 </div>
 
@@ -319,14 +360,18 @@
                     <h3 class="legal-section-title"><i class="ph-bold ph-bank"></i> 자본시장과 금융투자업에 관한 법률 준수 고지</h3>
                     <div class="legal-box-danger">
                         <strong>⚠️ 본 서비스는 금융투자상품의 매매 권유나 투자자문이 아닙니다.</strong>
-                        <p style="margin-top: 6px;">다자바타(DAJAVATA)는 「자본시장과 금융투자업에 관한 법률」상의 투자자문업자, 투자일임업자 또는 유사투자자문업자가 아닙니다. 특정 종목의 매수·매도 추천, 투자 일임, 원금 보장 또는 확정 수익률 약정을 일절 제공하지 않습니다.</p>
+                        <p style="margin-top: 6px;">다자바타(DAJAVATA)는 「자본시장과 금융투자업에 관한 법률」상의 투자자문업자, 투자일임업자 또는 유사투자자문업자가
+                            아닙니다. 특정 종목의 매수·매도 추천, 투자 일임, 원금 보장 또는 확정 수익률 약정을 일절 제공하지 않습니다.</p>
                     </div>
 
                     <h3 class="legal-section-title"><i class="ph-bold ph-chart-line"></i> 기술적 분석 보조 지표의 한계</h3>
-                    <p>본 플랫폼에서 제공하는 차트, ICT 스마트 머니 8대 구름대(FVG, OB, IFVG, BPR), 추세 지지선, RSI 골든크로스 시그널 및 AI 브리핑은 과거 시세 데이터에 기반한 <strong>기술적 분석 학습 및 연구 목적의 시각화 보조 데이터</strong>입니다. 시장의 급격한 변동, 거시 경제 이슈, 유동성 결손에 의해 지표 연산 결과와 실제 주가 흐름 사이에 차이가 발생할 수 있습니다.</p>
+                    <p>본 플랫폼에서 제공하는 차트, ICT 스마트 머니 8대 구름대(FVG, OB, IFVG, BPR), 추세 지지선, RSI 골든크로스 시그널 및 AI 브리핑은 과거 시세
+                        데이터에 기반한 <strong>기술적 분석 학습 및 연구 목적의 시각화 보조 데이터</strong>입니다. 시장의 급격한 변동, 거시 경제 이슈, 유동성 결손에 의해 지표
+                        연산 결과와 실제 주가 흐름 사이에 차이가 발생할 수 있습니다.</p>
 
                     <h3 class="legal-section-title"><i class="ph-bold ph-user-check"></i> 투자자 자기책임 원칙</h3>
-                    <p>모든 금융투자상품의 매매 판단과 그에 따른 손익의 결과는 <strong>전적으로 투자자 본인의 책임</strong>입니다. 다자바타는 본 서비스의 정보를 신뢰하여 행한 투자 결과에 대해 어떠한 법적 책임도 부담하지 않습니다. 독자적인 판단과 엄격한 리스크 관리 원칙에 따라 투자에 임해주시기 바랍니다.</p>
+                    <p>모든 금융투자상품의 매매 판단과 그에 따른 손익의 결과는 <strong>전적으로 투자자 본인의 책임</strong>입니다. 다자바타는 본 서비스의 정보를 신뢰하여 행한 투자
+                        결과에 대해 어떠한 법적 책임도 부담하지 않습니다. 독자적인 판단과 엄격한 리스크 관리 원칙에 따라 투자에 임해주시기 바랍니다.</p>
                 </div>
 
                 <!-- 탭 4: 고객 지원 -->
@@ -337,7 +382,8 @@
                     <div class="legal-box-highlight">
                         <strong>📬 공식 문의 및 피드백 접수</strong>
                         <ul style="margin: 8px 0 0 18px; line-height: 1.8;">
-                            <li><strong>공식 이메일:</strong> <a href="mailto:dkqk_485@naver.com" style="color: #38bdf8; text-decoration: underline;">dkqk_485@naver.com</a></li>
+                            <li><strong>공식 이메일:</strong> <a href="mailto:dkqk_485@naver.com"
+                                    style="color: #38bdf8; text-decoration: underline;">dkqk_485@naver.com</a></li>
                             <li><strong>운영 시간:</strong> 평일 09:00 ~ 18:00 (KST 기준)</li>
                             <li><strong>제보 내용:</strong> 시세 오류 제보, 신규 지표/기능 건의, 기술 제휴 및 파트너십</li>
                         </ul>
@@ -346,10 +392,11 @@
                     <h3 class="legal-section-title"><i class="ph-bold ph-question"></i> 자주 묻는 질문 (FAQ)</h3>
                     <div style="margin-top: 10px; line-height: 1.8;">
                         <p><strong>Q. 차트와 시세는 어떻게 갱신되나요?</strong><br>
-                        A. 국내 코스피·코스닥 4,200+ 종목 및 미국 대표 빅테크·ETF 종목은 실시간 캔들 피드 및 정규장 거래소 API를 통해 정확하게 동기화됩니다.</p>
-                        
+                            A. 국내 코스피·코스닥 4,200+ 종목 및 미국 대표 빅테크·ETF 종목은 실시간 캔들 피드 및 정규장 거래소 API를 통해 정확하게 동기화됩니다.</p>
+
                         <p style="margin-top: 12px;"><strong>Q. 트레이더 룸에 저장한 매매일지가 다른 컴퓨터에서도 유지되나요?</strong><br>
-                        A. 다자바타는 철저한 개인정보 보호를 위한 Local-First 아키텍처를 채택하고 있어 현재 사용 중인 브라우저에만 저장됩니다. 기기 변경 시에는 '데이터 보관함'의 백업/복원 기능을 이용해 주시기 바랍니다.</p>
+                            A. 다자바타는 철저한 개인정보 보호를 위한 Local-First 아키텍처를 채택하고 있어 현재 사용 중인 브라우저에만 저장됩니다. 기기 변경 시에는 '데이터
+                            보관함'의 백업/복원 기능을 이용해 주시기 바랍니다.</p>
                     </div>
                 </div>
 
@@ -359,21 +406,29 @@
                     <p>다자바타는 신뢰할 수 있는 공시 데이터와 글로벌 표준 기술을 기반으로 서비스를 구축하였습니다.</p>
 
                     <div style="margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
+                        <div
+                            style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
                             <strong style="color: #38bdf8;"><i class="ph-bold ph-chart-bar"></i> 차트 렌더링 엔진</strong>
-                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">TradingView™ Lightweight Charts<br>(공식 오픈소스 Apache 2.0 라이선스)</p>
+                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">TradingView™ Lightweight
+                                Charts<br>(공식 오픈소스 Apache 2.0 라이선스)</p>
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
+                        <div
+                            style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
                             <strong style="color: #10b981;"><i class="ph-bold ph-coins"></i> 국내 증권 시세</strong>
-                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">한국거래소(KRX) 공시 시세 및 네이버 증권 오픈 데이터 피드 연계</p>
+                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">한국거래소(KRX) 공시 시세 및 네이버 증권 오픈
+                                데이터 피드 연계</p>
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
+                        <div
+                            style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
                             <strong style="color: #f59e0b;"><i class="ph-bold ph-globe"></i> 해외 주식 시세</strong>
-                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">미국 NASDAQ / NYSE 정규장 공시 및 글로벌 거래소 데이터 피드 연동</p>
+                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">미국 NASDAQ / NYSE 정규장 공시 및 글로벌
+                                거래소 데이터 피드 연동</p>
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
+                        <div
+                            style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 14px; border-radius: 8px;">
                             <strong style="color: #ec4899;"><i class="ph-bold ph-atom"></i> 스마트 머니 시그널 엔진</strong>
-                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">다자바타 퀀트 랩(Dajavata Quant Lab) 독자 개발 ICT Smart Money & HTS 탐지 모델</p>
+                            <p style="font-size: 12px; color: #94a3b8; margin-top: 6px;">다자바타 퀀트 랩(Dajavata Quant Lab)
+                                독자 개발 ICT Smart Money & HTS 탐지 모델</p>
                         </div>
                     </div>
                 </div>
@@ -392,15 +447,22 @@
                         <p class="modal-sub">DAJAVATA ADMIN ACCESS</p>
                     </div>
                 </div>
-                <button type="button" class="modal-close-btn" id="admin-auth-close-btn" aria-label="닫기"><i class="ph ph-x"></i></button>
+                <button type="button" class="modal-close-btn" id="admin-auth-close-btn" aria-label="닫기"><i
+                        class="ph ph-x"></i></button>
             </div>
             <div class="dajavata-modal-body" style="padding: 24px;">
-                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">칼럼 작성·수정·삭제 권한을 위한 관리자 PIN 번호 4자리를 입력하세요.</p>
-                <input type="password" id="admin-pin-input" maxlength="10" placeholder="PIN 입력" style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 12px; border-radius: 8px; color: white; font-size: 18px; text-align: center; letter-spacing: 6px; outline: none;">
-                <div id="admin-pin-error" style="display: none; color: #ef4444; font-size: 12px; margin-top: 10px; text-align: center; line-height: 1.4;">PIN 번호가 일치하지 않습니다.</div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">칼럼 작성·수정·삭제
+                    권한을 위한 관리자 PIN 번호 4자리를 입력하세요.</p>
+                <input type="password" id="admin-pin-input" maxlength="10" placeholder="PIN 입력"
+                    style="width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 12px; border-radius: 8px; color: white; font-size: 18px; text-align: center; letter-spacing: 6px; outline: none;">
+                <div id="admin-pin-error"
+                    style="display: none; color: #ef4444; font-size: 12px; margin-top: 10px; text-align: center; line-height: 1.4;">
+                    PIN 번호가 일치하지 않습니다.</div>
                 <div style="display: flex; gap: 10px; margin-top: 20px;">
-                    <button id="admin-auth-cancel-btn" style="flex: 1; padding: 10px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; cursor: pointer; font-family: inherit;">취소</button>
-                    <button id="admin-auth-submit-btn" style="flex: 1; padding: 10px; background: #2563eb; border: none; color: white; border-radius: 6px; font-weight: 700; cursor: pointer; font-family: inherit;">인증하기</button>
+                    <button id="admin-auth-cancel-btn"
+                        style="flex: 1; padding: 10px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; cursor: pointer; font-family: inherit;">취소</button>
+                    <button id="admin-auth-submit-btn"
+                        style="flex: 1; padding: 10px; background: #2563eb; border: none; color: white; border-radius: 6px; font-weight: 700; cursor: pointer; font-family: inherit;">인증하기</button>
                 </div>
             </div>
         </div>
@@ -408,7 +470,8 @@
 
     <!-- 2. 다자바타 자체 관리자 웹 에디터 모달 (풀스크린 다크 테마) -->
     <div id="dajavata-editor-modal" class="dajavata-modal-overlay" style="display: none; z-index: 12500;">
-        <div class="dajavata-modal-box" style="max-width: 980px; width: 95vw; height: 90vh; display: flex; flex-direction: column;">
+        <div class="dajavata-modal-box"
+            style="max-width: 980px; width: 95vw; height: 90vh; display: flex; flex-direction: column;">
             <div class="dajavata-modal-header" style="flex-shrink: 0;">
                 <div class="modal-title-group">
                     <div class="modal-icon-badge" style="color: #3b82f6;"><i class="ph-bold ph-pencil-line"></i></div>
@@ -419,46 +482,65 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span id="editor-draft-status" style="font-size: 11px; color: var(--text-muted);"></span>
-                    <button type="button" class="modal-close-btn" id="editor-modal-close-btn" aria-label="닫기"><i class="ph ph-x"></i></button>
+                    <button type="button" class="modal-close-btn" id="editor-modal-close-btn" aria-label="닫기"><i
+                            class="ph ph-x"></i></button>
                 </div>
             </div>
 
             <!-- 에디터 카테고리 선택 탭 바 (발행 위치 직관적 선택) -->
-            <div class="editor-category-bar" id="editor-category-bar" style="padding: 10px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.28); flex-shrink: 0; flex-wrap: wrap;">
-                <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-right: 4px;"><i class="ph ph-tag"></i> 발행 위치:</span>
-                <button type="button" class="editor-cat-tab active" data-cat="company" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid #3b82f6; background: rgba(59,130,246,0.18); color: #60a5fa; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px;">
+            <div class="editor-category-bar" id="editor-category-bar"
+                style="padding: 10px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.28); flex-shrink: 0; flex-wrap: wrap;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-right: 4px;"><i
+                        class="ph ph-tag"></i> 발행 위치:</span>
+                <button type="button" class="editor-cat-tab active" data-cat="company"
+                    style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid #3b82f6; background: rgba(59,130,246,0.18); color: #60a5fa; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px;">
                     <i class="ph ph-chart-line-up"></i> 기업개요 및 차트분석
                 </button>
-                <button type="button" class="editor-cat-tab" data-cat="learning" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: #94a3b8; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px;">
+                <button type="button" class="editor-cat-tab" data-cat="learning"
+                    style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: #94a3b8; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px;">
                     <i class="ph ph-book-open"></i> 학습 자료
                 </button>
-                <button type="button" class="editor-cat-tab" data-cat="insights" style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: #94a3b8; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px;">
+                <button type="button" class="editor-cat-tab" data-cat="insights"
+                    style="padding: 6px 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: #94a3b8; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 5px;">
                     <i class="ph ph-folder-simple-star"></i> 이것저것
                 </button>
             </div>
 
             <!-- 에디터 메타 입력 바 -->
-            <div style="padding: 14px 24px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; background: rgba(0,0,0,0.18); flex-shrink: 0;">
-                <input type="text" id="editor-post-title" placeholder="칼럼 제목 (예: 파이버프로(368770) 기업 분석 및 차트 전망)" style="flex: 1; min-width: 280px; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 10px 14px; border-radius: 6px; color: white; font-size: 15px; font-weight: 600; outline: none; font-family: inherit;">
-                <input type="date" id="editor-post-date" style="width: 145px; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; color: white; font-size: 13px; outline: none; font-family: inherit;">
-                <input type="text" id="editor-post-ticker" placeholder="종목코드(선택)" style="width: 115px; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; color: white; font-size: 13px; outline: none; font-family: inherit;">
+            <div
+                style="padding: 14px 24px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 12px; background: rgba(0,0,0,0.18); flex-shrink: 0;">
+                <input type="text" id="editor-post-title" placeholder="칼럼 제목 (예: 파이버프로(368770) 기업 분석 및 차트 전망)"
+                    style="flex: 1; min-width: 280px; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 10px 14px; border-radius: 6px; color: white; font-size: 15px; font-weight: 600; outline: none; font-family: inherit;">
+                <input type="date" id="editor-post-date"
+                    style="width: 145px; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; color: white; font-size: 13px; outline: none; font-family: inherit;">
+                <input type="text" id="editor-post-ticker" placeholder="종목코드(선택)"
+                    style="width: 115px; background: rgba(0,0,0,0.35); border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; color: white; font-size: 13px; outline: none; font-family: inherit;">
             </div>
 
             <!-- 에디터 툴바 -->
-            <div class="editor-toolbar" id="editor-toolbar" style="padding: 8px 24px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: rgba(255,255,255,0.02); flex-shrink: 0;">
+            <div class="editor-toolbar" id="editor-toolbar"
+                style="padding: 8px 24px; border-bottom: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: rgba(255,255,255,0.02); flex-shrink: 0;">
                 <!-- 서체 변경 -->
-                <select id="editor-font-family" class="editor-select-tool" title="서체 변경" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; font-family: inherit;">
+                <select id="editor-font-family" class="editor-select-tool" title="서체 변경"
+                    style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; font-family: inherit;">
                     <option value="" style="background:#1e293b; color:#fff;">기본 서체 (Pretendard)</option>
-                    <option value="'Pretendard', sans-serif" style="background:#1e293b; color:#fff;">Pretendard (기본 고딕)</option>
-                    <option value="'Noto Sans KR', sans-serif" style="background:#1e293b; color:#fff;">본고딕 (Noto Sans KR)</option>
-                    <option value="'Nanum Gothic', sans-serif" style="background:#1e293b; color:#fff;">나눔고딕 (Nanum Gothic)</option>
-                    <option value="'Nanum Myeongjo', serif" style="background:#1e293b; color:#fff;">나눔명조 (신문·리포트체)</option>
-                    <option value="'Gmarket Sans', sans-serif" style="background:#1e293b; color:#fff;">지마켓산스 (헤드라인체)</option>
-                    <option value="'Consolas', 'Courier New', monospace" style="background:#1e293b; color:#fff;">고정폭 (코딩·데이터체)</option>
+                    <option value="'Pretendard', sans-serif" style="background:#1e293b; color:#fff;">Pretendard (기본 고딕)
+                    </option>
+                    <option value="'Noto Sans KR', sans-serif" style="background:#1e293b; color:#fff;">본고딕 (Noto Sans
+                        KR)</option>
+                    <option value="'Nanum Gothic', sans-serif" style="background:#1e293b; color:#fff;">나눔고딕 (Nanum
+                        Gothic)</option>
+                    <option value="'Nanum Myeongjo', serif" style="background:#1e293b; color:#fff;">나눔명조 (신문·리포트체)
+                    </option>
+                    <option value="'Gmarket Sans', sans-serif" style="background:#1e293b; color:#fff;">지마켓산스 (헤드라인체)
+                    </option>
+                    <option value="'Consolas', 'Courier New', monospace" style="background:#1e293b; color:#fff;">고정폭
+                        (코딩·데이터체)</option>
                 </select>
 
                 <!-- 글자 크기 변경 -->
-                <select id="editor-font-size" class="editor-select-tool" title="글자 크기" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; font-family: inherit;">
+                <select id="editor-font-size" class="editor-select-tool" title="글자 크기"
+                    style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none; cursor: pointer; font-family: inherit;">
                     <option value="" style="background:#1e293b; color:#fff;">크기 선택</option>
                     <option value="12px" style="background:#1e293b; color:#fff;">12px (작은 각주/출처)</option>
                     <option value="14px" style="background:#1e293b; color:#fff;">14px (보조 설명)</option>
@@ -470,72 +552,104 @@
                 </select>
 
                 <!-- 글자 색상 선택 도구 (프리셋 + 컬러피커) -->
-                <div class="editor-color-group" style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px;">
-                    <span style="font-size: 11px; color: var(--text-muted); margin-right: 2px;" title="글자 색상 선택"><i class="ph-bold ph-palette"></i></span>
-                    <button type="button" class="editor-color-btn" data-color="#e2e8f0" title="기본 흰색/연회색" style="width: 14px; height: 14px; border-radius: 3px; border: 1px solid #64748b; background: #e2e8f0; cursor: pointer; padding: 0;"></button>
-                    <button type="button" class="editor-color-btn" data-color="#ef4444" title="상승 / 매수 / 강조 빨강" style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #ef4444; cursor: pointer; padding: 0;"></button>
-                    <button type="button" class="editor-color-btn" data-color="#3b82f6" title="하락 / 매도 / 지지 파랑" style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #3b82f6; cursor: pointer; padding: 0;"></button>
-                    <button type="button" class="editor-color-btn" data-color="#eab308" title="주의 / 관망 노랑" style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #eab308; cursor: pointer; padding: 0;"></button>
-                    <button type="button" class="editor-color-btn" data-color="#10b981" title="호재 / 목표가 초록" style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #10b981; cursor: pointer; padding: 0;"></button>
-                    <button type="button" class="editor-color-btn" data-color="#a855f7" title="수급 / 리포트 보라" style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #a855f7; cursor: pointer; padding: 0;"></button>
-                    <input type="color" id="editor-color-picker" title="사용자 직접 지정 색상" value="#3b82f6" style="width: 18px; height: 18px; padding: 0; border: none; background: transparent; cursor: pointer; vertical-align: middle;">
+                <div class="editor-color-group"
+                    style="display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px;">
+                    <span style="font-size: 11px; color: var(--text-muted); margin-right: 2px;" title="글자 색상 선택"><i
+                            class="ph-bold ph-palette"></i></span>
+                    <button type="button" class="editor-color-btn" data-color="#e2e8f0" title="기본 흰색/연회색"
+                        style="width: 14px; height: 14px; border-radius: 3px; border: 1px solid #64748b; background: #e2e8f0; cursor: pointer; padding: 0;"></button>
+                    <button type="button" class="editor-color-btn" data-color="#ef4444" title="상승 / 매수 / 강조 빨강"
+                        style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #ef4444; cursor: pointer; padding: 0;"></button>
+                    <button type="button" class="editor-color-btn" data-color="#3b82f6" title="하락 / 매도 / 지지 파랑"
+                        style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #3b82f6; cursor: pointer; padding: 0;"></button>
+                    <button type="button" class="editor-color-btn" data-color="#eab308" title="주의 / 관망 노랑"
+                        style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #eab308; cursor: pointer; padding: 0;"></button>
+                    <button type="button" class="editor-color-btn" data-color="#10b981" title="호재 / 목표가 초록"
+                        style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #10b981; cursor: pointer; padding: 0;"></button>
+                    <button type="button" class="editor-color-btn" data-color="#a855f7" title="수급 / 리포트 보라"
+                        style="width: 14px; height: 14px; border-radius: 3px; border: none; background: #a855f7; cursor: pointer; padding: 0;"></button>
+                    <input type="color" id="editor-color-picker" title="사용자 직접 지정 색상" value="#3b82f6"
+                        style="width: 18px; height: 18px; padding: 0; border: none; background: transparent; cursor: pointer; vertical-align: middle;">
                 </div>
 
                 <span class="editor-tool-sep"></span>
-                <button type="button" class="editor-tool-btn" data-cmd="formatBlock" data-val="h2" title="소제목 1 (H2)"><b>H2</b></button>
-                <button type="button" class="editor-tool-btn" data-cmd="formatBlock" data-val="h3" title="소제목 2 (H3)"><b>H3</b></button>
-                <button type="button" class="editor-tool-btn" data-cmd="formatBlock" data-val="p" title="일반 본문">본문</button>
+                <button type="button" class="editor-tool-btn" data-cmd="formatBlock" data-val="h2"
+                    title="소제목 1 (H2)"><b>H2</b></button>
+                <button type="button" class="editor-tool-btn" data-cmd="formatBlock" data-val="h3"
+                    title="소제목 2 (H3)"><b>H3</b></button>
+                <button type="button" class="editor-tool-btn" data-cmd="formatBlock" data-val="p"
+                    title="일반 본문">본문</button>
                 <span class="editor-tool-sep"></span>
-                <button type="button" class="editor-tool-btn" data-cmd="bold" title="굵게 (Ctrl+B)"><i class="ph-bold ph-text-b"></i></button>
-                <button type="button" class="editor-tool-btn" data-cmd="italic" title="기울임 (Ctrl+I)"><i class="ph-bold ph-text-italic"></i></button>
-                <button type="button" class="editor-tool-btn" data-cmd="underline" title="밑줄 (Ctrl+U)"><i class="ph-bold ph-text-underline"></i></button>
-                <button type="button" class="editor-tool-btn" data-cmd="strikeThrough" title="취소선"><i class="ph-bold ph-text-strikethrough"></i></button>
+                <button type="button" class="editor-tool-btn" data-cmd="bold" title="굵게 (Ctrl+B)"><i
+                        class="ph-bold ph-text-b"></i></button>
+                <button type="button" class="editor-tool-btn" data-cmd="italic" title="기울임 (Ctrl+I)"><i
+                        class="ph-bold ph-text-italic"></i></button>
+                <button type="button" class="editor-tool-btn" data-cmd="underline" title="밑줄 (Ctrl+U)"><i
+                        class="ph-bold ph-text-underline"></i></button>
+                <button type="button" class="editor-tool-btn" data-cmd="strikeThrough" title="취소선"><i
+                        class="ph-bold ph-text-strikethrough"></i></button>
                 <span class="editor-tool-sep"></span>
-                <button type="button" class="editor-tool-btn" data-cmd="insertUnorderedList" title="글머리 기호"><i class="ph-bold ph-list-bullets"></i></button>
-                <button type="button" class="editor-tool-btn" data-cmd="insertOrderedList" title="번호 목록"><i class="ph-bold ph-list-numbers"></i></button>
-                <button type="button" class="editor-tool-btn" data-cmd="insertHorizontalRule" title="구분선"><i class="ph-bold ph-minus"></i></button>
+                <button type="button" class="editor-tool-btn" data-cmd="insertUnorderedList" title="글머리 기호"><i
+                        class="ph-bold ph-list-bullets"></i></button>
+                <button type="button" class="editor-tool-btn" data-cmd="insertOrderedList" title="번호 목록"><i
+                        class="ph-bold ph-list-numbers"></i></button>
+                <button type="button" class="editor-tool-btn" data-cmd="insertHorizontalRule" title="구분선"><i
+                        class="ph-bold ph-minus"></i></button>
                 <span class="editor-tool-sep"></span>
-                <button type="button" class="editor-tool-btn" id="btn-insert-table" title="표 삽입"><i class="ph-bold ph-table"></i> 표 삽입</button>
-                <button type="button" class="editor-tool-btn" id="btn-insert-callout" title="핵심 요약 강조 박스"><i class="ph-bold ph-lightbulb"></i> 요약 박스</button>
-                <label class="editor-tool-btn" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="이미지 파일 첨부">
+                <button type="button" class="editor-tool-btn" id="btn-insert-table" title="표 삽입"><i
+                        class="ph-bold ph-table"></i> 표 삽입</button>
+                <button type="button" class="editor-tool-btn" id="btn-insert-callout" title="핵심 요약 강조 박스"><i
+                        class="ph-bold ph-lightbulb"></i> 요약 박스</button>
+                <label class="editor-tool-btn"
+                    style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="이미지 파일 첨부">
                     <i class="ph-bold ph-image"></i> 이미지 파일
                     <input type="file" id="editor-image-file-input" accept="image/*" style="display: none;">
                 </label>
-                <span style="font-size: 11px; color: #94a3b8; margin-left: auto;">💡 캡처 이미지는 <b>Ctrl+V</b>로 바로 붙여넣을 수 있습니다</span>
+                <span style="font-size: 11px; color: #94a3b8; margin-left: auto;">💡 캡처 이미지는 <b>Ctrl+V</b>로 바로 붙여넣을 수
+                    있습니다</span>
             </div>
 
             <!-- 에디터 본문 캔버스 -->
-            <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 24px; position: relative; background: rgba(0,0,0,0.15);">
-                <div id="editor-content-canvas" contenteditable="true" style="min-height: 100%; outline: none; line-height: 1.85; font-size: 15px; color: var(--text-main);" placeholder="이곳에 기업 분석 내용을 작성하세요..."></div>
-                
+            <div
+                style="flex: 1; min-height: 0; overflow-y: auto; padding: 24px; position: relative; background: rgba(0,0,0,0.15);">
+                <div id="editor-content-canvas" contenteditable="true"
+                    style="min-height: 100%; outline: none; line-height: 1.85; font-size: 15px; color: var(--text-main);"
+                    placeholder="이곳에 기업 분석 내용을 작성하세요..."></div>
+
                 <!-- 실시간 미리보기 레이어 (토글) -->
-                <div id="editor-preview-container" style="display: none; min-height: 100%;" class="insight-article-container"></div>
+                <div id="editor-preview-container" style="display: none; min-height: 100%;"
+                    class="insight-article-container"></div>
             </div>
 
             <!-- 에디터 하단 액션 바 -->
-            <div style="padding: 12px 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); flex-shrink: 0;">
+            <div
+                style="padding: 12px 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); flex-shrink: 0;">
                 <div style="display: flex; gap: 8px;">
-                    <button type="button" id="btn-toggle-preview" style="padding: 8px 16px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit;">
+                    <button type="button" id="btn-toggle-preview"
+                        style="padding: 8px 16px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-main); border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit;">
                         <i class="ph ph-eye"></i> 미리보기
                     </button>
-                    <button type="button" id="btn-draft-save" style="padding: 8px 16px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit;">
+                    <button type="button" id="btn-draft-save"
+                        style="padding: 8px 16px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit;">
                         임시저장
                     </button>
                 </div>
                 <div style="display: flex; gap: 10px;">
-                    <button type="button" id="btn-editor-cancel" style="padding: 8px 18px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit;">취소</button>
-                    <button type="button" id="btn-publish-post" style="padding: 8px 22px; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: white; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(37,99,235,0.3); font-family: inherit;">
+                    <button type="button" id="btn-editor-cancel"
+                        style="padding: 8px 18px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit;">취소</button>
+                    <button type="button" id="btn-publish-post"
+                        style="padding: 8px 22px; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: white; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(37,99,235,0.3); font-family: inherit;">
                         <i class="ph-bold ph-paper-plane-tilt"></i> 사이트에 즉시 발행
                     </button>
                 </div>
             </div>
         </div>
     </div>
-    
+
     <script src="chart_scanner.js?v=19"></script>
     <script src="trader_room.js?v=8"></script>
-    <script src="quant_hub.js?v=4"></script>
-    <script src="app.js?v=34"></script>
+    <script src="quant_hub.js?v=5"></script>
+    <script src="app.js?v=35"></script>
 
     <!-- Hidden Google Translate Element -->
     <div id="google_translate_element" style="display:none;" class="notranslate"></div>
@@ -550,6 +664,8 @@
             }
         }
     </script>
-    <script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
+    <script type="text/javascript"
+        src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
 </body>
+
 </html>

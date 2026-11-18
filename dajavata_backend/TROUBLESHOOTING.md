@@ -216,3 +216,68 @@
 
 
 
+
+---
+
+### 📌 5. Dajavata 홈페이지 15:04 갱신 멈춤 및 GitHub Actions 큐 지연·프론트엔드 캐시 고착 이슈 (2026-11-03)
+- **증상:**
+  - `https://dajavata.com/` 접속 시 최근 업데이트 시각 및 결과일시가 `2026.11.02 15:04 (KST)`에 고정되어 장 마감 후 야간 및 새벽까지 갱신되지 않음.
+- **원인 분석 (Root Cause):**
+  1. **GitHub Actions 스케줄 문법 결함 및 큐 정체:**
+     - 원격 저장소의 워크플로우(`.github/workflows/update-data.yml`)에 `- cron: '15 0-7 * * 1-5'` 범위 지정으로 등록되어 큐 혼잡 시 장중/장마감 슬롯(16:15, 18:15, 21:15 KST)이 통째로 스킵됨.
+     - 야간 정산 배치(21:15 KST)가 GitHub Actions 글로벌 큐에서 3시간 30분 지체되어 00:47 KST에야 실행 완료됨.
+  2. **프론트엔드 `app.js` 조기 `break;` 결함:**
+     - `fetchThemesWithFallback()`이 Cloudflare Pages 정적 `data/theme_cache.json`을 읽자마자 `break;`하여 최신 GitHub Raw 비교가 원천 차단됨.
+  3. **자정~새벽(00:00~08:14 KST) 슬롯 계산 누락:**
+     - `get_effective_kst_slot()`과 `getKstDate()`가 `hour < 8`일 때 전 영업일 20:15 최종 마감 슬롯 대신 파일 과거 수정 시각(`15:04`)으로 되돌아감.
+- **조치 및 해결 (Resolution):**
+  1. **프론트엔드 (`app.js`, `index.html` v32):**
+     - GitHub Raw 최우선 순위 배치 및 캐시버스팅 타임스탬프(`?t=${Date.now()}`) 적용.
+     - 4.5초 타임아웃(`AbortController`)을 부여하여 Render 슬립 시에도 즉시 GitHub Raw 최신 캐시 채택.
+     - 조기 `break;`를 제거하여 모든 소스 중 최신 데이터가 100% 채택되도록 보장.
+     - `getKstDate()`에 평일 00:00~08:14 및 주말 분기 추가(전 영업일 20:15 마감 슬롯으로 동기화).
+  2. **백엔드 (`main.py`):**
+     - `get_effective_kst_slot()`에 `hour < 8` 분기 처리 추가 (전 영업일 20:15 최종 마감 슬롯 산출).
+  3. **GitHub Actions (`update-data.yml`):**
+     - 큐 병목 분인 `:15` 대신 `:18`분으로 조정, 범위(`0-7`) 대신 쉼표 분리(`0,1,2,3,4,5`, `6,7,8,9,10,11,12`) 적용.
+  4. **데이터 동기화:**
+     - 최신 데이터(264개 테마, 4,300여 개 종목)를 로컬 3대 디렉토리(`data/`, `dajavata_backend/data/`, `dajavata/dist/data/`)에 동기화 완료.
+
+
+---
+
+## 2026-11-03: 테마/종목 업데이트 시간 불일치 버그 및 정적 캐시 우선순위 로딩 최적화
+
+### 현상 및 증상
+1. **업데이트 시간 불일치:** 우측 상단 최근 업데이트 배지는 `2026.11.03 08:15 (KST)`로 정규 스케줄 슬롯을 표시하는데, 테이블 내의 모든 테마/종목 행의 '업데이트' 열은 `11.03 04:32`로 고정 출력됨.
+2. **테마 상세 50초 랙:** URL 직접 접근(`?view=theme&name=...`) 또는 테마 클릭 시, 화면이 장시간 멈추며 로딩 인디케이터가 지속됨.
+
+### Root Cause
+1. **엄격 초과(`>`) 비교 버그:** `formatKstTime()` 내부에서 `activeDate`와 `rawVal` 모두 `getKstDate()`를 거치면서 둘 다 `08:15`로 슬롯 정규화됨. `08:15 > 08:15` 비교가 `false`가 되어 `return rawVal;`로 빠지며 원본 캐시 문자열(`11.03 04:32`)이 노출됨.
+2. **백엔드 무한 대기:** `loadThemeDetails()`에서 슬립 모드의 Render 백엔드를 타임아웃 없이 순차 호출하여 50~60초간 응답이 지연됨. 정적 캐시 `data/theme_details.json`이 2순위로 밀려 있었음.
+
+### 해결 조치
+1. `app.js`의 `formatKstTime()`을 `getKstDate(activeDate || rawVal)` 기반 단일 포맷터로 개편하여 우측 상단 배지와 테이블 열 시간을 100% 일치시킴.
+2. `loadThemeDetails()`에서 `getThemeDetailsStore()`(로컬/CDN 정적 캐시)를 1순위로 즉시 조회(0~30ms)하도록 변경하고, 백엔드 호출에는 `fetchWithTimeout(..., 2000)` 타임아웃 적용.
+3. `data/theme_cache.json` 및 `data/all_stocks.json` 로컬 경로를 원격보다 최우선 순위로 배치.
+4. `index.html` 캐시 버스팅 `app.js?v=33` 반영 완료.
+
+
+---
+
+## 2026-11-03: 종목 브리핑 미니 차트 모달 실시간 체결가 불일치 버그 해결
+
+### 현상 및 증상
+- 메인 검색창/테이블 및 AI 차트 스캐너에서는 알지노믹스(476830)의 현재가가 `20,800원 (-3.93%)`으로 정상 표시되나, 종목을 클릭했을 때 나타나는 브리핑 미니 차트 모달 상단에는 과거 전일 종가인 `21,600원 (+1.41%)`이 고정되어 출력되고, 미니 차트 캔버스 내부에는 `20,750원 (-3.94%)`으로 나타나 가격 불일치 발생.
+
+### Root Cause
+1. `syncRealtimeStockQuotes()`가 검색 결과 뷰에서 `currentDataList`만 탐색하여 `stockResults`의 인메모리 `stock` 객체를 갱신하지 못함 (DOM만 갱신).
+2. `openStockBriefingModal(stock)` 호출 시 전일 종가 정적 객체(21,600원)가 전달되어 헤더에 그대로 렌더링됨.
+3. `loadAndDrawChart()`와 `loadStockBriefingDetails()`가 네이버로부터 당일 실시간 캔들 및 체결가를 수신한 뒤에도 모달 상단 헤더의 가격 엘리먼트를 재동기화하지 않는 구조적 결함.
+
+### 해결 조치
+1. `updateModalHeroPrice()` 및 `window.updateModalHeroPrice()` 공통 헬퍼 신설.
+2. `syncRealtimeStockQuotes()`에서 `list`, `currentDataList`, `window.allStocks` 전 영역의 인메모리 객체를 갱신하고 열려 있는 모달까지 즉시 실시간 동기화.
+3. `loadAndDrawChart()`에서 당일 일봉 캔들 종가(`last.close`) 및 등락률로 모달 상단 헤더 동기화.
+4. `loadStockBriefingDetails()`에서 네이버 실시간 체결가(`closePrice`) 수신 즉시 모달 상단과 당일 캔들 종가를 100% 실시간 시세로 일치시킴.
+5. `index.html` 캐시 버스팅 `app.js?v=34` 적용 완료.
