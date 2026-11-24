@@ -103,6 +103,7 @@
         calFilterMode: 'key',           // 'key' (S&P500/Nasdaq100/KOSPI200 주요주) | 'all' (전체 종목)
         calSearch: '',
         calDynamicMonths: {},
+        calLiveSyncedMonths: {},
         calLoadingMonth: false,
         guruStyle: 'ALL',               // 'ALL' | 1..8
         guruSize: 'ALL',                // 'ALL' | 'Q' | 'W' | 'E' | 'R'
@@ -1233,8 +1234,12 @@
             render();
             return calCache[ym] || state.calDynamicMonths[ym];
         }
-        state.calLoadingMonth = true;
-        render();
+        state.calLiveSyncedMonths[ym] = true;
+        const isSilentBackgroundRefresh = Boolean(forceRefresh && (calCache[ym] || state.calDynamicMonths[ym]));
+        if (!isSilentBackgroundRefresh) {
+            state.calLoadingMonth = true;
+            render();
+        }
         try {
             const res = await fetch(`${API_BASE}/api/quant/calendar?year=${year}&month=${month}`);
             if (res.ok) {
@@ -1243,6 +1248,7 @@
                     if (Array.isArray(data.economic)) {
                         data.economic = deduplicateEconomicRows(data.economic);
                     }
+                    data._liveSynced = true;
                     state.calDynamicMonths[ym] = data;
                     if (calCache[ym]) {
                         calCache[ym] = data;
@@ -1285,17 +1291,19 @@
         } : null);
 
         // 1) 아직 캐시에 없는 연/월이면 백그라운드 자동 로드
-        // 2) 캐시에 있더라도 과거 날짜(date < todayStr)의 주요 실적(key && epsAct==null)이 미반영된 상태면 1회 실시간 갱신 호출
+        // 2) 캐시에 있더라도 과거 날짜(date < todayStr)의 주요 실적(key && epsAct==null)이 미반영된 상태면 딱 1회만 실시간 갱신 호출
         if (mkt === 'US' && !state.calLoadingMonth) {
             if (!usMonthObj && !state.calDynamicMonths[ym]) {
+                state.calLiveSyncedMonths[ym] = true;
                 state.calDynamicMonths[ym] = { earnings: [], ipos: [], splits: [], dividends: [], economic: [], _fetching: true };
                 setTimeout(() => ensureCalendarMonthLoaded(year, month, true), 10);
-            } else if (usMonthObj && !usMonthObj._liveSynced) {
+            } else if (usMonthObj && !state.calLiveSyncedMonths[ym] && !usMonthObj._liveSynced) {
+                state.calLiveSyncedMonths[ym] = true;
+                usMonthObj._liveSynced = true;
                 const hasStalePastEarnings = (usMonthObj.earnings || []).some(
                     e => e.key && e.date && e.date < todayStr && e.epsAct == null
                 );
                 if (hasStalePastEarnings) {
-                    usMonthObj._liveSynced = true;
                     setTimeout(() => ensureCalendarMonthLoaded(year, month, true), 20);
                 }
             }
@@ -1624,11 +1632,11 @@
             ` : ''}
 
             <!-- 6. 전체 상세 테이블 -->
-            <div class="qh-table-card">
+            <div class="qh-table-card" style="flex-shrink:0;">
                 <div style="padding:12px 16px; border-bottom:1px solid var(--border); font-weight:700;">
                     일정 상세 리스트 (${displayEvents.length}건 표시 중)
                 </div>
-                <div class="qh-table-scroll" style="max-height:500px; overflow-y:auto;">
+                <div class="qh-table-scroll" id="qh-cal-detail-scroll" style="max-height:680px; overflow-y:auto;">
                     <table class="qh-table">
                         <thead>
                             <tr>
@@ -2425,8 +2433,22 @@
                 bodyHtml = renderRisingView();
         }
 
+        const prevContainerScrollTop = container.scrollTop || 0;
+        const prevDetailScrollEl = container.querySelector('#qh-cal-detail-scroll');
+        const prevDetailScrollTop = prevDetailScrollEl ? prevDetailScrollEl.scrollTop : 0;
+
         container.innerHTML = renderTopHeader() + bodyHtml;
         bindEvents(container);
+
+        if (prevContainerScrollTop > 0) {
+            container.scrollTop = prevContainerScrollTop;
+        }
+        if (prevDetailScrollTop > 0) {
+            const newDetailScrollEl = container.querySelector('#qh-cal-detail-scroll');
+            if (newDetailScrollEl) {
+                newDetailScrollEl.scrollTop = prevDetailScrollTop;
+            }
+        }
     }
 
     function bindEvents(container) {
