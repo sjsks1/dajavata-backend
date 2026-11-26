@@ -15,6 +15,11 @@
     <meta property="og:title" content="DAJAVATA(다자바타) - 주식 테마 수급 분석 & AI 차트 스캐너">
     <meta property="og:description" content="실시간 국내외 주식 테마 수급 분석, AI 차트 스캐너, ICT 스마트 머니 시그널 및 심층 기업 분석 칼럼 제공">
     <meta property="og:url" content="https://www.dajavata.com/">
+    <meta name="theme-color" content="#0a0b10">
+
+    <!-- Brand Favicon (SVG Vector Mark) -->
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="apple-touch-icon" href="favicon.svg">
 
     <!-- Naver Search Advisor Verification -->
     <meta name="naver-site-verification" content="a1d0cd66cffb04852538f6e36f7de2f1aa10083a" />
@@ -31,10 +36,10 @@
     <!-- Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <!-- Styles -->
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=10">
     <link rel="stylesheet" href="trader_room.css?v=7">
     <link rel="stylesheet" href="chart_scanner.css?v=9">
-    <link rel="stylesheet" href="quant_hub.css?v=2">
+    <link rel="stylesheet" href="quant_hub.css?v=3">
     <!-- TradingView Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
 </head>
@@ -47,7 +52,14 @@
                 <i class="ph ph-list"></i>
             </button>
             <div class="mobile-logo">
-                <i class="ph-fill ph-trend-up"></i>
+                <svg class="dajavata-brand-svg" width="22" height="22" viewBox="0 0 256 256" aria-hidden="true">
+                    <rect width="256" height="256" rx="56" fill="#131724"/>
+                    <path fill="#3b82f6" d="M 48 44 H 130 C 184 44 224 81 224 128 C 224 175 184 212 130 212 H 48 V 180 H 128 C 164 180 190 158 190 128 C 190 98 164 76 128 76 H 48 V 44 Z"/>
+                    <rect x="48" y="138" width="24" height="30" rx="5" fill="#3b82f6"/>
+                    <rect x="82" y="114" width="24" height="54" rx="5" fill="#60a5fa"/>
+                    <rect x="116" y="88" width="24" height="80" rx="5" fill="#f94d5d"/>
+                    <circle cx="128" cy="64" r="10" fill="#fb7185"/>
+                </svg>
                 <span>DAJAVATA</span>
             </div>
         </div>
@@ -66,8 +78,15 @@
             <div class="sidebar-header">
                 <a href="/" style="text-decoration: none; color: inherit;">
                     <div class="logo" id="dajavata-brand-logo" title="DAJAVATA" style="cursor: pointer;">
-                        <i class="ph-fill ph-trend-up"></i>
-                        <span style="font-weight: 900; letter-spacing: 1px;">DAJAVATA</span>
+                        <svg class="dajavata-brand-svg" width="26" height="26" viewBox="0 0 256 256" aria-hidden="true">
+                            <rect width="256" height="256" rx="56" fill="#131724" stroke="rgba(255,255,255,0.1)" stroke-width="6"/>
+                            <path fill="#3b82f6" d="M 48 44 H 130 C 184 44 224 81 224 128 C 224 175 184 212 130 212 H 48 V 180 H 128 C 164 180 190 158 190 128 C 190 98 164 76 128 76 H 48 V 44 Z"/>
+                            <rect x="48" y="138" width="24" height="30" rx="5" fill="#3b82f6"/>
+                            <rect x="82" y="114" width="24" height="54" rx="5" fill="#60a5fa"/>
+                            <rect x="116" y="88" width="24" height="80" rx="5" fill="#f94d5d"/>
+                            <circle cx="128" cy="64" r="10" fill="#fb7185"/>
+                        </svg>
+                        <span style="font-weight: 900; letter-spacing: 0.8px;">DAJAVATA</span>
                     </div>
                 </a>
             </div>
