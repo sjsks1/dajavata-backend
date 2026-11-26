@@ -337,6 +337,8 @@
                     if ((!mf0.krDepositSeries || !mf0.krDepositSeries.length) && mf1.krDepositSeries) mf0.krDepositSeries = mf1.krDepositSeries;
                     if ((!mf0.krM2Series || !mf0.krM2Series.length) && mf1.krM2Series) mf0.krM2Series = mf1.krM2Series;
                     if (mf1.krLatestIpos && mf1.krLatestIpos.length > (mf0.krLatestIpos || []).length) mf0.krLatestIpos = mf1.krLatestIpos;
+                    if (mf1.ipoLatest && mf1.ipoLatest.length > (mf0.ipoLatest || []).length) mf0.ipoLatest = mf1.ipoLatest;
+                    if (mf1.ipoLatestAll && mf1.ipoLatestAll.length > (mf0.ipoLatestAll || []).length) mf0.ipoLatestAll = mf1.ipoLatestAll;
                 }
                 syncKrQuantWithLatestStocks(state.cache);
                 state.loading = false;
@@ -2092,12 +2094,12 @@
             { market: 'KRX 반도체·AI 주도 섹터 수급', date: '2026-11-26', personal: -2180, foreign: 1640, institution: 590, totalFlow: 4410 }
         ];
 
-        // 4. 최근 신규 상장 주요 IPO 종목 (Latest IPOs) — 최근 1년 이내 실제 KRX 신규상장 전 종목(100개사) 표시 (과거 더미 0건)
+        // 4. 최근 신규 상장 주요 IPO 종목 (Latest IPOs) — 최근 1년 이내 실제 KRX/US 신규상장 전 종목 표시
         const krIpoSource = mf.krLatestIpos || [];
         const rawLatestIpos = mkt === 'KR'
             ? krIpoSource
             : (incFunds && mf.ipoLatestAll && mf.ipoLatestAll.length ? mf.ipoLatestAll : (mf.ipoLatest || []));
-        const normalizedIpos = rawLatestIpos.slice(0, 120).map(ip => {
+        const normalizedIpos = rawLatestIpos.slice(0, 300).map(ip => {
             const sym = String(ip.symbol || ip.s || ip.code || '').trim();
             const comp = String(ip.company || ip.n || ip.name || sym).trim();
             const dt = String(ip.date || ip.d || '-').trim();
@@ -2414,7 +2416,7 @@
                         <span style="display:inline-flex; align-items:center; gap:6px;"><i style="width:12px; height:8px; background:#64748b; display:inline-block; border-radius:2px;"></i> 스팩/합병 (SPAC)</span>
                     </div>
 
-                    <!-- 종목별 2줄 카드 리스트 (티커·기업명·상장일 + 공모규모 게이지 바 + AI 차트 직결 버튼) -->
+                    <!-- 종목별 2줄 카드 리스트 (티커·기업명·첫 상장일(YYYY-MM-DD) + 공모규모 게이지 바 + AI 차트 직결 버튼) -->
                     <div style="max-height:1180px; overflow-y:auto;">
                         ${normalizedIpos.map((ip, idx) => {
                             const barPct = ip.deal > 0 ? Math.max(4, Math.min(100, Math.round((ip.deal / maxDealSize) * 100))) : 3;
@@ -2428,7 +2430,7 @@
                                             <span style="font-weight:700; font-size:13px; color:var(--text-main); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${esc(ip.comp)}">${esc(ip.comp)}</span>
                                         </div>
                                         <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-                                            <span style="font-size:11px; color:var(--text-muted); font-family:monospace;">${esc(ip.dt.slice(5))}</span>
+                                            <span style="font-size:11px; font-weight:700; color:#93c5fd; background:rgba(59,130,246,0.14); border:1px solid rgba(59,130,246,0.3); padding:2px 7px; border-radius:4px; font-family:monospace; white-space:nowrap;" title="첫 상장일 (${esc(ip.ex)})">상장일 ${esc(ip.dt)}</span>
                                             <button type="button" class="qh-chart-btn" onclick="window.openInDajavataScanner('${esc(ip.sym)}', '${esc(ip.comp.replace(/'/g, ''))}')">AI 차트</button>
                                         </div>
                                     </div>

@@ -915,6 +915,108 @@ def main():
     all_obj = ipo_stats.get("all") or {}
     m2_monthly_list = (m2_raw.get("m") or [])[-120:]
 
+    # [LIVE 2-B] 미국 나스닥(Nasdaq) 공식 IPO 캘린더 API(최근 12개월 전수 조회) 직결로 15개 제한 해제 (최근 1년 200+개사 전수 수집)
+    us_ipo_map_comp = {}
+    us_ipo_map_all = {}
+    for base_ip in (comp_obj.get("latest") or []):
+        sym_b = str(base_ip.get("symbol") or base_ip.get("s") or "").strip()
+        if sym_b:
+            us_ipo_map_comp[sym_b] = dict(base_ip)
+            us_ipo_map_all[sym_b] = dict(base_ip)
+    for base_ip in (all_obj.get("latest") or []):
+        sym_b = str(base_ip.get("symbol") or base_ip.get("s") or "").strip()
+        if sym_b and sym_b not in us_ipo_map_all:
+            us_ipo_map_all[sym_b] = dict(base_ip)
+
+    def fetch_nasdaq_month_ipos(ym_q):
+        nq_headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+            "Accept": "application/json, text/plain, */*",
+            "Origin": "https://www.nasdaq.com",
+            "Referer": "https://www.nasdaq.com/",
+        }
+        try:
+            r_nq = requests.get(f"https://api.nasdaq.com/api/ipo/calendar?date={ym_q}", headers=nq_headers, timeout=7)
+            if r_nq.status_code == 200:
+                return ((r_nq.json() or {}).get("data") or {}).get("priced", {}).get("rows") or []
+        except Exception:
+            pass
+        return []
+
+    ym_queries = []
+    for m_off in range(0, -12, -1):
+        y_q = now_dt.year
+        m_q = now_dt.month + m_off
+        while m_q < 1:
+            m_q += 12
+            y_q -= 1
+        ym_queries.append(f"{y_q:04d}-{m_q:02d}")
+
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=6) as ex_nq:
+            nq_results = list(ex_nq.map(fetch_nasdaq_month_ipos, ym_queries))
+        for rows_m in nq_results:
+            for nr in (rows_m or []):
+                if not isinstance(nr, dict):
+                    continue
+                sym_n = str(nr.get("proposedTickerSymbol") or "").strip()
+                comp_n = str(nr.get("companyName") or "").strip()
+                p_dt = str(nr.get("pricedDate") or "").strip()
+                if not sym_n or not comp_n or "/" not in p_dt:
+                    continue
+                parts_d = p_dt.split("/")
+                if len(parts_d) == 3:
+                    dt_iso_n = f"{parts_d[2]}-{parts_d[0].zfill(2)}-{parts_d[1].zfill(2)}"
+                else:
+                    continue
+                raw_ex = str(nr.get("proposedExchange") or "NASDAQ").upper()
+                ex_n = "NYSE" if "NYSE" in raw_ex else ("AMEX" if "AMEX" in raw_ex or "AMERICAN" in raw_ex else "NASDAQ")
+                raw_dl = str(nr.get("dollarValueOfSharesOffered") or "0").replace("$", "").replace(",", "").strip()
+                try:
+                    deal_n = int(float(raw_dl or 0))
+                except Exception:
+                    deal_n = 0
+                if deal_n <= 0:
+                    try:
+                        px_n = float(str(nr.get("proposedSharePrice") or "0").replace("$", "").replace(",", "").strip() or 0)
+                        sh_n = float(str(nr.get("sharesOffered") or "0").replace(",", "").strip() or 0)
+                        deal_n = int(px_n * sh_n)
+                    except Exception:
+                        deal_n = 0
+                entry_n = {
+                    "date": dt_iso_n,
+                    "symbol": sym_n,
+                    "company": comp_n,
+                    "exchange": ex_n,
+                    "dealSize": deal_n,
+                }
+                if sym_n not in us_ipo_map_comp:
+                    us_ipo_map_comp[sym_n] = entry_n
+                if sym_n not in us_ipo_map_all:
+                    us_ipo_map_all[sym_n] = entry_n
+    except Exception as nq_e:
+        print(f"  [WARN] Nasdaq 12-month IPO calendar fetch warning: {nq_e}")
+
+    # Merge any Priced ETFs/Stocks from calendar_months into us_ipo_map_all
+    for cm_val in calendar_months.values():
+        for c_ipo in (cm_val.get("ipos") or []):
+            if str(c_ipo.get("actions") or "") == "Priced":
+                sym_c = str(c_ipo.get("symbol") or "").strip()
+                dt_c = str(c_ipo.get("date") or "").strip()
+                if sym_c and dt_c and sym_c not in us_ipo_map_all:
+                    us_ipo_map_all[sym_c] = {
+                        "date": dt_c,
+                        "symbol": sym_c,
+                        "company": str(c_ipo.get("company") or sym_c).strip(),
+                        "exchange": str(c_ipo.get("exchange") or "NYSE").strip(),
+                        "dealSize": int(float(c_ipo.get("marketCap") or 0)),
+                        "kind": "Fund" if "ETF" in str(c_ipo.get("company") or "") else "Company",
+                    }
+
+    us_ipo_latest_comp = sorted(us_ipo_map_comp.values(), key=lambda x: str(x.get("date") or ""), reverse=True)[:250]
+    us_ipo_latest_all = sorted(us_ipo_map_all.values(), key=lambda x: str(x.get("date") or ""), reverse=True)[:280]
+
     # [LIVE 3] 미국 재무부 금융조사국(OFR) 공식 API를 통한 실시간 미국 MMF 총자산($B) 시계열 수집
     mmf_series = []
     try:
@@ -984,8 +1086,8 @@ def main():
         "ipoProceedsAll": all_obj.get("proceeds", []),
         "ipoTotal": comp_obj.get("total", 5265),
         "ipoTotalAll": all_obj.get("total", 6500),
-        "ipoLatest": (comp_obj.get("latest") or [])[:40],
-        "ipoLatestAll": (all_obj.get("latest") or [])[:40],
+        "ipoLatest": us_ipo_latest_comp,
+        "ipoLatestAll": us_ipo_latest_all,
         "mmf": mmf_series,
         "cot": cot_live,
         "fedRate": (rates_raw.get("ff") or [])[-120:],
