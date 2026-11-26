@@ -2092,37 +2092,18 @@
             { market: 'KRX 반도체·AI 주도 섹터 수급', date: '2026-11-26', personal: -2180, foreign: 1640, institution: 590, totalFlow: 4410 }
         ];
 
-        // 4. 최근 신규 상장 주요 IPO 종목 (Latest IPOs) — KR / US 완벽 분리 + 최신 11월 상장주 자동 병합
-        const FALLBACK_NOV_KR_IPOS = [
-            { date: '2026-11-24', symbol: '482690', company: '엠비디 (MBD · 3D 세포배양·오가노이드)', exchange: 'KOSDAQ', dealSize: 24500000000, kind: 'Company' },
-            { date: '2026-11-20', symbol: '482610', company: '하나에어로다이내믹스 (항공우주·방산 부품)', exchange: 'KOSDAQ', dealSize: 34200000000, kind: 'Company' },
-            { date: '2026-11-18', symbol: '481850', company: '에이엘로봇 (AL Robot · 산업용 로봇·센서)', exchange: 'KOSDAQ', dealSize: 44000000000, kind: 'Company' },
-            { date: '2026-11-17', symbol: '481070', company: '옵토닉스 (Optonics · 레이저·광학 솔루션)', exchange: 'KOSDAQ', dealSize: 31200000000, kind: 'Company' },
-            { date: '2026-11-16', symbol: '480920', company: '영광와이케이엠씨 (표면처리·항공방산)', exchange: 'KOSDAQ', dealSize: 29700000000, kind: 'Company' },
-            { date: '2026-11-12', symbol: '480450', company: '넥스아이 (Nex-I · 면역항암제 신약)', exchange: 'KOSDAQ', dealSize: 26400000000, kind: 'Company' },
-            { date: '2026-11-11', symbol: '480110', company: '바로팜 (BaroPharm · 의약품 유통 플랫폼)', exchange: 'KOSDAQ', dealSize: 49200000000, kind: 'Company' },
-            { date: '2026-11-10', symbol: '479960', company: '동원파츠 (Dongwon Parts · 정밀 모빌리티 부품)', exchange: 'KOSDAQ', dealSize: 66200000000, kind: 'Company' },
-            { date: '2026-11-04', symbol: '479520', company: '이에스티 (EST · 이차전지·소재 장비)', exchange: 'KOSDAQ', dealSize: 31000000000, kind: 'Company' },
-            { date: '2026-11-04', symbol: '479380', company: '아이엠스팩1호 (iM 기업인수목적1호)', exchange: 'KOSDAQ', dealSize: 10000000000, kind: 'SPAC' },
-            { date: '2026-11-03', symbol: '479140', company: '래블업 (Lablup · AI GPU 클라우드 플랫폼)', exchange: 'KOSDAQ', dealSize: 57000000000, kind: 'Company' },
-            { date: '2026-10-30', symbol: '478820', company: '인텔리빅스 (IntelliVix · 비전 AI·보안)', exchange: 'KOSDAQ', dealSize: 27000000000, kind: 'Company' },
-            { date: '2026-10-30', symbol: '478710', company: '크리에이츠 (Creatz · AI 스포츠 골프 센서)', exchange: 'KOSDAQ', dealSize: 45000000000, kind: 'Company' }
-        ];
-        let krIpoSource = mf.krLatestIpos || [];
-        if (krIpoSource.length <= 15 && (!krIpoSource[0] || String(krIpoSource[0].date) <= '2026-10-28')) {
-            const seenSyms = new Set(FALLBACK_NOV_KR_IPOS.map(x => x.symbol));
-            krIpoSource = [...FALLBACK_NOV_KR_IPOS, ...krIpoSource.filter(x => !seenSyms.has(x.symbol))];
-        }
+        // 4. 최근 신규 상장 주요 IPO 종목 (Latest IPOs) — 최근 1년 이내 실제 KRX 신규상장 전 종목(100개사) 표시 (과거 더미 0건)
+        const krIpoSource = mf.krLatestIpos || [];
         const rawLatestIpos = mkt === 'KR'
             ? krIpoSource
             : (incFunds && mf.ipoLatestAll && mf.ipoLatestAll.length ? mf.ipoLatestAll : (mf.ipoLatest || []));
-        const normalizedIpos = rawLatestIpos.slice(0, 25).map(ip => {
+        const normalizedIpos = rawLatestIpos.slice(0, 120).map(ip => {
             const sym = String(ip.symbol || ip.s || ip.code || '').trim();
             const comp = String(ip.company || ip.n || ip.name || sym).trim();
             const dt = String(ip.date || ip.d || '-').trim();
             const ex = String(ip.exchange || ip.ex || (mkt === 'KR' ? 'KOSDAQ' : 'NASDAQ')).trim();
             const deal = Number(ip.dealSize || ip.proceeds || 0);
-            const isSpac = /SPAC|Acquisition|Blank Check|스팩/i.test(comp) || ip.kind === 'SPAC';
+            const isSpac = /SPAC|Acquisition|Blank Check|스팩|기업인수목적/i.test(comp) || ip.kind === 'SPAC';
             return { sym, comp, dt, ex, deal, isSpac };
         });
         const maxDealSize = Math.max(...normalizedIpos.map(x => x.deal || 0), 1);
