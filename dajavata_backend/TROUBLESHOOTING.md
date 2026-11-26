@@ -281,3 +281,51 @@
 3. `loadAndDrawChart()`에서 당일 일봉 캔들 종가(`last.close`) 및 등락률로 모달 상단 헤더 동기화.
 4. `loadStockBriefingDetails()`에서 네이버 실시간 체결가(`closePrice`) 수신 즉시 모달 상단과 당일 캔들 종가를 100% 실시간 시세로 일치시킴.
 5. `index.html` 캐시 버스팅 `app.js?v=34` 적용 완료.
+
+
+---
+
+## 2026-11-18: 글로벌 퀀트 허브 10월 30일 날짜 멈춤, 증시 캘린더 '발표예정' 미갱신 & Render 배포 `Port scan timeout` 해결
+
+### 🚨 1. 글로벌 퀀트 허브(`QuantHub`) 업데이트 날짜가 `2026-10-30`에서 멈춰 있던 문제
+- **원인:**
+  1. GitHub 웹 업로드 시 `update-data.yml`이 `.github/workflows/` 폴더 내부가 아닌 최상위 루트에 업로드되어, 실제 GitHub Actions는 `python update_themes.py`만 실행하고 `update_quant_hub.py`는 실행하지 못했음.
+  2. 프론트엔드 `quant_hub.js`의 `ensureDataLoaded()`가 호스팅 서버의 정적 `data/quant_hub_cache.json`만 1순위로 읽고 종료하여 GitHub Raw 최신본이나 `window.allStocks` 실시간 시세를 반영하지 못했음.
+- **해결:**
+  1. `.github/workflows/update-data.yml` 내부에 `python update_quant_hub.py || true`가 포함된 최신 워크플로우를 정확히 업로드.
+  2. `quant_hub.js` (`?v=5`)에서 GitHub Raw 최신본과 로컬 캐시의 `updated_at`을 병렬 비교해 더 최신인 데이터를 채택하고, `syncKrQuantWithLatestStocks()`로 국내 퀀트 종목 시세를 실시간 최신화.
+  3. `app.js` (`?v=35`)의 `loadAllStocks()` 및 `getThemeDetailsStore()`에서도 GitHub Raw 최신 자동 갱신본을 최우선 순위로 조회하도록 수정.
+
+### 🚨 2. 증시 캘린더(`quant-calendar`)에서 과거 날짜(11월 2일 등)가 여전히 '실제 발표: 발표예정'으로 뜨던 문제
+- **원인:**
+  1. 미국 서머타임(DST) 해제 시점에 업스트림 `calendar-economic` API에 동일 일자·동일 지표가 `14:00 UTC (actual: null)`와 `15:00 UTC (actual: 52.4 / 55.5)` 두 줄로 중복 등록되어 가짜 `발표예정` 행이 상단에 노출됨.
+  2. 연준 위원 연설(`Speech`), 회의(`Meeting`) 등 원래 수치 발표가 없는 일정에도 일괄적으로 `발표예정` 또는 `발표예정%`가 붙음.
+  3. 과거 날짜인데 캐시 생성 이후 발표된 실적을 재조회하는 로직 및 국내(KRX) 지난 일정의 확정 지표 연동이 없었음.
+- **해결:**
+  1. `update_quant_hub.py`, `dajavata_backend/main.py`, `quant_hub.js` 3곳 모두에 `(일자, 이벤트명)` 기준 중복 병합(`deduplicateEconomicRows`, `actual != null` 우선 보존) 적용.
+  2. 과거 날짜 비수치 일정은 `일정 종료 (연설/회의 완료)` / `발표 완료`로 자동 표기하고, 미국 실적은 `실제: $2.05 (Beat 🔥 / Miss ❄️)` 및 확정 매출액 표기 + 미반영 과거 실적 자동 실시간 패치(`ensureCalendarMonthLoaded(..., true)`) 적용.
+  3. 국내(KRX) 지난 일정은 `[발표완료]` 배지와 함께 `window.allStocks`의 최신 종가·확정 EPS·PER·PBR을 자동 결합.
+
+### 🚨 3. Render 백엔드 배포 시 `Port scan timeout reached, no open ports detected` (Timed Out) 실패 문제
+- **원인:**
+  - `dajavata_backend/main.py` 최상단(Top-level)에서 `pandas`, `numpy`, `matplotlib`, `matplotlib.font_manager`, `FinanceDataReader`, `update_themes`를 한꺼번에 임포트하면서, 새 리눅스 컨테이너 부팅 시 `matplotlib.font_manager`의 시스템 폰트 캐시 빌드가 0.1 CPU를 장시간 점유하여 Uvicorn의 포트 바인딩이 지연됨.
+- **해결 (반드시 영구 유지할 규칙):**
+  1. **Top-level 무거운 패키지 임포트 금지 (Lazy Import 필수):** `dajavata_backend/main.py` 최상단에는 표준 라이브러리와 `fastapi`, `requests`, `dotenv`만 두고, `pandas`, `numpy`, `matplotlib`, `FinanceDataReader`, `update_themes`는 반드시 각 함수 내부에서 지연 임포트(Lazy Import)할 것.
+  2. **경량 숫자 검증 (`is_valid_num`):** `/api/themes` 등에서 `pd.notna()` 대신 `math.isnan()` 기반 `is_valid_num()`을 사용하여 `pandas` 로드 없이 즉시 응답할 것.
+  3. **종목 리스트 로컬 캐시 즉시 로드 (`load_stocks_sync`):** 포트가 열린 지 2초 뒤(`loop.call_later(2.0, ...)`)에 로컬 `data/all_stocks.json`에서 0.01초 만에 종목 리스트를 로드하고, `os.getenv("RENDER")` 환경에서는 무거운 전체 배치 크롤링을 GitHub Actions에 위임할 것.
+
+
+---
+
+## 2026-11-24: 증시 일정 캘린더(`quant-calendar`) 하단 상세 리스트 스크롤 불가(첫 리스트로 튕김) 및 4줄 압축 버그 해결
+
+### 🚨 문제 증상 (Issue)
+- 증시 일정 캘린더(`?view=quant&tab=quant-calendar`)에서 날짜 클릭 후 하단 '일정 상세 리스트(24건 표시 중)'를 볼 때, 처음 4개 항목만 노출되고 마우스 스크롤을 내려도 내려가지 않거나 즉시 첫 번째 항목(맨 위)으로 되돌아감.
+
+### 🔍 원인 분석 (Root Cause)
+1. **실시간 동기화 무한 재렌더링 루프:** `renderCalendarView()`에서 과거 날짜 미발표 실적 확인 후 `ensureCalendarMonthLoaded(year, month, true)`를 호출할 때, 새로 받아온 `data`가 기존 `usMonthObj`를 덮어쓰면서 `_liveSynced` 플래그가 초기화됨. 서버 응답에도 여전히 `epsAct == null`인 과거 종목이 존재하여 `render()` ➔ `setTimeout(ensureCalendarMonthLoaded, 20)` ➔ `container.innerHTML 재작성(스크롤 0으로 리셋)`이 무한 반복됨.
+2. **Flexbox 자식 높이 수축(`flex-shrink: 1`):** `.quant-hub-container` 내부의 `.qh-table-card`(`overflow: hidden`)에 `flex-shrink: 0`이 없어 상단 캘린더 그리드에 밀려 테이블 카드 높이가 4줄 크기로 찌부러짐.
+
+### ✅ 해결 조치 (Resolution)
+1. `quant_hub.js` (`?v=6`): `state.calLiveSyncedMonths[ym] = true` 영구 상태 플래그를 추가하여 월별 실시간 보강 호출을 딱 1회로 제한하고, `render()` 시 `container.scrollTop` 및 `#qh-cal-detail-scroll.scrollTop` 위치를 보존·복원하도록 개선.
+2. `quant_hub.css` (`?v=2`): `.quant-hub-container > *` 및 `.qh-table-card`에 `flex-shrink: 0;`을 적용하여 하단 테이블 카드가 압축되지 않고 전체 스크롤 및 내부 스크롤이 끝까지 작동하도록 수정.
