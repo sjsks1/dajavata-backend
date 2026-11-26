@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
   <defs>
     <linearGradient id="daj-bg-a" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#151926"/>
+      <stop offset="0%" stop-color="#151b2b"/>
       <stop offset="100%" stop-color="#0b0d14"/>
     </linearGradient>
     <linearGradient id="daj-blue-a" x1="0" y1="0" x2="1" y2="1">
@@ -13,10 +13,9 @@
       <stop offset="100%" stop-color="#fb7185"/>
     </linearGradient>
   </defs>
-  <rect width="256" height="256" rx="56" fill="url(#daj-bg-a)"/>
-  <path fill="url(#daj-blue-a)" d="M 48 44 H 130 C 184 44 224 81 224 128 C 224 175 184 212 130 212 H 48 V 180 H 128 C 164 180 190 158 190 128 C 190 98 164 76 128 76 H 48 V 44 Z"/>
-  <rect x="48" y="138" width="24" height="30" rx="5" fill="#3b82f6"/>
-  <rect x="82" y="114" width="24" height="54" rx="5" fill="#60a5fa"/>
-  <rect x="116" y="88" width="24" height="80" rx="5" fill="url(#daj-red-a)"/>
-  <circle cx="128" cy="64" r="10" fill="#f94d5d"/>
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="url(#daj-bg-a)" stroke="rgba(96,165,250,0.3)" stroke-width="8"/>
+  <path fill="url(#daj-blue-a)" d="M 56 48 H 132 C 182 48 216 81 216 128 C 216 175 182 208 132 208 H 56 C 51.6 208 48 204.4 48 200 V 56 C 48 51.6 51.6 48 56 48 Z M 76 76 V 180 H 130 C 164 180 188 158 188 128 C 188 98 164 76 130 76 H 76 Z"/>
+  <rect x="92" y="136" width="16" height="30" rx="4" fill="#60a5fa"/>
+  <rect x="116" y="116" width="16" height="50" rx="4" fill="#38bdf8"/>
+  <rect x="140" y="94" width="16" height="72" rx="4" fill="url(#daj-red-a)"/>
 </svg>
