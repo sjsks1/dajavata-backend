@@ -5200,13 +5200,38 @@
                 </div>
             </div>
 
-            <div class="cs-sh-actions">
+            <div class="cs-sh-actions" style="display:flex; align-items:center; gap:8px;">
+                <button class="cs-btn-calc-link" id="btn-share-alpha-vault" style="background:linear-gradient(135deg, rgba(37,99,235,0.22), rgba(2,132,199,0.22)); border-color:rgba(56,189,248,0.45); color:#38bdf8;" title="현재 종목의 차트 작도와 진입/목표/손절 시나리오를 알파 라운지 볼트에 공유합니다 (+1 AP & +1 패스)">
+                    <i class="ph-fill ph-share-network"></i>
+                    <span>알파 볼트에 작도 공유 🚀</span>
+                </button>
                 <button class="cs-btn-calc-link" id="btn-calc-transfer">
                     <i class="ph-fill ph-calculator"></i>
                     <span>리스크 계산기로 전송 ↗</span>
                 </button>
             </div>
         `;
+
+        const btnShareVault = headerEl.querySelector('#btn-share-alpha-vault');
+        if (btnShareVault) {
+            btnShareVault.addEventListener('click', () => {
+                if (window.CommunityHub && typeof window.CommunityHub.openShareVaultModal === 'function') {
+                    window.CommunityHub.openShareVaultModal({
+                        ticker: stock.code,
+                        stockName: stock.name,
+                        kind: 'chart',
+                        stance: 'BUY / LONG',
+                        entryPrice: stock.price,
+                        targetPrice: stock.targetPrice || Math.round(stock.price * 1.09),
+                        stopPrice: stock.stopPrice || Math.round(stock.price * 0.96),
+                        timeframe: `${tfLabel} (${state.activeTimeframe})`,
+                        title: `${stock.name}(${stock.code}) ${tfLabel} ICT 구름대 & 지지선 스윙 작도 시나리오`,
+                        summary: (stock.briefing && stock.briefing.reason) ? `${stock.briefing.reason} ${stock.briefing.tradePlan || ''}` : `${stock.name} ${tfLabel} 주요 지지·저항 매물대 및 손익비 타점 작도 공유`,
+                        tags: `${stock.theme || '수급주'}, ICT구름대, ${tfLabel}`
+                    });
+                }
+            });
+        }
 
         const btnCalc = headerEl.querySelector('#btn-calc-transfer');
         if (btnCalc) {
@@ -5647,12 +5672,14 @@
             const traderWorkspace = document.getElementById('trader-workspace-container');
             const scannerContainer = document.getElementById('chart-scanner-container');
             const quantHubContainer = document.getElementById('quant-hub-container');
+            const communityContainer = document.getElementById('community-hub-container');
 
             if (!scannerContainer) return;
 
             if (defaultView) defaultView.style.display = 'none';
             if (traderWorkspace) traderWorkspace.style.display = 'none';
             if (quantHubContainer) quantHubContainer.style.display = 'none';
+            if (communityContainer) communityContainer.style.display = 'none';
 
             scannerContainer.style.display = 'flex';
 

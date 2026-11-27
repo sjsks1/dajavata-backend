@@ -1946,3 +1946,565 @@ def get_quant_calendar_month(year: int = None, month: int = None):
 @app.get("/")
 def read_root():
     return {"message": "DAJAVATA API Server is running!"}
+
+
+# ==============================================================================
+# [신규] DAJAVATA 알파 라운지(커뮤니티·작도공유·등급/패스·클라우드 동기화) & 관리자 전용 방문자 분석 엔진
+# ==============================================================================
+COMMUNITY_DB_PATHS = [
+    os.path.join(os.path.dirname(__file__), "data", "community_db.json"),
+    "data/community_db.json",
+    "../data/community_db.json",
+    "../dajavata/dist/data/community_db.json",
+]
+
+ANALYTICS_DB_PATHS = [
+    os.path.join(os.path.dirname(__file__), "data", "analytics_db.json"),
+    "data/analytics_db.json",
+    "../data/analytics_db.json",
+]
+
+TRADER_CLOUD_DB_PATHS = [
+    os.path.join(os.path.dirname(__file__), "data", "trader_cloud_db.json"),
+    "data/trader_cloud_db.json",
+]
+
+
+def _load_json_first(paths, default_factory):
+    for p in paths:
+        if os.path.exists(p) and os.path.getsize(p) > 10:
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                pass
+    return default_factory()
+
+
+def _save_json_all(paths, payload):
+    for p in paths:
+        try:
+            d = os.path.dirname(p)
+            if d:
+                os.makedirs(d, exist_ok=True)
+            with open(p, "w", encoding="utf-8") as f:
+                json.dump(payload, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+
+def _recompute_user_tiers(profiles_map: dict):
+    """기여 포인트(AP) 기반 5단계 알파 티어 자동 산정 (Lv5 알파 마스터는 40 AP 이상 중 상위 10%)"""
+    eligible_top = []
+    for uid, prof in profiles_map.items():
+        if uid == "official_desk" or int(prof.get("tier") or 1) == 9:
+            prof["tier"] = 9
+            continue
+        ap = int(prof.get("ap") or 0)
+        if ap >= 40:
+            prof["tier"] = 4
+            eligible_top.append((ap, uid))
+        elif ap >= 15:
+            prof["tier"] = 3
+        elif ap >= 5:
+            prof["tier"] = 2
+        else:
+            prof["tier"] = 1
+    if eligible_top:
+        eligible_top.sort(reverse=True)
+        total_users = max(len([u for u in profiles_map.values() if int(u.get("tier") or 1) != 9]), 1)
+        top_n = max(1, int(round(total_users * 0.10)))
+        for _, uid in eligible_top[:top_n]:
+            profiles_map[uid]["tier"] = 5
+
+
+@app.get("/api/community/data")
+def get_community_data(user_id: Optional[str] = None, is_admin: Optional[bool] = False):
+    db = _load_json_first(COMMUNITY_DB_PATHS, lambda: {
+        "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "profiles": {},
+        "vaultItems": [],
+        "loungePosts": [],
+        "researchRequests": [],
+        "supportTickets": [],
+    })
+    profiles = db.get("profiles") or {}
+    _recompute_user_tiers(profiles)
+
+    # 비밀 문의글 마스킹 보호 (작성자 본인 또는 관리자만 본문 열람 가능)
+    safe_tickets = []
+    for t in (db.get("supportTickets") or []):
+        t_copy = dict(t)
+        t_copy.pop("password", None)
+        if t_copy.get("isSecret") and not is_admin and (not user_id or t_copy.get("authorId") != user_id):
+            t_copy["body"] = "🔒 작성자와 다자바타 운영 데스크만 열람할 수 있는 비밀 문의글입니다."
+            t_copy["locked"] = True
+        else:
+            t_copy["locked"] = False
+        safe_tickets.append(t_copy)
+
+    return {
+        "updated_at": db.get("updated_at"),
+        "profiles": profiles,
+        "vaultItems": db.get("vaultItems") or [],
+        "loungePosts": db.get("loungePosts") or [],
+        "researchRequests": db.get("researchRequests") or [],
+        "supportTickets": safe_tickets,
+    }
+
+
+@app.post("/api/community/action")
+async def post_community_action(req: Request):
+    body = await req.json()
+    action = str(body.get("action") or "").strip()
+    db = _load_json_first(COMMUNITY_DB_PATHS, lambda: {
+        "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "profiles": {},
+        "vaultItems": [],
+        "loungePosts": [],
+        "researchRequests": [],
+        "supportTickets": [],
+    })
+    profiles = db.setdefault("profiles", {})
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    today_str = now_str[:10]
+
+    if action == "register_profile":
+        uid = str(body.get("userId") or "").strip()
+        nick = sanitize_html_content(str(body.get("nickname") or "트레이더").strip())[:24]
+        if not uid:
+            raise HTTPException(status_code=400, detail="Missing userId")
+        prof = profiles.get(uid)
+        if not prof:
+            prof = {
+                "id": uid,
+                "nickname": nick,
+                "provider": str(body.get("provider") or "kakao"),
+                "avatar": str(body.get("avatar") or ""),
+                "ap": 1,
+                "passes": 3,
+                "tier": 1,
+                "lastRefillDate": today_str,
+                "joined_at": today_str,
+            }
+            profiles[uid] = prof
+        else:
+            if nick:
+                prof["nickname"] = nick
+            if body.get("avatar"):
+                prof["avatar"] = str(body.get("avatar"))
+            if prof.get("lastRefillDate") != today_str:
+                prof["lastRefillDate"] = today_str
+                if int(prof.get("passes") or 0) < 3:
+                    prof["passes"] = 3
+        _recompute_user_tiers(profiles)
+        db["updated_at"] = now_str
+        _save_json_all(COMMUNITY_DB_PATHS, db)
+        return {"ok": True, "profile": profiles[uid]}
+
+    elif action == "share_vault":
+        uid = str(body.get("authorId") or "guest").strip()
+        prof = profiles.setdefault(uid, {
+            "id": uid,
+            "nickname": sanitize_html_content(str(body.get("authorNick") or "트레이더"))[:24],
+            "provider": "kakao",
+            "ap": 1,
+            "passes": 3,
+            "tier": 1,
+            "joined_at": today_str,
+        })
+        prof["ap"] = int(prof.get("ap") or 0) + 1
+        prof["passes"] = int(prof.get("passes") or 0) + 1
+        _recompute_user_tiers(profiles)
+
+        new_item = {
+            "id": f"vault-{int(time.time() * 1000)}",
+            "kind": str(body.get("kind") or "chart"),
+            "ticker": sanitize_html_content(str(body.get("ticker") or "005930").upper())[:12],
+            "stockName": sanitize_html_content(str(body.get("stockName") or "종목"))[:40],
+            "market": sanitize_html_content(str(body.get("market") or "KRX"))[:12],
+            "timeframe": sanitize_html_content(str(body.get("timeframe") or "일봉 (1D)"))[:20],
+            "stance": str(body.get("stance") or "BULL"),
+            "title": sanitize_html_content(str(body.get("title") or ""))[:100],
+            "summary": sanitize_html_content(str(body.get("summary") or ""))[:600],
+            "entryPrice": float(body.get("entryPrice") or 0),
+            "stopPrice": float(body.get("stopPrice") or 0),
+            "targetPrice": float(body.get("targetPrice") or 0),
+            "rrRatio": sanitize_html_content(str(body.get("rrRatio") or "1 : 2.5"))[:16],
+            "authorId": uid,
+            "authorNick": prof["nickname"],
+            "authorTier": prof["tier"],
+            "imports": 0,
+            "likes": 0,
+            "tags": [sanitize_html_content(str(t))[:16] for t in (body.get("tags") or [])[:6]],
+            "created_at": now_str,
+            "chartPreview": body.get("chartPreview") or {"candles": [100, 102, 101, 105, 108, 106, 111], "fibLevels": [0.382, 0.618]},
+            "drawings": body.get("drawings") or [],
+        }
+        db.setdefault("vaultItems", []).insert(0, new_item)
+        db["updated_at"] = now_str
+        _save_json_all(COMMUNITY_DB_PATHS, db)
+        return {"ok": True, "item": new_item, "profile": prof}
+
+    elif action == "import_vault":
+        item_id = str(body.get("itemId") or "")
+        uid = str(body.get("userId") or "")
+        for it in db.get("vaultItems") or []:
+            if it.get("id") == item_id:
+                it["imports"] = int(it.get("imports") or 0) + 1
+                author_id = it.get("authorId")
+                if author_id and author_id in profiles and author_id != uid:
+                    profiles[author_id]["ap"] = int(profiles[author_id].get("ap") or 0) + 1
+                if uid and uid in profiles and author_id != uid:
+                    profiles[uid]["passes"] = max(0, int(profiles[uid].get("passes") or 0) - 1)
+                _recompute_user_tiers(profiles)
+                db["updated_at"] = now_str
+                _save_json_all(COMMUNITY_DB_PATHS, db)
+                return {"ok": True, "item": it, "profile": profiles.get(uid)}
+        raise HTTPException(status_code=404, detail="Vault item not found")
+
+    elif action == "create_post":
+        uid = str(body.get("authorId") or "guest").strip()
+        prof = profiles.get(uid) or {"nickname": sanitize_html_content(str(body.get("authorNick") or "트레이더"))[:24], "tier": 1}
+        new_post = {
+            "id": f"post-{int(time.time() * 1000)}",
+            "channel": str(body.get("channel") or "kr-theme"),
+            "ticker": sanitize_html_content(str(body.get("ticker") or "").upper())[:12],
+            "stockName": sanitize_html_content(str(body.get("stockName") or ""))[:40],
+            "stance": str(body.get("stance") or "BULL"),
+            "title": sanitize_html_content(str(body.get("title") or ""))[:120],
+            "body": sanitize_html_content(str(body.get("body") or ""))[:3000],
+            "authorId": uid,
+            "authorNick": prof.get("nickname", "트레이더"),
+            "authorTier": prof.get("tier", 1),
+            "likes": 0,
+            "views": 1,
+            "created_at": now_str,
+            "comments": [],
+        }
+        db.setdefault("loungePosts", []).insert(0, new_post)
+        db["updated_at"] = now_str
+        _save_json_all(COMMUNITY_DB_PATHS, db)
+        return {"ok": True, "post": new_post}
+
+    elif action == "like_item":
+        t_type = str(body.get("targetType") or "lounge")
+        t_id = str(body.get("targetId") or "")
+        arr = db.get("vaultItems") if t_type == "vault" else db.get("loungePosts")
+        for it in (arr or []):
+            if it.get("id") == t_id:
+                it["likes"] = int(it.get("likes") or 0) + 1
+                db["updated_at"] = now_str
+                _save_json_all(COMMUNITY_DB_PATHS, db)
+                return {"ok": True, "likes": it["likes"]}
+        return {"ok": False}
+
+    elif action == "add_comment":
+        t_id = str(body.get("targetId") or "")
+        c_body = sanitize_html_content(str(body.get("body") or "")).strip()[:1000]
+        if not c_body:
+            raise HTTPException(status_code=400, detail="Empty comment")
+        for p in (db.get("loungePosts") or []):
+            if p.get("id") == t_id:
+                new_c = {
+                    "id": f"c-{int(time.time() * 1000)}",
+                    "authorNick": sanitize_html_content(str(body.get("authorNick") or "트레이더"))[:24],
+                    "authorTier": int(body.get("authorTier") or 1),
+                    "body": c_body,
+                    "created_at": now_str,
+                }
+                p.setdefault("comments", []).append(new_c)
+                db["updated_at"] = now_str
+                _save_json_all(COMMUNITY_DB_PATHS, db)
+                return {"ok": True, "comment": new_c}
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    elif action == "create_request":
+        uid = str(body.get("authorId") or "guest").strip()
+        reward = max(0, min(5, int(body.get("rewardPass") or 1)))
+        prof = profiles.get(uid)
+        if prof and reward > 0:
+            prof["passes"] = max(0, int(prof.get("passes") or 0) - reward)
+        new_req = {
+            "id": f"req-{int(time.time() * 1000)}",
+            "status": "open",
+            "ticker": sanitize_html_content(str(body.get("ticker") or "").upper())[:12],
+            "stockName": sanitize_html_content(str(body.get("stockName") or ""))[:40],
+            "title": sanitize_html_content(str(body.get("title") or ""))[:120],
+            "body": sanitize_html_content(str(body.get("body") or ""))[:1500],
+            "tags": [sanitize_html_content(str(t))[:16] for t in (body.get("tags") or [])[:6]],
+            "rewardPass": reward,
+            "authorId": uid,
+            "authorNick": (prof and prof.get("nickname")) or sanitize_html_content(str(body.get("authorNick") or "트레이더"))[:24],
+            "authorTier": (prof and prof.get("tier")) or 1,
+            "created_at": now_str,
+            "acceptedAnswerId": None,
+            "answers": [],
+        }
+        db.setdefault("researchRequests", []).insert(0, new_req)
+        db["updated_at"] = now_str
+        _save_json_all(COMMUNITY_DB_PATHS, db)
+        return {"ok": True, "request": new_req, "profile": prof}
+
+    elif action == "submit_research_answer":
+        req_id = str(body.get("requestId") or "")
+        for rq in (db.get("researchRequests") or []):
+            if rq.get("id") == req_id:
+                ans = {
+                    "id": f"ans-{int(time.time() * 1000)}",
+                    "vaultItemId": str(body.get("vaultItemId") or ""),
+                    "vaultTitle": sanitize_html_content(str(body.get("vaultTitle") or "리서치 분석 답변"))[:100],
+                    "comment": sanitize_html_content(str(body.get("comment") or ""))[:800],
+                    "authorId": str(body.get("authorId") or ""),
+                    "authorNick": sanitize_html_content(str(body.get("authorNick") or "트레이더"))[:24],
+                    "authorTier": int(body.get("authorTier") or 1),
+                    "created_at": now_str,
+                    "isAccepted": False,
+                }
+                rq.setdefault("answers", []).append(ans)
+                db["updated_at"] = now_str
+                _save_json_all(COMMUNITY_DB_PATHS, db)
+                return {"ok": True, "answer": ans}
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    elif action == "accept_research_answer":
+        req_id = str(body.get("requestId") or "")
+        ans_id = str(body.get("answerId") or "")
+        for rq in (db.get("researchRequests") or []):
+            if rq.get("id") == req_id and rq.get("status") == "open":
+                for ans in (rq.get("answers") or []):
+                    if ans.get("id") == ans_id:
+                        ans["isAccepted"] = True
+                        rq["status"] = "fulfilled"
+                        rq["acceptedAnswerId"] = ans_id
+                        ans_uid = ans.get("authorId")
+                        if ans_uid and ans_uid in profiles:
+                            profiles[ans_uid]["ap"] = int(profiles[ans_uid].get("ap") or 0) + 3
+                            profiles[ans_uid]["passes"] = int(profiles[ans_uid].get("passes") or 0) + int(rq.get("rewardPass") or 1)
+                            _recompute_user_tiers(profiles)
+                        db["updated_at"] = now_str
+                        _save_json_all(COMMUNITY_DB_PATHS, db)
+                        return {"ok": True, "request": rq}
+        raise HTTPException(status_code=400, detail="Cannot accept answer")
+
+    elif action == "create_ticket":
+        new_tkt = {
+            "id": f"tkt-{int(time.time() * 1000)}",
+            "category": str(body.get("category") or "feature"),
+            "title": sanitize_html_content(str(body.get("title") or ""))[:120],
+            "body": sanitize_html_content(str(body.get("body") or ""))[:2500],
+            "contact": sanitize_html_content(str(body.get("contact") or ""))[:80],
+            "authorId": str(body.get("authorId") or "guest"),
+            "authorNick": sanitize_html_content(str(body.get("authorNick") or "방문자"))[:24],
+            "authorTier": int(body.get("authorTier") or 1),
+            "isSecret": bool(body.get("isSecret")),
+            "password": str(body.get("password") or "")[:32],
+            "status": "open",
+            "created_at": now_str,
+            "staffReply": None,
+            "staffReplyAt": None,
+        }
+        db.setdefault("supportTickets", []).insert(0, new_tkt)
+        db["updated_at"] = now_str
+        _save_json_all(COMMUNITY_DB_PATHS, db)
+        return {"ok": True, "ticket": new_tkt}
+
+    elif action == "admin_reply_ticket":
+        if not is_authorized_admin(token=body.get("token"), pin=body.get("pin")):
+            raise HTTPException(status_code=403, detail="관리자 권한이 필요합니다.")
+        tkt_id = str(body.get("ticketId") or "")
+        reply_txt = sanitize_html_content(str(body.get("reply") or "")).strip()
+        for t in (db.get("supportTickets") or []):
+            if t.get("id") == tkt_id:
+                t["staffReply"] = reply_txt
+                t["staffReplyAt"] = now_str
+                t["status"] = "answered"
+                db["updated_at"] = now_str
+                _save_json_all(COMMUNITY_DB_PATHS, db)
+                return {"ok": True, "ticket": t}
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    return {"ok": False, "detail": "Unknown action"}
+
+
+# --- 카카오 계정 기반 트레이더 룸 & 차트 작도 클라우드 백업/복원 API ---
+@app.post("/api/trader/cloud-sync")
+async def post_trader_cloud_sync(req: Request):
+    body = await req.json()
+    uid = str(body.get("userId") or "").strip()
+    mode = str(body.get("mode") or "pull").strip()
+    if not uid:
+        raise HTTPException(status_code=400, detail="Missing userId")
+    cloud_db = _load_json_first(TRADER_CLOUD_DB_PATHS, lambda: {"users": {}})
+    users_map = cloud_db.setdefault("users", {})
+    now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    if mode == "push":
+        users_map[uid] = {
+            "updated_at": now_str,
+            "nickname": str(body.get("nickname") or ""),
+            "traderDb": body.get("traderDb") or {},
+            "scannerDrawings": body.get("scannerDrawings") or {},
+        }
+        _save_json_all(TRADER_CLOUD_DB_PATHS, cloud_db)
+        return {"ok": True, "updated_at": now_str}
+    else:
+        record = users_map.get(uid)
+        return {"ok": True, "hasBackup": bool(record), "record": record}
+
+
+# --- 관리자 전용 방문자 수 & 유입 경로(Referrer/UTM) 트래킹 엔진 (일반 방문자에게는 100% 비공개) ---
+def _classify_referrer(ref_url: str, utm_source: str = "") -> str:
+    combined = f"{ref_url} {utm_source}".lower()
+    if not ref_url.strip() and not utm_source.strip():
+        return "직접 접속 / 북마크 (Direct)"
+    if "cafe.naver" in combined or "blog.naver" in combined:
+        return "네이버 카페 · 블로그"
+    if "naver.com" in combined:
+        return "네이버 검색 (Naver)"
+    if "google." in combined:
+        return "구글 검색 (Google)"
+    if "kakao" in combined or "daum.net" in combined:
+        return "카카오톡 · 다음 (Kakao)"
+    if "youtube.com" in combined or "youtu.be" in combined:
+        return "유튜브 (YouTube)"
+    if "instagram" in combined or "threads" in combined or "t.co" in combined or "twitter" in combined or "facebook" in combined:
+        return "SNS (인스타·X·쓰레드)"
+    if "dcinside" in combined or "fmkorea" in combined or "clien" in combined or "tradingview" in combined:
+        return "주식·투자 커뮤니티"
+    if "dajavata.com" in combined or "localhost" in combined or "127.0.0.1" in combined:
+        return "내부 메뉴 이동"
+    return "기타 외부 링크 (Referral)"
+
+
+@app.post("/api/analytics/track")
+async def track_visitor_hit(req: Request):
+    try:
+        body = await req.json()
+    except Exception:
+        body = {}
+    kst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+    date_str = kst_now.strftime("%Y-%m-%d")
+    hour_str = kst_now.strftime("%H")
+    time_str = kst_now.strftime("%Y-%m-%d %H:%M:%S")
+
+    client_ip = req.client.host if req.client else "0.0.0.0"
+    ua = req.headers.get("user-agent", "")
+    vid = str(body.get("visitorId") or hashlib.sha256(f"{client_ip}_{ua[:40]}_{date_str}".encode()).hexdigest()[:14])
+    ref_raw = str(body.get("referrer") or "").strip()[:300]
+    utm_raw = str(body.get("utmSource") or "").strip()[:80]
+    view_name = str(body.get("view") or "전체 테마").strip()[:50]
+    device_type = "Mobile / Tablet" if re.search(r"Mobile|Android|iPhone|iPad", ua, re.I) else "PC Desktop"
+    source_cat = _classify_referrer(ref_raw, utm_raw)
+
+    adb = _load_json_first(ANALYTICS_DB_PATHS, lambda: {
+        "daily": {},
+        "hourly": {f"{h:02d}": 0 for h in range(24)},
+        "sources": {},
+        "views": {},
+        "devices": {"PC Desktop": 0, "Mobile / Tablet": 0},
+        "recentVisits": [],
+    })
+
+    # 1. 일별 PV & UV(고유 방문자) 집계
+    day_obj = adb.setdefault("daily", {}).setdefault(date_str, {"pv": 0, "uv_list": []})
+    day_obj["pv"] = int(day_obj.get("pv") or 0) + 1
+    if vid not in day_obj.setdefault("uv_list", []):
+        day_obj["uv_list"].append(vid)
+
+    # 2. 시간대별 집계
+    hr_map = adb.setdefault("hourly", {})
+    hr_map[hour_str] = int(hr_map.get(hour_str) or 0) + 1
+
+    # 3. 유입 경로(Source) 집계 (내부 이동 제외)
+    if source_cat != "내부 메뉴 이동":
+        src_map = adb.setdefault("sources", {})
+        src_map[source_cat] = int(src_map.get(source_cat) or 0) + 1
+
+    # 4. 인기 메뉴/뷰 집계
+    vw_map = adb.setdefault("views", {})
+    vw_map[view_name] = int(vw_map.get(view_name) or 0) + 1
+
+    # 5. 기기별 집계
+    dv_map = adb.setdefault("devices", {"PC Desktop": 0, "Mobile / Tablet": 0})
+    dv_map[device_type] = int(dv_map.get(device_type) or 0) + 1
+
+    # 6. 최근 실시간 방문 로그 (최신 80건 유지)
+    recent = adb.setdefault("recentVisits", [])
+    recent.insert(0, {
+        "time": time_str,
+        "visitorId": vid[:8],
+        "source": source_cat,
+        "referrer": ref_raw or "(직접 주소 입력 / 북마크)",
+        "view": view_name,
+        "device": device_type,
+    })
+    adb["recentVisits"] = recent[:80]
+
+    _save_json_all(ANALYTICS_DB_PATHS, adb)
+    return {"ok": True}
+
+
+@app.post("/api/analytics/admin-summary")
+async def get_admin_analytics_summary(req: Request):
+    """오직 관리자(PIN/세션 토큰 인증 완료자)만 조회할 수 있는 방문자 수 & 유입 경로 대시보드 API"""
+    body = await req.json()
+    if not is_authorized_admin(token=body.get("token"), pin=body.get("pin")):
+        raise HTTPException(status_code=403, detail="관리자 전용 통계입니다. (권한 없음)")
+
+    adb = _load_json_first(ANALYTICS_DB_PATHS, lambda: {
+        "daily": {},
+        "hourly": {},
+        "sources": {},
+        "views": {},
+        "devices": {"PC Desktop": 0, "Mobile / Tablet": 0},
+        "recentVisits": [],
+    })
+
+    kst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
+    today_str = kst_now.strftime("%Y-%m-%d")
+    yest_str = (kst_now - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+
+    daily_map = adb.get("daily") or {}
+    daily_series = []
+    uv_7d = 0
+    pv_7d = 0
+    uv_30d = 0
+    pv_30d = 0
+
+    for d_off in range(13, -1, -1):
+        d_key = (kst_now - datetime.timedelta(days=d_off)).strftime("%Y-%m-%d")
+        d_info = daily_map.get(d_key) or {"pv": 0, "uv_list": []}
+        uv_c = len(d_info.get("uv_list") or [])
+        pv_c = int(d_info.get("pv") or 0)
+        daily_series.append({"date": d_key, "uv": uv_c, "pv": pv_c})
+
+    for d_off in range(30):
+        d_key = (kst_now - datetime.timedelta(days=d_off)).strftime("%Y-%m-%d")
+        d_info = daily_map.get(d_key)
+        if d_info:
+            u_c = len(d_info.get("uv_list") or [])
+            p_c = int(d_info.get("pv") or 0)
+            uv_30d += u_c
+            pv_30d += p_c
+            if d_off < 7:
+                uv_7d += u_c
+                pv_7d += p_c
+
+    today_info = daily_map.get(today_str) or {"pv": 0, "uv_list": []}
+    yest_info = daily_map.get(yest_str) or {"pv": 0, "uv_list": []}
+
+    return {
+        "ok": True,
+        "today": {"date": today_str, "uv": len(today_info.get("uv_list") or []), "pv": int(today_info.get("pv") or 0)},
+        "yesterday": {"date": yest_str, "uv": len(yest_info.get("uv_list") or []), "pv": int(yest_info.get("pv") or 0)},
+        "sum7d": {"uv": uv_7d, "pv": pv_7d},
+        "sum30d": {"uv": uv_30d, "pv": pv_30d},
+        "dailySeries": daily_series,
+        "hourly": adb.get("hourly") or {},
+        "sources": adb.get("sources") or {},
+        "views": adb.get("views") or {},
+        "devices": adb.get("devices") or {},
+        "recentVisits": (adb.get("recentVisits") or [])[:50],
+    }
+

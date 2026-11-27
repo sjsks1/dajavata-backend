@@ -2819,12 +2819,14 @@
             const traderWorkspace = document.getElementById('trader-workspace-container');
             const scannerContainer = document.getElementById('chart-scanner-container');
             const quantHubContainer = document.getElementById('quant-hub-container');
+            const communityContainer = document.getElementById('community-hub-container');
 
             if (!quantHubContainer) return;
 
             if (defaultView) defaultView.style.display = 'none';
             if (traderWorkspace) traderWorkspace.style.display = 'none';
             if (scannerContainer) scannerContainer.style.display = 'none';
+            if (communityContainer) communityContainer.style.display = 'none';
             quantHubContainer.style.display = 'flex';
 
             document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));

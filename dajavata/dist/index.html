@@ -40,6 +40,7 @@
     <link rel="stylesheet" href="trader_room.css?v=7">
     <link rel="stylesheet" href="chart_scanner.css?v=9">
     <link rel="stylesheet" href="quant_hub.css?v=3">
+    <link rel="stylesheet" href="community_hub.css?v=1">
     <!-- TradingView Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
 </head>
@@ -185,6 +186,22 @@
                         <li data-action="trader-vault"><a href="#"><i class="ph ph-hard-drive"></i> 데이터 보관함</a></li>
                     </ul>
                 </div>
+
+                <!-- 신규 추가: 다자바타 알파 라운지 & 집단지성 커뮤니티 -->
+                <div class="menu-section">
+                    <h3>알파 라운지 & 커뮤니티</h3>
+                    <ul id="community-menu-list">
+                        <li data-action="community-vault">
+                            <a href="#"><i class="ph-fill ph-sparkle" style="color: #38bdf8;"></i> 알파 차트·시나리오 볼트
+                                <span
+                                    style="background: linear-gradient(135deg, #2563eb, #0284c7); color: white; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 4px;">NEW</span>
+                            </a>
+                        </li>
+                        <li data-action="community-lounge"><a href="#"><i class="ph ph-chats-circle"></i> 마켓 라운지 · 종목토론</a></li>
+                        <li data-action="community-research"><a href="#"><i class="ph ph-crosshair"></i> 종목·차트 리서치 의뢰소</a></li>
+                        <li data-action="community-support"><a href="#"><i class="ph ph-shield-check"></i> 고객센터 & 파트너십</a></li>
+                    </ul>
+                </div>
             </nav>
 
         </aside>
@@ -254,6 +271,9 @@
 
             <!-- 신규: 글로벌 퀀트 & 마켓 인텔리전스 허브 전용 뷰 컨테이너 (초기에는 숨김) -->
             <div id="quant-hub-container" class="quant-hub-container" style="display: none;"></div>
+
+            <!-- 신규: 다자바타 알파 라운지 & 집단지성 커뮤니티 전용 뷰 컨테이너 (초기에는 숨김) -->
+            <div id="community-hub-container" class="community-hub-container" style="display: none;"></div>
 
             <!-- 글로벌 하단 푸터 바 (Image 4 스타일) -->
             <footer class="dajavata-global-footer">
@@ -667,10 +687,11 @@
         </div>
     </div>
 
-    <script src="chart_scanner.js?v=19"></script>
-    <script src="trader_room.js?v=8"></script>
-    <script src="quant_hub.js?v=10"></script>
-    <script src="app.js?v=35"></script>
+    <script src="chart_scanner.js?v=20"></script>
+    <script src="trader_room.js?v=9"></script>
+    <script src="quant_hub.js?v=11"></script>
+    <script src="community_hub.js?v=2"></script>
+    <script src="app.js?v=36"></script>
 
     <!-- Hidden Google Translate Element -->
     <div id="google_translate_element" style="display:none;" class="notranslate"></div>

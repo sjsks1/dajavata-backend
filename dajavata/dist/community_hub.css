@@ -1,0 +1,529 @@
+/* ============================================================================
+   DAJAVATA ALPHA LOUNGE & COLLECTIVE INTELLIGENCE NETWORK (community_hub.css)
+   - 다자바타 고유의 다크 핀테크 터미널 아이덴티티 (블룸버그/트레이딩뷰 감성)
+   - 기존 레이아웃과 100% 격리된 전용 네임스페이스 (.al-*)
+   ============================================================================ */
+
+.community-hub-container {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    min-width: 0;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 26px 56px;
+    background: var(--bg-dark, #0a0b10);
+    color: var(--text-main, #f1f2f5);
+    gap: 16px;
+}
+
+.community-hub-container > * {
+    flex-shrink: 0;
+}
+
+/* 상단 헤더 & 카카오 프로필/지갑 바 */
+.al-top-banner {
+    background: linear-gradient(135deg, rgba(19, 24, 38, 0.96) 0%, rgba(13, 17, 28, 0.98) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.24);
+    border-radius: 14px;
+    padding: 18px 22px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.al-title-area {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.al-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.14);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    padding: 3px 9px;
+    border-radius: 999px;
+    width: fit-content;
+}
+
+.al-title-area h1 {
+    font-size: 21px;
+    font-weight: 800;
+    color: #f8fafc;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.al-title-area p {
+    font-size: 12.5px;
+    color: #94a3b8;
+    margin: 0;
+}
+
+/* 우측 사용자 지갑 & 카카오 로그인 박스 */
+.al-wallet-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: rgba(10, 12, 20, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    padding: 8px 14px;
+    border-radius: 12px;
+}
+
+.al-kakao-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: #FEE500;
+    color: #191919;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 12.5px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 3px 10px rgba(254, 229, 0, 0.22);
+}
+
+.al-kakao-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(254, 229, 0, 0.35);
+}
+
+.al-user-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #f8fafc;
+}
+
+.al-stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    background: rgba(59, 130, 246, 0.14);
+    border: 1px solid rgba(59, 130, 246, 0.32);
+    color: #93c5fd;
+    font-variant-numeric: tabular-nums;
+}
+
+.al-stat-pill.pass {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: rgba(245, 158, 11, 0.38);
+    color: #fcd34d;
+}
+
+.al-ghost-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    color: #cbd5e1;
+    padding: 5px 11px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: inherit;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.al-ghost-btn:hover {
+    background: rgba(59, 130, 246, 0.16);
+    border-color: #3b82f6;
+    color: #fff;
+}
+
+/* 4대 모듈 네비게이션 탭 바 */
+.al-nav-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    padding-bottom: 12px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.al-nav-left {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.al-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 16px;
+    border-radius: 10px;
+    background: rgba(21, 22, 30, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.al-tab-btn:hover {
+    color: #f8fafc;
+    border-color: rgba(59, 130, 246, 0.45);
+}
+
+.al-tab-btn.active {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border-color: #3b82f6;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+/* 필터 & 검색 컨트롤 바 */
+.al-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-card, #15161e);
+    border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+    padding: 12px 16px;
+    border-radius: 12px;
+}
+
+.al-pill-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.al-pill-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    color: #94a3b8;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.al-pill-btn:hover {
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.al-pill-btn.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: #3b82f6;
+    color: #60a5fa;
+}
+
+.al-search-input {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    color: #f8fafc;
+    padding: 7px 13px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    min-width: 220px;
+    font-family: inherit;
+}
+
+.al-primary-btn {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    transition: transform 0.15s ease;
+}
+
+.al-primary-btn:hover {
+    transform: translateY(-1px);
+}
+
+/* [모듈 1] 알파 차트·시나리오 볼트 그리드 (다자바타 오리지널 금융 터미널 카드) */
+.al-vault-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 16px;
+}
+
+.al-vault-card {
+    background: linear-gradient(180deg, #161925 0%, #12151f 100%);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 8px 22px rgba(0, 0, 0, 0.28);
+    transition: transform 0.16s ease, border-color 0.16s ease;
+}
+
+.al-vault-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(59, 130, 246, 0.48);
+}
+
+.al-vault-chart-box {
+    position: relative;
+    height: 156px;
+    background: radial-gradient(circle at 50% 20%, rgba(37, 99, 235, 0.14), rgba(10, 12, 18, 0.95));
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.al-vault-top-tags {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 2;
+}
+
+.al-stance-badge {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.al-stance-BULL {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.al-stance-BEAR {
+    background: rgba(244, 63, 94, 0.18);
+    color: #fb7185;
+    border: 1px solid rgba(244, 63, 94, 0.4);
+}
+
+.al-stance-NEUTRAL {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.al-vault-body {
+    padding: 15px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+}
+
+.al-vault-title {
+    font-size: 14.5px;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.al-vault-summary {
+    font-size: 12.5px;
+    color: #94a3b8;
+    line-height: 1.55;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.al-target-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    background: rgba(10, 12, 18, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-variant-numeric: tabular-nums;
+}
+
+.al-target-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.al-target-cell .lbl {
+    font-size: 10px;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.al-target-cell .val {
+    font-size: 12.5px;
+    font-weight: 800;
+}
+
+.al-vault-footer {
+    padding: 11px 16px;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+    background: rgba(10, 12, 18, 0.4);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+/* [모듈 2] 마켓 라운지 (투자자 피드 & 베스트 인사이트) */
+.al-best-box {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(19, 24, 38, 0.9) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    border-radius: 12px;
+    padding: 14px 18px;
+}
+
+.al-feed-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.al-feed-table th {
+    background: rgba(15, 23, 42, 0.65);
+    color: #94a3b8;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 11px 14px;
+    text-align: left;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.al-feed-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    vertical-align: middle;
+}
+
+.al-feed-table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+}
+
+.al-feed-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* 모달 다이얼로그 */
+.al-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 7, 12, 0.78);
+    backdrop-filter: blur(5px);
+    z-index: 12200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+}
+
+.al-modal-box {
+    background: #141824;
+    border: 1px solid rgba(59, 130, 246, 0.32);
+    border-radius: 16px;
+    width: min(740px, 100%);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+}
+
+.al-modal-box.wide {
+    width: min(1040px, 100%);
+}
+
+.al-modal-header {
+    padding: 16px 22px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(10, 12, 18, 0.55);
+}
+
+.al-modal-body {
+    padding: 20px 22px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* 5단계 알파 티어 카드 그리드 */
+.al-tier-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+    gap: 10px;
+}
+
+.al-tier-card {
+    background: rgba(15, 20, 32, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 12px;
+    padding: 14px 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.al-tier-card.master {
+    border-color: rgba(245, 158, 11, 0.55);
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.12) 0%, rgba(15, 20, 32, 0.95) 100%);
+}
+
+@media (max-width: 768px) {
+    .community-hub-container {
+        padding: 14px 12px 48px;
+    }
+    .al-vault-grid {
+        grid-template-columns: 1fr;
+    }
+}

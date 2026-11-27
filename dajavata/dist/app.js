@@ -2087,10 +2087,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const workspace = document.getElementById('trader-workspace-container');
         const scanner = document.getElementById('chart-scanner-container');
         const quantHub = document.getElementById('quant-hub-container');
+        const communityHub = document.getElementById('community-hub-container');
         if (defaultView) defaultView.style.display = 'flex';
         if (workspace) workspace.style.display = 'none';
         if (scanner) scanner.style.display = 'none';
         if (quantHub) quantHub.style.display = 'none';
+        if (communityHub) communityHub.style.display = 'none';
     }
 
     // 테마 메뉴 클릭 이벤트
@@ -2349,6 +2351,25 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (window.TraderRoom) {
                 window.TraderRoom.navigate(action);
+            }
+        });
+    });
+
+    // 알파 라운지 & 커뮤니티 메뉴 클릭 이벤트
+    const communityMenus = document.querySelectorAll('#community-menu-list li');
+    communityMenus.forEach(menu => {
+        menu.addEventListener('click', (e) => {
+            e.preventDefault();
+            currentMode = 'community';
+            if (window.updateAdminUI) window.updateAdminUI();
+            const action = menu.getAttribute('data-action');
+            updateUrlState({ view: 'community', tab: action, id: null, name: null, action: null });
+            setPageSeo("다자바타 알파 라운지", "다자바타 알파 차트·시나리오 볼트 및 투자자 집단지성 커뮤니티");
+            if (window.ChartScanner) {
+                window.ChartScanner.hide();
+            }
+            if (window.CommunityHub) {
+                window.CommunityHub.navigate(action);
             }
         });
     });
@@ -2724,6 +2745,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (footerAdminBtn) footerAdminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
             const footerAdminDot = document.getElementById('footer-admin-dot');
             if (footerAdminDot) footerAdminDot.style.display = isAdmin ? 'inline-block' : 'none';
+            if (window.CommunityHub && typeof window.CommunityHub.syncHeaderAuthWidget === 'function') {
+                window.CommunityHub.syncHeaderAuthWidget();
+            }
         }
         window.updateAdminUI = updateAdminUI;
         updateAdminUI();

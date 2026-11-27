@@ -329,3 +329,29 @@
 ### ✅ 해결 조치 (Resolution)
 1. `quant_hub.js` (`?v=6`): `state.calLiveSyncedMonths[ym] = true` 영구 상태 플래그를 추가하여 월별 실시간 보강 호출을 딱 1회로 제한하고, `render()` 시 `container.scrollTop` 및 `#qh-cal-detail-scroll.scrollTop` 위치를 보존·복원하도록 개선.
 2. `quant_hub.css` (`?v=2`): `.quant-hub-container > *` 및 `.qh-table-card`에 `flex-shrink: 0;`을 적용하여 하단 테이블 카드가 압축되지 않고 전체 스크롤 및 내부 스크롤이 끝까지 작동하도록 수정.
+
+---
+
+## 2026-11-27: 머니 플로우(`quant-money-flow`) 예탁금·MMF·CFTC 선물 빈 차트 및 한·미 IPO 리스트 누락 해결 (4대 공식 API 직결)
+
+### 🚨 문제 증상 (Issues)
+1. **국내 고객예탁금 & 미국 리테일 MMF & CFTC 4대 주가지수 선물 차트 '시계열 데이터 준비 중' 표시:**
+   - 외부 `goodstock123.com/api/fundamentals/capital-flows` API가 `mmf: []`, `cot: {}` 빈 데이터를 반환하면서 미국 MMF 차트, CFTC 선물 차트 및 포지션 표(`0 계약 / 1 계약 / 0.0%`)가 모두 비어버림.
+   - 또한 `quant_hub.js`에서 국내(`KR`) 고객예탁금 차트 위치에도 미국 `mmfList`를 공용으로 바인딩하고 있었음.
+2. **국내 신규 상장 주요 IPO(`krLatestIpos`)에 2~3년 전 상장 종목이 섞여 있고 최근 1년 내 상장 종목이 누락됨:**
+   - `update_quant_hub.py`에 과거 2023~2024년 대어급 IPO(두산로보틱스, 에코프로머티, 시프트업, 더본코리아, 클로봇 등)가 가짜 2026년 날짜로 하드코딩(`base_kr_ipos`)되어 있었고, `[:25]` 제한으로 인해 실제 최근 1년 내 상장 종목들이 잘려 나감.
+3. **미국 신규 상장 주요 IPO(`ipoLatest`)가 15개사만 표시되고, 한·미 IPO 첫 상장 날짜 연도가 잘려(`11-24`) 보임:**
+   - `ipo-stats?v=3` 요약 API가 `latest` 배열을 15개로만 제한하여 내려주고 있었고, 프론트엔드에서 `ip.dt.slice(5)`로 연도를 잘라내어 첫 상장일 식별이 어려웠음.
+
+### ✅ 해결 조치 (Resolution — `update_quant_hub.py`, `quant_hub.js?v=10`, `style.css?v=10`, `quant_hub.css?v=3`)
+1. **국내 고객예탁금 & 신용잔고 공식 API 직결 (`krDepositSeries`):**
+   - 신형 네이버 증권 증시자금동향 내부 JSON API (`https://stock.naver.com/api/domestic/market/trendDeposit?size=60`, 헤더 `Referer: https://stock.naver.com/market/stock/kr/deposit`)를 직결하여 일별 고객예탁금(조 원) 및 신용융자 잔고(조 원) 60영업일 시계열을 자동 수집하고, `quant_hub.js`에서 국내(`krDepositSeries`)와 미국(`mmfList`) 차트를 완전히 분리.
+2. **미국 MMF 대기 자금 공식 API 직결 (`mmf`):**
+   - 미국 재무부 금융조사국(OFR) 공식 시계열 API (`https://data.financialresearch.gov/v1/series/timeseries?mnemonic=MMF-MMF_TOT-M`)를 직결하여 최근 60개월 미국 MMF 총자산(`$B`) 시계열을 자동 수집.
+3. **CFTC 미국 4대 주가지수 선물 공식 API 직결 (`cot.ES`, `NQ`, `YM`, `QR`):**
+   - 미국 상품선물거래위원회(CFTC) 공식 Socrata API (`https://publicreporting.cftc.gov/resource/6dca-aqww.json`, `ES=13874A`, `NQ=209742`, `YM=124603`, `QR=239742`)를 직결하여 최근 60주 롱·숏·미결제약정·순포지션 비중(%)을 매주 자동 갱신.
+4. **국내 KRX 최근 1년 신규 상장 100개사 전수 자동 수집 (`krLatestIpos`):**
+   - 과거 더미 리스트(`base_kr_ipos`)를 100% 삭제하고, 네이버 KRX 신규상장 공식 JSON API (`https://stock.naver.com/api/domestic/market/stock/default?tradeType=KRX&marketType=ALL&orderType=newStock&startIdx=0&pageSize=120`) 및 공모 진행 API (`/api/domestic/market/ipo/progress`)를 직결하여 최근 1년 이내 실제 상장한 코스피·코스닥 100개사 전체를 공식 종목코드(`itemcode`), 실제 상장일(`listedDate`), 공모규모와 함께 표시하고 월별 상장 건수(`krIpoMonths2026`)도 자동 집계.
+5. **미국 나스닥 최근 12개월 신규 상장 250~280개사 전수 자동 수집 (`ipoLatest`, `ipoLatestAll`) 및 첫 상장일(`상장일 YYYY-MM-DD`) 배지 적용:**
+   - 나스닥 공식 IPO 캘린더 API (`https://api.nasdaq.com/api/ipo/calendar?date=YYYY-MM`) 최근 12개월 병렬 수집으로 미국 IPO 리스트를 250~280개사로 확장하고, 한·미 양쪽 리스트에 `상장일 YYYY-MM-DD` 배지를 선명하게 표시.
+
