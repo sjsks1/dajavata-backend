@@ -2205,9 +2205,12 @@
     // =========================================================================
     const homeState = {
         quantCache: null,
+        quantFetchStarted: false,
         risingMarket: 'KR', // 'KR' | 'US'
         ipoMarket: 'KR',    // 'KR' | 'US'
         postsLoaded: false,
+        postsFetchStarted: false,
+        dbFetchStarted: false,
         allArticles: []
     };
 
@@ -2235,17 +2238,32 @@
     }
 
     async function ensureHomeArticles() {
-        if (window.DajavataApp && typeof window.DajavataApp.getAllPosts === 'function') {
-            try {
-                const res = await window.DajavataApp.getAllPosts();
-                const merged = [];
-                (res.company || []).forEach(p => merged.push({ ...p, _cat: 'company', _catLabel: '기업개요·차트분석', _color: '#38bdf8' }));
-                (res.learning || []).forEach(p => merged.push({ ...p, _cat: 'learning', _catLabel: '학습 자료', _color: '#34d399' }));
-                (res.insights || []).forEach(p => merged.push({ ...p, _cat: 'insights', _catLabel: '이것저것 칼럼', _color: '#c084fc' }));
-                merged.sort((a, b) => String(b.date || b.updated_at || '').localeCompare(String(a.date || a.updated_at || '')));
-                homeState.allArticles = merged;
-                homeState.postsLoaded = true;
-            } catch (e) {}
+        if (homeState.postsLoaded) return homeState.allArticles;
+        try {
+            let res = null;
+            if (window.DajavataApp && typeof window.DajavataApp.getAllPosts === 'function') {
+                res = await window.DajavataApp.getAllPosts();
+            } else {
+                const [cRes, lRes, iRes] = await Promise.all([
+                    fetch('data/company_db.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('data/learning_db.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
+                    fetch('data/insights_db.json').then(r => r.ok ? r.json() : {}).catch(() => ({}))
+                ]);
+                res = {
+                    company: cRes.posts || [],
+                    learning: lRes.posts || [],
+                    insights: iRes.posts || []
+                };
+            }
+            const merged = [];
+            ((res && res.company) || []).forEach(p => merged.push({ ...p, _cat: 'company', _catLabel: '기업개요·차트분석', _color: '#38bdf8' }));
+            ((res && res.learning) || []).forEach(p => merged.push({ ...p, _cat: 'learning', _catLabel: '학습 자료', _color: '#34d399' }));
+            ((res && res.insights) || []).forEach(p => merged.push({ ...p, _cat: 'insights', _catLabel: '이것저것 칼럼', _color: '#c084fc' }));
+            merged.sort((a, b) => String(b.date || b.updated_at || '').localeCompare(String(a.date || a.updated_at || '')));
+            homeState.allArticles = merged;
+            homeState.postsLoaded = true;
+        } catch (e) {
+            homeState.postsLoaded = true;
         }
         return homeState.allArticles;
     }
@@ -2266,22 +2284,25 @@
         return `👑 ${top.name} (${d1 >= 0 ? '+' : ''}${d1.toFixed(1)}%)`;
     }
 
-    async function renderMainHomeDashboard() {
+    function renderMainHomeDashboard() {
         const box = document.getElementById('main-home-dashboard');
         if (!box) return;
 
-        // 비동기 실제 데이터 로드 (quant_hub_cache + 칼럼 + 커뮤니티 DB)
-        if (!homeState.quantCache) {
+        // 비동기 실제 데이터 로드 (단 1회씩만 호출되도록 가드하여 무한 재귀 루프 원천 차단)
+        if (!homeState.quantCache && !homeState.quantFetchStarted) {
+            homeState.quantFetchStarted = true;
             ensureHomeQuantCache().then(() => {
                 if (box.style.display !== 'none') renderMainHomeDashboard();
             });
         }
-        if (!homeState.postsLoaded) {
+        if (!homeState.postsLoaded && !homeState.postsFetchStarted) {
+            homeState.postsFetchStarted = true;
             ensureHomeArticles().then(() => {
                 if (box.style.display !== 'none') renderMainHomeDashboard();
             });
         }
-        if (!state.db) {
+        if (!state.db && !homeState.dbFetchStarted) {
+            homeState.dbFetchStarted = true;
             ensureCommunityDataLoaded().then(() => {
                 if (box.style.display !== 'none') renderMainHomeDashboard();
             });
