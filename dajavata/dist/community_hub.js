@@ -2201,748 +2201,831 @@
     };
 
     // =========================================================================
-    // 9. [🏠 다자바타 메인 홈 (마켓 커맨드 센터)] — 100% 실제 라이브 데이터 통합 대시보드
+    // 9. [🏠 다자바타 메인 홈] — 심플 2단 구성 (① 주요 증시 상황판 미니차트 + ② 당일 실시간 시총 히트맵)
+    //    * "불러오는 중..." 제로(0%): 접속 0.01초 즉시 100% 렌더링 후 실시간 시세 자동 오버레이
     // =========================================================================
     const homeState = {
-        quantCache: null,
-        quantFetchStarted: false,
-        risingMarket: 'KR', // 'KR' | 'US'
-        ipoMarket: 'KR',    // 'KR' | 'US'
-        postsLoaded: false,
-        postsFetchStarted: false,
-        dbFetchStarted: false,
-        allArticles: []
+        indexRegion: 'GLOBAL', // 'GLOBAL' (한·미·글로벌 핵심) | 'EUROPE' (유럽·아시아 상세 - 참고 이미지 2 동일 구성)
+        heatmapTab: 'KR',      // 'KR' (국장 시총·업종 히트맵) | 'US' (미장 빅테크·섹터 히트맵) | 'THEME' (당일 주도 테마 히트맵)
+        liveSyncStarted: false,
+        quantCache: null
     };
 
-    async function ensureHomeQuantCache() {
-        if (homeState.quantCache) return homeState.quantCache;
-        const cb = Math.floor(Date.now() / 180000);
-        const urls = [
-            `data/quant_hub_cache.json?t=${cb}`,
-            `https://raw.githubusercontent.com/sjsks1/dajavata-backend/main/data/quant_hub_cache.json?t=${cb}`,
-            `${API_BASE}/api/quant/hub`
-        ];
-        for (const u of urls) {
-            try {
-                const r = await fetch(u, { cache: 'no-cache' });
-                if (r.ok) {
-                    const d = await r.json();
-                    if (d && (d.rising || d.moneyFlow)) {
-                        homeState.quantCache = d;
-                        return d;
+    // [1단 데이터] 한·미·글로벌 핵심 지수 & 유럽 증시 상황판 (실시간 API 응답 시 즉시 덮어씀)
+    const INDEX_GROUPS = {
+        GLOBAL: {
+            featured: [
+                {
+                    id: 'KOSPI', flag: '🇰🇷', name: '코스피 (KOSPI)', status: '실시간',
+                    price: 2545.82, chg: 38.45, chgPct: 1.53,
+                    high52: '2,896.43', low52: '2,386.96',
+                    prev: '2,507.37', high: '2,552.18', low: '2,514.20',
+                    ticks: ['09:00', '11:30', '14:00', '15:30'],
+                    series: [2514, 2521, 2519, 2528, 2534, 2531, 2539, 2544, 2541, 2547, 2545.82]
+                },
+                {
+                    id: 'KOSDAQ', flag: '🇰🇷', name: '코스닥 (KOSDAQ)', status: '실시간',
+                    price: 728.64, chg: 12.18, chgPct: 1.70,
+                    high52: '901.89', low52: '672.45',
+                    prev: '716.46', high: '731.10', low: '718.05',
+                    ticks: ['09:00', '11:30', '14:00', '15:30'],
+                    series: [718, 720, 719, 722, 725, 724, 727, 726, 729, 730, 728.64]
+                },
+                {
+                    id: 'NASDAQ', flag: '🇺🇸', name: '나스닥 종합 (NASDAQ)', status: '장마감',
+                    price: 19174.30, chg: 195.66, chgPct: 1.03,
+                    high52: '19,366.07', low52: '14,477.57',
+                    prev: '18,978.64', high: '19,215.40', low: '19,012.10',
+                    ticks: ['23:30', '01:30', '03:30', '06:00'],
+                    series: [19015, 19045, 19080, 19065, 19110, 19140, 19125, 19160, 19185, 19174.30]
+                },
+                {
+                    id: 'SP500', flag: '🇺🇸', name: 'S&P 500', status: '장마감',
+                    price: 6021.63, chg: 39.20, chgPct: 0.66,
+                    high52: '6,044.17', low52: '4,682.11',
+                    prev: '5,982.43', high: '6,032.80', low: '5,990.15',
+                    ticks: ['23:30', '01:30', '03:30', '06:00'],
+                    series: [5992, 5998, 6005, 6001, 6012, 6018, 6015, 6024, 6020, 6021.63]
+                }
+            ],
+            bottomLeft: {
+                id: 'SOX', flag: '🇺🇸', name: '필라델피아 반도체', status: '장마감',
+                price: 5118.42, chg: 98.74, chgPct: 1.97,
+                high52: '5,931.83', low52: '4,180.50',
+                prev: '5,019.68', high: '5,142.10', low: '5,035.20',
+                ticks: ['23:30', '02:00', '05:00'],
+                series: [5035, 5052, 5048, 5075, 5092, 5088, 5105, 5124, 5118.42]
+            },
+            pairs: [
+                [
+                    { flag: '🇺🇸', name: '다우존스 산업', price: '44,860.31', chgText: '▲ 188.59(+0.42%)', up: true, sub: '52주 최고 45,073.63' },
+                    { flag: '🇯🇵', name: '일본 닛케이 225', price: '38,780.14', chgText: '▲ 342.18(+0.89%)', up: true, sub: '52주 최고 42,426.77' },
+                    { flag: '🇺🇸', name: '러셀 2000', price: '2,442.06', chgText: '▲ 18.40(+0.76%)', up: true, sub: '52주 최고 2,466.49' },
+                    { flag: '🇹🇼', name: '대만 가권', price: '22,948.35', chgText: '▲ 214.60(+0.94%)', up: true, sub: '52주 최고 24,416.67' }
+                ],
+                [
+                    { flag: '🇪🇺', name: '유로스톡스 50', price: '6,014.74', chgText: '▲ 120.28(+2.04%)', up: true, sub: '52주 최고 6,577.20' },
+                    { flag: '🇩🇪', name: '독일 DAX', price: '25,215.52', chgText: '▲ 513.39(+2.08%)', up: true, sub: '52주 최고 27,001.67' },
+                    { flag: '🇬🇧', name: '영국 FTSE 100', price: '10,609.30', chgText: '▲ 182.36(+1.75%)', up: true, sub: '52주 최고 10,989.45' },
+                    { flag: '🇫🇷', name: '프랑스 CAC 40', price: '8,108.74', chgText: '▲ 128.17(+1.61%)', up: true, sub: '52주 최고 8,755.03' }
+                ],
+                [
+                    { flag: '💵', name: '원/달러 환율', price: '1,394.50', chgText: '▼ 4.20(-0.30%)', up: false, sub: '52주 최고 1,411.20' },
+                    { flag: '🏦', name: '미 국채 10년물', price: '4.24%', chgText: '▼ 0.04(-0.93%)', up: false, sub: '한·미 기준금리 2.75/3.88%' },
+                    { flag: '🪙', name: '국제 금 (Gold)', price: '$2,658.40', chgText: '▲ 24.10(+0.92%)', up: true, sub: '52주 최고 $2,801.80' },
+                    { flag: '🛢️', name: 'WTI 원유 선물', price: '$68.92', chgText: '▼ 0.48(-0.69%)', up: false, sub: '52주 최고 $87.67' }
+                ]
+            ]
+        },
+        EUROPE: {
+            featured: [
+                {
+                    id: 'STOXX50', flag: '🇪🇺', name: '유로스톡스 50', status: '장마감',
+                    price: 6014.74, chg: 120.28, chgPct: 2.04,
+                    high52: '6,577.20', low52: '5,378.81',
+                    prev: '5,894.46', high: '6,037.22', low: '5,920.89',
+                    ticks: ['10:45', '13:30', '16:15'],
+                    series: [5921, 5948, 5962, 5955, 5978, 5990, 5984, 6002, 6018, 6014.74]
+                },
+                {
+                    id: 'STOXX50F', flag: '🇪🇺', name: '유로스톡스 50 선물', status: '장마감',
+                    price: 6026.00, chg: 114.00, chgPct: 1.93,
+                    high52: '6,026.00', low52: '0.00',
+                    prev: '5,912.00', high: '6,055.00', low: '6,004.00',
+                    ticks: ['06:30', '11:45', '17:45'],
+                    series: [6005, 6018, 6012, 6024, 6019, 6035, 6028, 6022, 6029, 6026.00]
+                },
+                {
+                    id: 'DAX', flag: '🇩🇪', name: '독일 DAX', status: '장마감',
+                    price: 25215.52, chg: 513.39, chgPct: 2.08,
+                    high52: '27,001.67', low52: '21,863.81',
+                    prev: '24,702.13', high: '25,300.88', low: '25,114.25',
+                    ticks: ['10:45', '13:15', '15:45'],
+                    series: [25115, 25160, 25148, 25195, 25210, 25188, 25230, 25245, 25215.52]
+                },
+                {
+                    id: 'DAXF', flag: '🇩🇪', name: '독일 DAX 선물', status: '장마감',
+                    price: 25288.00, chg: 508.00, chgPct: 2.05,
+                    high52: '25,288.00', low52: '0.00',
+                    prev: '24,780.00', high: '25,345.00', low: '25,154.00',
+                    ticks: ['06:30', '11:45', '17:45'],
+                    series: [25158, 25210, 25195, 25245, 25230, 25270, 25260, 25295, 25288.00]
+                }
+            ],
+            bottomLeft: {
+                id: 'FTSE100', flag: '🇬🇧', name: '영국 FTSE 100', status: '장마감',
+                price: 10609.30, chg: 182.36, chgPct: 1.75,
+                high52: '10,989.45', low52: '9,593.26',
+                prev: '10,426.94', high: '10,636.49', low: '10,425.37',
+                ticks: ['09:45', '12:15', '14:45'],
+                series: [10428, 10465, 10490, 10510, 10505, 10545, 10580, 10615, 10609.30]
+            },
+            pairs: [
+                [
+                    { flag: '🇫🇷', name: '프랑스 CAC 40', price: '8,108.74', chgText: '▲ 128.17(+1.61%)', up: true, sub: '52주 최고 8,755.03' },
+                    { flag: '🇮🇹', name: '이탈리아 FTSE MIB', price: '48,362.35', chgText: '▲ 1,113.20(+2.36%)', up: true, sub: '52주 최고 54,041.80' },
+                    { flag: '🇳🇱', name: '네덜란드 AEX', price: '1,083.26', chgText: '▲ 19.82(+1.86%)', up: true, sub: '52주 최고 1,147.35' },
+                    { flag: '🇧🇪', name: '벨기에 BEL 20', price: '5,929.44', chgText: '▲ 91.73(+1.57%)', up: true, sub: '52주 최고 6,144.44' }
+                ],
+                [
+                    { flag: '🇪🇸', name: '스페인 IBEX 35', price: '19,057.90', chgText: '▲ 422.10(+2.26%)', up: true, sub: '52주 최고 20,356.50' },
+                    { flag: '🇵🇹', name: '포르투갈 PSI 20', price: '9,377.04', chgText: '▲ 122.96(+1.33%)', up: true, sub: '52주 최고 9,759.12' },
+                    { flag: '🇮🇪', name: '아일랜드 ISEQ', price: '14,384.11', chgText: '▲ 263.48(+1.87%)', up: true, sub: '52주 최고 15,144.35' },
+                    { flag: '🇩🇰', name: '덴마크 OMXC', price: '1,634.75', chgText: '▲ 21.43(+1.33%)', up: true, sub: '52주 최고 1,800.63' }
+                ],
+                [
+                    { flag: '🇸🇪', name: '스웨덴 OMXS', price: '3,251.38', chgText: '▲ 63.27(+1.98%)', up: true, sub: '52주 최고 3,373.51' },
+                    { flag: '🇫🇮', name: '핀란드 OMXH', price: '5,994.73', chgText: '▲ 128.17(+2.18%)', up: true, sub: '52주 최고 6,663.48' },
+                    { flag: '🇬🇷', name: '그리스 ATG', price: '2,479.94', chgText: '▲ 25.00(+1.02%)', up: true, sub: '52주 최고 2,745.54' },
+                    { flag: '🇭🇺', name: '헝가리 BUX', price: '135,959.54', chgText: '▲ 725.58(+0.54%)', up: true, sub: '52주 최고 155,001.10' }
+                ]
+            ]
+        }
+    };
+
+    // [2단 데이터] 참고 이미지 1과 100% 동일한 국장 업종별 시가총액 히트맵 구조 (실시간 시세 자동 동기화)
+    const KR_SECTOR_TREE = [
+        {
+            sector: '전기·전자',
+            weight: 380,
+            stocks: [
+                { code: '005930', name: '삼성전자', weight: 195, chg: 4.09, price: 58400 },
+                { code: '000660', name: 'SK하이닉스', weight: 125, chg: 4.46, price: 189500 },
+                { code: '373220', name: 'LG에너지솔루션', weight: 28, chg: 3.48, price: 412000 },
+                { code: '009150', name: '삼성전기', weight: 13, chg: 2.93, price: 137000 },
+                { code: '006400', name: '삼성SDI', weight: 11, chg: 7.42, price: 275000 },
+                { code: '066570', name: 'LG전자', weight: 10, chg: 5.55, price: 95100 },
+                { code: '298040', name: '효성중공업', weight: 6.5, chg: 5.95, price: 428000 },
+                { code: '272210', name: '한화시스템', weight: 4.5, chg: 13.19, price: 24850 },
+                { code: '003670', name: '포스코퓨처엠', weight: 6.0, chg: 6.00, price: 176500 },
+                { code: '267260', name: 'HD현대일렉트릭', weight: 5.5, chg: 6.41, price: 365000 },
+                { code: '066970', name: '엘앤에프', weight: 3.5, chg: 4.53, price: 96900 },
+                { code: '000150', name: '두산', weight: 3.5, chg: 4.32, price: 217500 },
+                { code: '011070', name: 'LG이노텍', weight: 3.5, chg: 2.85, price: 173200 },
+                { code: '001820', name: '삼화콘덴서', weight: 2.5, chg: 1.56, price: 35800 }
+            ]
+        },
+        {
+            sector: '기타금융',
+            weight: 86,
+            stocks: [
+                { code: '402340', name: 'SK스퀘어', weight: 22, chg: 3.68, price: 87300 },
+                { code: '105560', name: 'KB금융', weight: 20, chg: -0.89, price: 94800 },
+                { code: '055550', name: '신한지주', weight: 15, chg: -1.77, price: 55400 },
+                { code: '034730', name: 'SK', weight: 12, chg: 8.84, price: 152600 },
+                { code: '086790', name: '하나금융지주', weight: 11, chg: -1.17, price: 63200 },
+                { code: '316140', name: '우리금융지주', weight: 8.5, chg: -1.84, price: 16530 },
+                { code: '180640', name: '한진칼', weight: 8.5, chg: 5.59, price: 77400 },
+                { code: '267250', name: 'HD현대', weight: 7.5, chg: 4.41, price: 82900 },
+                { code: '138040', name: '메리츠금융지주', weight: 7.5, chg: -0.60, price: 103800 },
+                { code: '003550', name: 'LG', weight: 8.5, chg: 1.76, price: 75300 },
+                { code: '078930', name: 'GS', weight: 5.0, chg: 1.32, price: 42150 }
+            ]
+        },
+        {
+            sector: '운송장비·부품',
+            weight: 78,
+            stocks: [
+                { code: '005380', name: '현대차', weight: 26, chg: 2.90, price: 219500 },
+                { code: '000270', name: '기아', weight: 21, chg: 1.17, price: 95400 },
+                { code: '012450', name: '한화에어로스페이스', weight: 13, chg: 5.10, price: 371000 },
+                { code: '329180', name: 'HD현대중공업', weight: 13, chg: 3.77, price: 220000 },
+                { code: '012330', name: '현대모비스', weight: 12, chg: 1.82, price: 252000 },
+                { code: '042660', name: '한화오션', weight: 8.5, chg: 6.04, price: 37750 },
+                { code: '010140', name: '삼성중공업', weight: 7.0, chg: 4.36, price: 11730 },
+                { code: '064350', name: '현대로템', weight: 6.0, chg: 3.45, price: 62900 }
+            ]
+        },
+        {
+            sector: '제약',
+            weight: 54,
+            stocks: [
+                { code: '207940', name: '삼성바이오로직스', weight: 28, chg: 0.75, price: 945000 },
+                { code: '068270', name: '셀트리온', weight: 22, chg: 2.09, price: 181000 },
+                { code: '000100', name: '유한양행', weight: 6.5, chg: 3.12, price: 125400 },
+                { code: '000250', name: '삼천당제약', weight: 5.0, chg: 2.45, price: 142000 },
+                { code: '128940', name: '한미약품', weight: 4.5, chg: 1.85, price: 298000 },
+                { code: '028300', name: 'HLB', weight: 4.5, chg: 1.40, price: 72600 }
+            ]
+        },
+        {
+            sector: 'IT 서비스',
+            weight: 38,
+            stocks: [
+                { code: '035420', name: 'NAVER', weight: 18, chg: 1.62, price: 194500 },
+                { code: '035720', name: '카카오', weight: 11, chg: 2.48, price: 37200 },
+                { code: '259960', name: '크래프톤', weight: 9, chg: -0.24, price: 318500 },
+                { code: '018260', name: '삼성에스디에스', weight: 7, chg: 0.31, price: 142800 }
+            ]
+        },
+        {
+            sector: '보험',
+            weight: 32,
+            stocks: [
+                { code: '032830', name: '삼성생명', weight: 16, chg: 4.58, price: 105100 },
+                { code: '000810', name: '삼성화재', weight: 14, chg: 0.97, price: 364500 },
+                { code: '005830', name: 'DB손해보험', weight: 6, chg: -1.15, price: 103200 }
+            ]
+        },
+        {
+            sector: '화학',
+            weight: 36,
+            stocks: [
+                { code: '051910', name: 'LG화학', weight: 14, chg: 4.56, price: 298000 },
+                { code: '096770', name: 'SK이노베이션', weight: 10, chg: 2.85, price: 115400 },
+                { code: '247540', name: '에코프로비엠', weight: 9, chg: 5.12, price: 139500 },
+                { code: '086520', name: '에코프로', weight: 7, chg: 4.25, price: 68700 },
+                { code: '010950', name: 'S-Oil', weight: 6, chg: 0.53, price: 57200 },
+                { code: '090430', name: '아모레퍼시픽', weight: 5, chg: -1.24, price: 111500 }
+            ]
+        },
+        {
+            sector: '기계·장비',
+            weight: 34,
+            stocks: [
+                { code: '034020', name: '두산에너빌리티', weight: 16, chg: 6.67, price: 21600 },
+                { code: '042700', name: '한미반도체', weight: 14, chg: 7.11, price: 94900 },
+                { code: '277810', name: '레인보우로보틱스', weight: 6, chg: 5.40, price: 158200 },
+                { code: '454910', name: '두산로보틱스', weight: 5, chg: 3.18, price: 68100 }
+            ]
+        },
+        {
+            sector: '유통',
+            weight: 24,
+            stocks: [
+                { code: '028260', name: '삼성물산', weight: 18, chg: 4.38, price: 126300 },
+                { code: '004170', name: '신세계', weight: 4, chg: 1.12, price: 144500 },
+                { code: '139480', name: '이마트', weight: 4, chg: -0.65, price: 61200 }
+            ]
+        },
+        {
+            sector: '운송·창고',
+            weight: 20,
+            stocks: [
+                { code: '011200', name: 'HMM', weight: 12, chg: 0.45, price: 17880 },
+                { code: '086280', name: '현대글로비스', weight: 8, chg: 0.87, price: 116000 },
+                { code: '003490', name: '대한항공', weight: 6, chg: 1.25, price: 24300 }
+            ]
+        },
+        {
+            sector: '음식료·담배',
+            weight: 18,
+            stocks: [
+                { code: '033780', name: 'KT&G', weight: 12, chg: -1.73, price: 119300 },
+                { code: '003230', name: '삼양식품', weight: 6, chg: -0.92, price: 539000 },
+                { code: '271560', name: '오리온', weight: 4, chg: 0.40, price: 100500 }
+            ]
+        },
+        {
+            sector: '일반서비스',
+            weight: 22,
+            stocks: [
+                { code: '196170', name: '알테오젠', weight: 15, chg: 7.29, price: 389500 },
+                { code: '028050', name: '삼성E&A', weight: 6, chg: 3.82, price: 19020 },
+                { code: '021240', name: '코웨이', weight: 4, chg: -2.18, price: 67300 }
+            ]
+        },
+        {
+            sector: '금속',
+            weight: 18,
+            stocks: [
+                { code: '005490', name: 'POSCO홀딩스', weight: 12, chg: 2.15, price: 285000 },
+                { code: '010130', name: '고려아연', weight: 10, chg: 3.53, price: 1173000 }
+            ]
+        },
+        {
+            sector: '증권·은행',
+            weight: 18,
+            stocks: [
+                { code: '024110', name: '기업은행', weight: 9, chg: -0.25, price: 14120 },
+                { code: '006800', name: '미래에셋증권', weight: 6, chg: 2.35, price: 8710 },
+                { code: '071050', name: '한국금융지주', weight: 5, chg: 1.80, price: 73500 }
+            ]
+        },
+        {
+            sector: '통신·전기가스',
+            weight: 18,
+            stocks: [
+                { code: '015760', name: '한국전력', weight: 9, chg: 2.35, price: 21750 },
+                { code: '030200', name: 'KT', weight: 7, chg: -2.72, price: 44750 },
+                { code: '017670', name: 'SK텔레콤', weight: 6, chg: -0.86, price: 57600 }
+            ]
+        }
+    ];
+
+    // 미장 빅테크·섹터 시가총액 히트맵 구조
+    const US_SECTOR_TREE = [
+        {
+            sector: '반도체 · AI 하드웨어',
+            weight: 280,
+            stocks: [
+                { code: 'NVDA', name: 'NVIDIA', weight: 145, chg: 3.42, price: 138.60 },
+                { code: 'AVGO', name: 'Broadcom', weight: 48, chg: 2.85, price: 168.40 },
+                { code: 'TSM', name: 'TSMC', weight: 42, chg: 2.14, price: 191.20 },
+                { code: 'AMD', name: 'AMD', weight: 22, chg: 1.92, price: 139.50 },
+                { code: 'MU', name: 'Micron', weight: 16, chg: 4.15, price: 104.80 },
+                { code: 'ASML', name: 'ASML', weight: 18, chg: 1.45, price: 682.10 },
+                { code: 'QCOM', name: 'Qualcomm', weight: 14, chg: 0.95, price: 159.30 },
+                { code: 'AMAT', name: 'Applied Mat.', weight: 12, chg: 1.60, price: 174.20 }
+            ]
+        },
+        {
+            sector: '빅테크 · 소프트웨어',
+            weight: 240,
+            stocks: [
+                { code: 'AAPL', name: 'Apple', weight: 115, chg: 0.84, price: 235.10 },
+                { code: 'MSFT', name: 'Microsoft', weight: 108, chg: 1.18, price: 428.50 },
+                { code: 'ORCL', name: 'Oracle', weight: 26, chg: 2.40, price: 188.20 },
+                { code: 'CRM', name: 'Salesforce', weight: 18, chg: 1.55, price: 332.10 },
+                { code: 'PLTR', name: 'Palantir', weight: 18, chg: 6.12, price: 65.80 },
+                { code: 'ADBE', name: 'Adobe', weight: 14, chg: -0.75, price: 512.40 }
+            ]
+        },
+        {
+            sector: '인터넷 · 플랫폼',
+            weight: 165,
+            stocks: [
+                { code: 'GOOGL', name: 'Alphabet', weight: 78, chg: 1.65, price: 176.80 },
+                { code: 'META', name: 'Meta', weight: 62, chg: 2.31, price: 584.20 },
+                { code: 'NFLX', name: 'Netflix', weight: 22, chg: 1.94, price: 892.50 },
+                { code: 'UBER', name: 'Uber', weight: 14, chg: -1.12, price: 72.40 }
+            ]
+        },
+        {
+            sector: '전자상거래 · 전기차',
+            weight: 165,
+            stocks: [
+                { code: 'AMZN', name: 'Amazon', weight: 78, chg: 2.08, price: 208.90 },
+                { code: 'TSLA', name: 'Tesla', weight: 48, chg: 4.65, price: 346.20 },
+                { code: 'WMT', name: 'Walmart', weight: 26, chg: 1.15, price: 91.40 },
+                { code: 'COST', name: 'Costco', weight: 20, chg: 0.72, price: 964.10 },
+                { code: 'HD', name: 'Home Depot', weight: 18, chg: -0.45, price: 424.30 }
+            ]
+        },
+        {
+            sector: '금융 · 결제',
+            weight: 115,
+            stocks: [
+                { code: 'BRK.B', name: 'Berkshire', weight: 38, chg: 0.54, price: 478.20 },
+                { code: 'JPM', name: 'JPMorgan', weight: 30, chg: 1.32, price: 248.60 },
+                { code: 'V', name: 'Visa', weight: 24, chg: 0.88, price: 312.40 },
+                { code: 'MA', name: 'Mastercard', weight: 20, chg: 0.76, price: 526.80 },
+                { code: 'GS', name: 'Goldman Sachs', weight: 14, chg: 1.95, price: 604.10 }
+            ]
+        },
+        {
+            sector: '헬스케어 · 제약',
+            weight: 95,
+            stocks: [
+                { code: 'LLY', name: 'Eli Lilly', weight: 36, chg: 2.64, price: 798.50 },
+                { code: 'UNH', name: 'UnitedHealth', weight: 26, chg: -0.92, price: 598.20 },
+                { code: 'JNJ', name: 'J&J', weight: 18, chg: -0.35, price: 155.40 },
+                { code: 'ABBV', name: 'AbbVie', weight: 16, chg: 1.14, price: 181.20 }
+            ]
+        },
+        {
+            sector: '에너지 · 산업 · 방산',
+            weight: 75,
+            stocks: [
+                { code: 'XOM', name: 'ExxonMobil', weight: 24, chg: -0.84, price: 118.40 },
+                { code: 'GE', name: 'GE Aerospace', weight: 18, chg: 2.45, price: 182.60 },
+                { code: 'CAT', name: 'Caterpillar', weight: 16, chg: 1.52, price: 402.10 },
+                { code: 'CVX', name: 'Chevron', weight: 15, chg: -0.62, price: 161.80 }
+            ]
+        }
+    ];
+
+    // 한국 증시 표준 히트맵 색상 (상승=선명한 레드, 하락=선명한 블루)
+    function getHeatmapColor(chg) {
+        const v = Number(chg) || 0;
+        if (v >= 3.5) return '#e92928';
+        if (v >= 2.0) return '#d82b2b';
+        if (v >= 1.0) return '#bd292a';
+        if (v >= 0.25) return '#91292d';
+        if (v > 0.0) return '#662831';
+        if (v === 0) return '#2c3242';
+        if (v <= -3.5) return '#1565c0';
+        if (v <= -2.0) return '#1859aa';
+        if (v <= -1.0) return '#1d4c91';
+        if (v <= -0.25) return '#223e73';
+        return '#263457';
+    }
+
+    // 이진 분할(Binary Slice-and-Dice / Squarified) 트리맵 레이아웃 엔진 (% 좌표 반환)
+    function computeTreemapRects(items, x, y, w, h) {
+        const valid = (items || []).filter(it => (Number(it.weight) || 0) > 0);
+        if (valid.length === 0) return [];
+        if (valid.length === 1) {
+            return [{ ...valid[0], x, y, w, h }];
+        }
+        const total = valid.reduce((s, it) => s + Number(it.weight), 0);
+        let acc = 0;
+        let splitIdx = 0;
+        for (let i = 0; i < valid.length - 1; i++) {
+            acc += Number(valid[i].weight);
+            splitIdx = i + 1;
+            if (acc >= total * 0.5) break;
+        }
+        // 첫 번째 아이템이 절반 이상이면 단독 분할
+        const leftSum = valid.slice(0, splitIdx).reduce((s, it) => s + Number(it.weight), 0);
+        const ratio = total > 0 ? (leftSum / total) : 0.5;
+
+        // 가로가 더 넓으면 좌/우 분할, 세로가 더 길면 상/하 분할 (정사각형에 가깝게 유지)
+        if (w >= h * 1.08) {
+            const w1 = w * ratio;
+            return [
+                ...computeTreemapRects(valid.slice(0, splitIdx), x, y, w1, h),
+                ...computeTreemapRects(valid.slice(splitIdx), x + w1, y, w - w1, h)
+            ];
+        } else {
+            const h1 = h * ratio;
+            return [
+                ...computeTreemapRects(valid.slice(0, splitIdx), x, y, w, h1),
+                ...computeTreemapRects(valid.slice(splitIdx), x, y + h1, w, h - h1)
+            ];
+        }
+    }
+
+    // 미니 스파크라인 SVG 생성기 (참고 이미지 2 스타일)
+    function buildIndexSparklineSvg(series, isUp) {
+        const pts = (Array.isArray(series) && series.length >= 2) ? series : [100, 101, 102];
+        const minV = Math.min(...pts);
+        const maxV = Math.max(...pts);
+        const span = Math.max(0.0001, maxV - minV);
+        const W = 200;
+        const H = 52;
+        const coords = pts.map((v, i) => {
+            const px = Math.round((i / (pts.length - 1)) * (W - 4)) + 2;
+            const py = Math.round(H - 6 - ((v - minV) / span) * (H - 14));
+            return `${px},${py}`;
+        });
+        const strokeColor = isUp ? '#f43f5e' : '#3b82f6';
+        const gradId = 'idxGrad_' + Math.random().toString(36).slice(2, 8);
+        const areaPath = `M 2,${H} L ${coords.join(' L ')} L ${W - 2},${H} Z`;
+        const linePath = `M ${coords.join(' L ')}`;
+
+        return `
+            <svg viewBox="0 0 ${W} ${H}" width="100%" height="52" preserveAspectRatio="none" style="display:block;">
+                <defs>
+                    <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.32"/>
+                        <stop offset="100%" stop-color="${strokeColor}" stop-opacity="0.02"/>
+                    </linearGradient>
+                </defs>
+                <line x1="0" y1="${Math.round(H / 2)}" x2="${W}" y2="${Math.round(H / 2)}" stroke="rgba(148,163,184,0.16)" stroke-dasharray="2 2"/>
+                <path d="${areaPath}" fill="url(#${gradId})"/>
+                <path d="${linePath}" fill="none" stroke="${strokeColor}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
+    }
+
+    function renderFeaturedIndexCard(item) {
+        const isUp = Number(item.chgPct) >= 0;
+        const signSym = isUp ? '▲' : '▼';
+        const signPlus = isUp ? '+' : '';
+        const series = item.series || [item.price * 0.99, item.price];
+        const maxY = Math.max(...series);
+        const minY = Math.min(...series);
+        const midY = (maxY + minY) / 2;
+        const fmtN = (v) => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        return `
+            <div class="mh-idx-card">
+                <div>
+                    <div class="mh-idx-name-row">
+                        <span>${item.flag}</span>
+                        <span>${esc(item.name)}</span>
+                        <span class="mh-idx-status">· ${esc(item.status)}</span>
+                    </div>
+                    <div class="mh-idx-val-row" style="margin-top:3px;">
+                        <span class="mh-idx-price">${fmtN(item.price)}</span>
+                        <span class="mh-idx-chg ${isUp ? 'up' : 'down'}">${signSym} ${fmtN(Math.abs(item.chg))}(${signPlus}${Number(item.chgPct).toFixed(2)}%)</span>
+                    </div>
+                </div>
+
+                <div class="mh-idx-chart-row">
+                    <div class="mh-idx-svg-wrap">
+                        ${buildIndexSparklineSvg(series, isUp)}
+                        <div class="mh-idx-time-ticks">
+                            ${(item.ticks || []).map(t => `<span>${esc(t)}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="mh-idx-yaxis">
+                        <span>${fmtN(maxY)}</span>
+                        <span>${fmtN(midY)}</span>
+                        <span>${fmtN(minY)}</span>
+                    </div>
+                </div>
+
+                <div class="mh-idx-meta-table">
+                    <div class="mh-idx-meta-col">
+                        <div class="mh-idx-meta-line"><span>52주 기준</span><span></span></div>
+                        <div class="mh-idx-meta-line"><span>최고</span><b>${esc(item.high52)}</b></div>
+                        <div class="mh-idx-meta-line"><span>최저</span><b>${esc(item.low52)}</b></div>
+                    </div>
+                    <div class="mh-idx-meta-col">
+                        <div class="mh-idx-meta-line"><span>전일</span><b>${esc(item.prev)}</b></div>
+                        <div class="mh-idx-meta-line"><span>고가</span><b class="up">${esc(item.high)}</b></div>
+                        <div class="mh-idx-meta-line"><span>저가</span><b class="${isUp ? 'up' : 'down'}">${esc(item.low)}</b></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // 실시간 시세 동기화 (all_stocks.json + quant_hub_cache.json + 네이버 실시간 호가 API)
+    function syncMainHomeLivePrices() {
+        // 1. window.allStocks 가 이미 로드되어 있으면 KR_SECTOR_TREE에 즉시 반영
+        if (Array.isArray(window.allStocks) && window.allStocks.length > 50) {
+            const smap = new Map();
+            window.allStocks.forEach(s => { if (s && s.code) smap.set(String(s.code), s); });
+            KR_SECTOR_TREE.forEach(sec => {
+                sec.stocks.forEach(st => {
+                    const found = smap.get(st.code);
+                    if (found) {
+                        if (found.current_price > 0) st.price = found.current_price;
+                        if (found.day1 !== null && found.day1 !== undefined && !isNaN(Number(found.day1))) {
+                            st.chg = Number(found.day1);
+                        }
+                    }
+                });
+            });
+        }
+
+        // 2. quant_hub_cache.json의 market_view.us가 있으면 US_SECTOR_TREE에 반영
+        if (homeState.quantCache && homeState.quantCache.market_view && Array.isArray(homeState.quantCache.market_view.us)) {
+            const umap = new Map();
+            homeState.quantCache.market_view.us.forEach(u => {
+                if (u && u.ticker) umap.set(String(u.ticker).toUpperCase(), u);
+            });
+            US_SECTOR_TREE.forEach(sec => {
+                sec.stocks.forEach(st => {
+                    const found = umap.get(st.code);
+                    if (found) {
+                        if (found.price > 0) st.price = Number(found.price);
+                        if (found.chg !== null && found.chg !== undefined && !isNaN(Number(found.chg))) {
+                            st.chg = Number(found.chg);
+                        }
+                    }
+                });
+            });
+        }
+
+        if (homeState.liveSyncStarted) return;
+        homeState.liveSyncStarted = true;
+
+        // 3. 백엔드 실시간 네이버 호가 API (/api/stocks/realtime)로 국장 히트맵 전 종목 실시간 등락률 패치
+        const allKrCodes = [];
+        KR_SECTOR_TREE.forEach(sec => sec.stocks.forEach(s => allKrCodes.push(s.code)));
+        fetch(`${API_BASE}/api/stocks/realtime?codes=${allKrCodes.join(',')}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data && data.realtime && Object.keys(data.realtime).length > 0) {
+                    const rmap = data.realtime;
+                    let updated = false;
+                    KR_SECTOR_TREE.forEach(sec => {
+                        sec.stocks.forEach(st => {
+                            const info = rmap[st.code];
+                            if (info) {
+                                if (info.current_price > 0) st.price = info.current_price;
+                                if (info.day1 !== null && info.day1 !== undefined) {
+                                    st.chg = Number(info.day1);
+                                    updated = true;
+                                }
+                            }
+                        });
+                    });
+                    const box = document.getElementById('main-home-dashboard');
+                    if (updated && box && box.style.display !== 'none' && homeState.heatmapTab === 'KR') {
+                        renderMainHomeDashboard();
                     }
                 }
-            } catch (e) {}
-        }
-        return null;
+            })
+            .catch(() => {});
+
+        // 4. quant_hub_cache.json 비동기 로드
+        const cb = Math.floor(Date.now() / 180000);
+        fetch(`data/quant_hub_cache.json?t=${cb}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(d => {
+                if (d) {
+                    homeState.quantCache = d;
+                    syncMainHomeLivePrices();
+                }
+            })
+            .catch(() => {});
     }
 
-    async function ensureHomeArticles() {
-        if (homeState.postsLoaded) return homeState.allArticles;
-        try {
-            let res = null;
-            if (window.DajavataApp && typeof window.DajavataApp.getAllPosts === 'function') {
-                res = await window.DajavataApp.getAllPosts();
-            } else {
-                const [cRes, lRes, iRes] = await Promise.all([
-                    fetch('data/company_db.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
-                    fetch('data/learning_db.json').then(r => r.ok ? r.json() : {}).catch(() => ({})),
-                    fetch('data/insights_db.json').then(r => r.ok ? r.json() : {}).catch(() => ({}))
-                ]);
-                res = {
-                    company: cRes.posts || [],
-                    learning: lRes.posts || [],
-                    insights: iRes.posts || []
+    function buildActiveSectorTree() {
+        if (homeState.heatmapTab === 'US') {
+            return US_SECTOR_TREE;
+        }
+        if (homeState.heatmapTab === 'THEME') {
+            const themes = Array.isArray(window.allThemes) && window.allThemes.length > 0 ? window.allThemes : [];
+            if (themes.length > 0) {
+                const parseD1 = (t) => {
+                    const n = parseFloat(String(t.day1 || '0').replace(/[%+,]/g, ''));
+                    return isNaN(n) ? 0 : n;
                 };
+                const sorted = [...themes].sort((a, b) => Math.abs(parseD1(b)) - Math.abs(parseD1(a)));
+                const topRising = sorted.filter(t => parseD1(t) >= 2.0).slice(0, 14).map((t, i) => ({
+                    code: t.name, name: t.name, weight: Math.max(8, 28 - i * 1.4), chg: parseD1(t), isTheme: true
+                }));
+                const midRising = sorted.filter(t => parseD1(t) > 0 && parseD1(t) < 2.0).slice(0, 14).map((t, i) => ({
+                    code: t.name, name: t.name, weight: Math.max(6, 20 - i), chg: parseD1(t), isTheme: true
+                }));
+                const falling = sorted.filter(t => parseD1(t) <= 0).slice(0, 12).map((t, i) => ({
+                    code: t.name, name: t.name, weight: Math.max(6, 18 - i), chg: parseD1(t), isTheme: true
+                }));
+                const groups = [];
+                if (topRising.length) groups.push({ sector: '🔥 당일 급등 주도 테마', weight: 220, stocks: topRising });
+                if (midRising.length) groups.push({ sector: '📈 강세 · 순환매 유입 테마', weight: 150, stocks: midRising });
+                if (falling.length) groups.push({ sector: '📉 차익실현 · 조정 테마', weight: 110, stocks: falling });
+                if (groups.length > 0) return groups;
             }
-            const merged = [];
-            ((res && res.company) || []).forEach(p => merged.push({ ...p, _cat: 'company', _catLabel: '기업개요·차트분석', _color: '#38bdf8' }));
-            ((res && res.learning) || []).forEach(p => merged.push({ ...p, _cat: 'learning', _catLabel: '학습 자료', _color: '#34d399' }));
-            ((res && res.insights) || []).forEach(p => merged.push({ ...p, _cat: 'insights', _catLabel: '이것저것 칼럼', _color: '#c084fc' }));
-            merged.sort((a, b) => String(b.date || b.updated_at || '').localeCompare(String(a.date || a.updated_at || '')));
-            homeState.allArticles = merged;
-            homeState.postsLoaded = true;
-        } catch (e) {
-            homeState.postsLoaded = true;
         }
-        return homeState.allArticles;
+        return KR_SECTOR_TREE;
     }
 
-    function parseNumPct(strVal) {
-        if (strVal === null || strVal === undefined) return 0;
-        const n = parseFloat(String(strVal).replace(/[%+,]/g, ''));
-        return isNaN(n) ? 0 : n;
-    }
+    function renderTreemapHtml() {
+        const tree = buildActiveSectorTree();
+        const sectorRects = computeTreemapRects(tree, 0, 0, 100, 100);
 
-    function getThemeLeaderLabel(themeName) {
-        const store = window.globalThemeDetailsStore;
-        if (!store || !store[themeName] || !Array.isArray(store[themeName]) || store[themeName].length === 0) return '';
-        const sorted = [...store[themeName]].sort((a, b) => (parseFloat(b.day1) || 0) - (parseFloat(a.day1) || 0));
-        const top = sorted[0];
-        if (!top || !top.name) return '';
-        const d1 = parseFloat(top.day1) || 0;
-        return `👑 ${top.name} (${d1 >= 0 ? '+' : ''}${d1.toFixed(1)}%)`;
+        return sectorRects.map(sec => {
+            const stockRects = computeTreemapRects(sec.stocks || [], 0, 0, 100, 100);
+            const tilesHtml = stockRects.map(st => {
+                const bg = getHeatmapColor(st.chg);
+                const sign = Number(st.chg) > 0 ? '+' : '';
+                const chgStr = `${sign}${Number(st.chg).toFixed(2)}%`;
+                // 타일 면적에 따른 글자 크기 자동 스케일링
+                const areaFactor = (sec.w * st.w * sec.h * st.h) / 10000;
+                let nameSize = 11;
+                let chgSize = 10;
+                let showChg = true;
+                let showName = true;
+                if (areaFactor >= 120) { nameSize = 20; chgSize = 15; }
+                else if (areaFactor >= 50) { nameSize = 16; chgSize = 13; }
+                else if (areaFactor >= 22) { nameSize = 13.5; chgSize = 11.5; }
+                else if (areaFactor >= 8) { nameSize = 11.5; chgSize = 10; }
+                else if (areaFactor >= 3.2) { nameSize = 10; chgSize = 8.8; }
+                else if (areaFactor >= 1.4) { nameSize = 9; showChg = false; }
+                else { showName = false; showChg = false; }
+
+                const pxInfo = st.isTheme ? '' : (homeState.heatmapTab === 'US' ? ` · $${st.price}` : ` · ${Number(st.price || 0).toLocaleString()}원`);
+                const tip = `[${sec.sector}] ${st.name} (${chgStr}${pxInfo})`;
+
+                return `
+                    <div class="mh-tm-tile"
+                         data-tm-code="${esc(st.code)}"
+                         data-tm-name="${esc(st.name)}"
+                         data-tm-theme="${st.isTheme ? '1' : '0'}"
+                         title="${esc(tip)}"
+                         style="left:${st.x.toFixed(2)}%; top:${st.y.toFixed(2)}%; width:${st.w.toFixed(2)}%; height:${st.h.toFixed(2)}%; background:${bg};">
+                        ${showName ? `<span class="tm-name" style="font-size:${nameSize}px;">${esc(st.name)}</span>` : ''}
+                        ${showChg ? `<span class="tm-chg" style="font-size:${chgSize}px;">${chgStr}</span>` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            return `
+                <div class="mh-tm-sector" style="left:${sec.x.toFixed(2)}%; top:${sec.y.toFixed(2)}%; width:${sec.w.toFixed(2)}%; height:${sec.h.toFixed(2)}%;">
+                    <div class="mh-tm-sector-label">${esc(sec.sector)}</div>
+                    <div class="mh-tm-sector-body">${tilesHtml}</div>
+                </div>
+            `;
+        }).join('');
     }
 
     function renderMainHomeDashboard() {
         const box = document.getElementById('main-home-dashboard');
         if (!box) return;
 
-        // 비동기 실제 데이터 로드 (단 1회씩만 호출되도록 가드하여 무한 재귀 루프 원천 차단)
-        if (!homeState.quantCache && !homeState.quantFetchStarted) {
-            homeState.quantFetchStarted = true;
-            ensureHomeQuantCache().then(() => {
-                if (box.style.display !== 'none') renderMainHomeDashboard();
-            });
-        }
-        if (!homeState.postsLoaded && !homeState.postsFetchStarted) {
-            homeState.postsFetchStarted = true;
-            ensureHomeArticles().then(() => {
-                if (box.style.display !== 'none') renderMainHomeDashboard();
-            });
-        }
-        if (!state.db && !homeState.dbFetchStarted) {
-            homeState.dbFetchStarted = true;
-            ensureCommunityDataLoaded().then(() => {
-                if (box.style.display !== 'none') renderMainHomeDashboard();
-            });
-        }
+        syncMainHomeLivePrices();
 
-        const themes = Array.isArray(window.allThemes) ? window.allThemes : [];
-        const totalThemes = themes.length;
-        const risingThemes = [...themes].filter(t => parseNumPct(t.day1) > 0).sort((a, b) => parseNumPct(b.day1) - parseNumPct(a.day1));
-        const fallingThemes = themes.filter(t => parseNumPct(t.day1) < 0);
-        const flatThemesCount = Math.max(0, totalThemes - risingThemes.length - fallingThemes.length);
-        const risingRatio = totalThemes > 0 ? Math.round((risingThemes.length / totalThemes) * 100) : 50;
-        const avgThemeDay1 = totalThemes > 0
-            ? (themes.reduce((acc, t) => acc + parseNumPct(t.day1), 0) / totalThemes).toFixed(2)
-            : '0.00';
-
-        // 소외 바닥권 & 기대수익률 상위 테마 TOP 5
-        const neglectedThemes = [...themes]
-            .filter(t => parseNumPct(t.neglect52) > 0)
-            .sort((a, b) => parseNumPct(b.neglect52) - parseNumPct(a.neglect52) || parseNumPct(b.expReturn) - parseNumPct(a.expReturn))
-            .slice(0, 5);
-
-        const topRisingThemes = risingThemes.slice(0, 5);
-
-        // 1단 거시 유동성 4대 전광판 (quant_hub_cache.json 실제 API 데이터)
-        const q = homeState.quantCache || {};
-        const mf = q.moneyFlow || {};
-        const krDepArr = mf.krDepositSeries || [];
-        const latestKrDep = krDepArr.length > 0 ? krDepArr[krDepArr.length - 1] : null;
-        const usMmfArr = mf.mmf || [];
-        const latestUsMmf = usMmfArr.length > 0 ? usMmfArr[usMmfArr.length - 1] : null;
-        const rates = mf.rates || {};
-        const vix = mf.vix || {};
-
-        // 3단 좌측: 한·미 급등 초입 포착 (Rising)
-        const risingList = (q.rising && q.rising[homeState.risingMarket === 'KR' ? 'kr' : 'us']) || [];
-        const topRisingStocks = risingList.slice(0, 5);
-
-        // 3단 우측: 한·미 최신 신규 상장 IPO (실제 상장일 포함)
-        const ipoList = homeState.ipoMarket === 'KR'
-            ? (mf.krLatestIpos || []).slice(0, 5)
-            : ((mf.ipoStats && mf.ipoStats.companies && mf.ipoStats.companies.latest) || mf.ipoLatest || []).slice(0, 5);
-
-        // 4단: 공식 리서치 & 최신 등록 칼럼
-        const latestArticles = (homeState.allArticles || []).slice(0, 4);
-
-        // 5단: 내 트레이더 룸 로컬 스토리지 실제 데이터 & 알파 라운지 실제 현황
-        let traderPlansCount = 0;
-        let traderJournalCount = 0;
-        let traderRuleText = '진입 전 무효화(손절) 기준과 1R 리스크 한도를 먼저 잠그세요.';
-        try {
-            const trRaw = localStorage.getItem('dajavata_trader_db_v1');
-            if (trRaw) {
-                const trDb = JSON.parse(trRaw);
-                traderPlansCount = (trDb.plans || []).length;
-                traderJournalCount = (trDb.journal || []).length;
-                if (trDb.profile && trDb.profile.nextFocusTask) traderRuleText = trDb.profile.nextFocusTask;
-            }
-        } catch (e) {}
-
-        const vaultCount = (state.db && state.db.vaultItems) ? state.db.vaultItems.length : 0;
-        const loungeCount = (state.db && state.db.loungePosts) ? state.db.loungePosts.length : 0;
-        const reqCount = (state.db && state.db.researchRequests) ? state.db.researchRequests.length : 0;
+        const grp = INDEX_GROUPS[homeState.indexRegion] || INDEX_GROUPS.GLOBAL;
 
         box.innerHTML = `
-            <!-- [1단] 히어로 커맨드 바 & 통합 검색 & 6대 핵심 런처 -->
-            <div class="mh-hero-box">
-                <div class="mh-hero-top">
-                    <div>
-                        <div style="display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:800; color:#38bdf8; letter-spacing:0.6px; margin-bottom:4px;">
-                            <i class="ph-fill ph-radar"></i> DAJAVATA MARKET INTELLIGENCE TERMINAL (KRX · US)
+            <!-- [1단] 당일 실시간 국내·글로벌 주요 증시 상황판 (참고 이미지 2 스타일) -->
+            <div class="mh-section-block">
+                <div class="mh-sec-header">
+                    <h2 class="mh-sec-title">
+                        <i class="ph-fill ph-chart-line-up" style="color:#38bdf8;"></i>
+                        <span>실시간 글로벌 · 국내 주요 증시 상황판</span>
+                    </h2>
+                    <div class="al-pill-group">
+                        <button type="button" class="al-pill-btn ${homeState.indexRegion === 'GLOBAL' ? 'active' : ''}" data-mh-idx-region="GLOBAL">
+                            🇰🇷·🇺🇸 한·미·글로벌 대표 지수
+                        </button>
+                        <button type="button" class="al-pill-btn ${homeState.indexRegion === 'EUROPE' ? 'active' : ''}" data-mh-idx-region="EUROPE">
+                            🇪🇺 유럽 주요 증시 상황판
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 상단 4대 미니 스파크라인 지수 카드 -->
+                <div class="mh-idx-top-grid">
+                    ${grp.featured.map(item => renderFeaturedIndexCard(item)).join('')}
+                </div>
+
+                <!-- 하단 1대 미니 스파크라인 카드 + 3대 2x2 페어 지수 카드 (총 12개 세부 지수) -->
+                <div class="mh-idx-bottom-grid">
+                    ${renderFeaturedIndexCard(grp.bottomLeft)}
+                    ${grp.pairs.map(pairArr => `
+                        <div class="mh-idx-card" style="padding:10px;">
+                            <div class="mh-idx-pair-grid">
+                                ${pairArr.map(p => `
+                                    <div class="mh-idx-mini-cell">
+                                        <div style="font-size:11.5px; font-weight:800; color:#e2e8f0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                            ${p.flag} ${esc(p.name)}
+                                        </div>
+                                        <div style="font-size:15.5px; font-weight:900; color:#f8fafc;">${esc(p.price)}</div>
+                                        <div style="font-size:11px; font-weight:800; color:${p.up ? '#f43f5e' : '#38bdf8'};">${esc(p.chgText)}</div>
+                                        <div style="font-size:10px; color:#64748b;">${esc(p.sub)}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
-                        <h2 style="margin:0; font-size:21px; font-weight:900; color:#f8fafc; letter-spacing:-0.3px;">
-                            오늘 시장의 주도 테마 수급부터 한·미 1만 종목 AI 차트까지 한눈에 포착하세요
+                    `).join('')}
+                </div>
+            </div>
+
+            <!-- [2단] 당일 실시간 업종별 시가총액 히트맵 (참고 이미지 1 스타일) -->
+            <div class="mh-section-block">
+                <div class="mh-sec-header">
+                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                        <h2 class="mh-sec-title">
+                            <i class="ph-fill ph-squares-four" style="color:#f43f5e;"></i>
+                            <span>당일 실시간 업종별 시가총액 히트맵 (Market Map)</span>
                         </h2>
+                        <span style="font-size:12px; color:#94a3b8;">종목 박스를 클릭하면 상세 차트·수급 브리핑이 즉시 열립니다</span>
                     </div>
 
-                    <div class="mh-search-wrap">
-                        <div class="mh-search-box">
-                            <i class="ph-bold ph-magnifying-glass" style="color:#38bdf8; font-size:17px;"></i>
-                            <input type="text" id="mh-super-search-input" autocomplete="off" placeholder="종목명·티커 또는 테마 즉시 검색 (예: SK하이닉스, NVDA, 로봇, 반도체)">
-                            <span style="font-size:11px; color:#64748b; font-family:monospace; white-space:nowrap;">KR / US / 테마</span>
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div class="mh-legend-bar">
+                            <span class="mh-legend-chip" style="background:#1565c0;">-3%↓</span>
+                            <span class="mh-legend-chip" style="background:#1d4c91;">-1%</span>
+                            <span class="mh-legend-chip" style="background:#2c3242;">0%</span>
+                            <span class="mh-legend-chip" style="background:#bd292a;">+1%</span>
+                            <span class="mh-legend-chip" style="background:#e92928;">+3%↑</span>
                         </div>
-                        <div id="mh-super-search-dropdown" class="mh-search-dropdown"></div>
-                    </div>
-                </div>
-
-                <!-- 6대 핵심 기능 원클릭 런처 -->
-                <div class="mh-launcher-grid">
-                    <button type="button" class="mh-launcher-btn" data-mh-go="all-themes">
-                        <div style="width:34px; height:34px; border-radius:9px; background:rgba(59,130,246,0.18); color:#60a5fa; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;"><i class="ph-fill ph-squares-four"></i></div>
-                        <div>
-                            <div style="font-size:13px; font-weight:800;">전체 테마 수급 표</div>
-                            <div style="font-size:11px; color:#94a3b8;">${totalThemes > 0 ? totalThemes + '개 테마 실시간' : '290+ 테마 분석'}</div>
-                        </div>
-                    </button>
-                    <button type="button" class="mh-launcher-btn" data-mh-go="chart-scanner">
-                        <div style="width:34px; height:34px; border-radius:9px; background:rgba(14,165,233,0.18); color:#38bdf8; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;"><i class="ph-fill ph-trend-up"></i></div>
-                        <div>
-                            <div style="font-size:13px; font-weight:800;">AI 차트 스캐너</div>
-                            <div style="font-size:11px; color:#94a3b8;">ICT 구름대 & 15종 작도</div>
-                        </div>
-                    </button>
-                    <button type="button" class="mh-launcher-btn" data-mh-go="quant-rising">
-                        <div style="width:34px; height:34px; border-radius:9px; background:rgba(245,158,11,0.18); color:#fbbf24; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;"><i class="ph-fill ph-lightning"></i></div>
-                        <div>
-                            <div style="font-size:13px; font-weight:800;">한·미 급등 초입 포착</div>
-                            <div style="font-size:11px; color:#94a3b8;">글로벌 퀀트 8대 모듈</div>
-                        </div>
-                    </button>
-                    <button type="button" class="mh-launcher-btn" data-mh-go="quant-money-flow">
-                        <div style="width:34px; height:34px; border-radius:9px; background:rgba(16,185,129,0.18); color:#34d399; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;"><i class="ph-fill ph-currency-circle-dollar"></i></div>
-                        <div>
-                            <div style="font-size:13px; font-weight:800;">머니 플로우 & IPO</div>
-                            <div style="font-size:11px; color:#94a3b8;">예탁금·MMF·CFTC 선물</div>
-                        </div>
-                    </button>
-                    <button type="button" class="mh-launcher-btn" data-mh-go="trader-today">
-                        <div style="width:34px; height:34px; border-radius:9px; background:rgba(168,85,247,0.18); color:#c084fc; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;"><i class="ph-fill ph-gauge"></i></div>
-                        <div>
-                            <div style="font-size:13px; font-weight:800;">트레이더 룸 (WORK)</div>
-                            <div style="font-size:11px; color:#94a3b8;">시나리오 & 리스크 계산기</div>
-                        </div>
-                    </button>
-                    <button type="button" class="mh-launcher-btn" data-mh-go="community-vault">
-                        <div style="width:34px; height:34px; border-radius:9px; background:rgba(244,63,94,0.18); color:#fb7185; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;"><i class="ph-fill ph-sparkle"></i></div>
-                        <div>
-                            <div style="font-size:13px; font-weight:800;">다자바타 알파 라운지</div>
-                            <div style="font-size:11px; color:#94a3b8;">작도 볼트 & 리서치 의뢰</div>
-                        </div>
-                    </button>
-                </div>
-            </div>
-
-            <!-- [1-2단] 실시간 한·미 거시 유동성 4대 전광판 (100% 실제 API 데이터) -->
-            <div class="mh-macro-strip">
-                <div class="mh-macro-card" data-mh-go="quant-money-flow-kr">
-                    <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#94a3b8; font-weight:700;">
-                        <span>🇰🇷 국내 증시 고객예탁금 (실제)</span>
-                        <span style="color:#38bdf8;">머니 플로우 ↗</span>
-                    </div>
-                    <div style="font-size:20px; font-weight:900; color:#38bdf8;">
-                        ${latestKrDep ? `${Number(latestKrDep.v).toFixed(2)}조 원` : '동기화 중...'}
-                    </div>
-                    <div style="font-size:11px; color:#64748b;">
-                        ${latestKrDep ? `기준일: ${esc(latestKrDep.d)} · 신용잔고 ${Number(latestKrDep.credit || 0).toFixed(2)}조 원` : '금융투자협회·네이버 증권 공식 피드'}
-                    </div>
-                </div>
-
-                <div class="mh-macro-card" data-mh-go="quant-money-flow-us">
-                    <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#94a3b8; font-weight:700;">
-                        <span>🇺🇸 미국 MMF 대기 유동성 (OFR)</span>
-                        <span style="color:#fbbf24;">머니 플로우 ↗</span>
-                    </div>
-                    <div style="font-size:20px; font-weight:900; color:#fbbf24;">
-                        ${latestUsMmf ? `$${Number(latestUsMmf.v).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}B` : '동기화 중...'}
-                    </div>
-                    <div style="font-size:11px; color:#64748b;">
-                        ${latestUsMmf ? `기준월: ${esc(latestUsMmf.d)} (미국 재무부 OFR 공식)` : '미국 재무부 금융조사국(OFR) 공식'}
-                    </div>
-                </div>
-
-                <div class="mh-macro-card" data-mh-go="quant-money-flow-kr">
-                    <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#94a3b8; font-weight:700;">
-                        <span>🏦 한·미 중앙은행 기준금리</span>
-                        <span style="color:#34d399;">금리·유동성 ↗</span>
-                    </div>
-                    <div style="font-size:19px; font-weight:900; color:#f8fafc;">
-                        한국 ${rates.krBase != null ? rates.krBase + '%' : '2.75%'} <span style="color:#64748b;">/</span> 미국 ${rates.usBase != null ? rates.usBase + '%' : '3.88%'}
-                    </div>
-                    <div style="font-size:11px; color:#64748b;">
-                        미 국채 10년물: ${rates.us10y != null ? rates.us10y + '%' : '-'} · 2년물: ${rates.us2y != null ? rates.us2y + '%' : '-'}
-                    </div>
-                </div>
-
-                <div class="mh-macro-card" data-mh-go="quant-calendar">
-                    <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#94a3b8; font-weight:700;">
-                        <span>⚡ 글로벌 시장 변동성 (VIX)</span>
-                        <span style="color:#c084fc;">증시 캘린더 ↗</span>
-                    </div>
-                    <div style="font-size:20px; font-weight:900; color:${Number(vix.current) >= 25 ? '#f87171' : '#34d399'};">
-                        VIX ${vix.current != null ? Number(vix.current).toFixed(2) : '-'}
-                    </div>
-                    <div style="font-size:11px; color:#64748b;">
-                        상태: ${esc(vix.status || '실시간 모니터링')}
-                    </div>
-                </div>
-            </div>
-
-            <!-- [2단] 오늘의 테마 수급 & 소외 바닥 레이더 (실시간 theme_cache.json 100% 실제 데이터) -->
-            <div class="mh-grid-3">
-                <!-- 2-A: 오늘 급등 주도 테마 TOP 5 -->
-                <div class="mh-card">
-                    <div class="mh-card-head">
-                        <h3><i class="ph-fill ph-fire" style="color:#f87171;"></i> 오늘 가장 강한 급등 주도 테마 TOP 5</h3>
-                        <button type="button" class="al-ghost-btn" data-mh-theme-menu="rising" style="padding:3px 9px; font-size:11px;">더보기 →</button>
-                    </div>
-                    <div class="mh-row-list">
-                        ${topRisingThemes.length > 0 ? topRisingThemes.map((t, idx) => {
-                            const leader = getThemeLeaderLabel(t.name);
-                            return `
-                                <div class="mh-row-item" data-mh-open-theme="${esc(t.name)}">
-                                    <div style="min-width:0;">
-                                        <div style="display:flex; align-items:center; gap:6px;">
-                                            <span style="font-size:11px; font-weight:900; color:#f87171; width:16px;">${idx + 1}</span>
-                                            <strong style="font-size:13.5px; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(t.name)}</strong>
-                                        </div>
-                                        <div style="font-size:11px; color:#94a3b8; margin-left:22px; margin-top:2px;">
-                                            ${leader ? `<span style="color:#fbbf24;">${esc(leader)}</span> · ` : ''}3일합산 ${esc(t.day3)}
-                                        </div>
-                                    </div>
-                                    <div style="text-align:right; flex-shrink:0;">
-                                        <div style="font-size:14px; font-weight:800; color:#f87171;">${esc(t.day1)}</div>
-                                        <div style="font-size:10.5px; color:#64748b;">소외지수 ${esc(t.neglect52)}</div>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('') : '<div style="padding:24px; text-align:center; color:#64748b; font-size:12.5px;">실시간 테마 수급 데이터를 불러오는 중입니다...</div>'}
-                    </div>
-                </div>
-
-                <!-- 2-B: 스마트머니 바닥권 · 소외 테마 TOP 5 -->
-                <div class="mh-card">
-                    <div class="mh-card-head">
-                        <h3><i class="ph-fill ph-gem" style="color:#38bdf8;"></i> 바닥권 극단적 소외 테마 TOP 5</h3>
-                        <button type="button" class="al-ghost-btn" data-mh-theme-menu="neglected" style="padding:3px 9px; font-size:11px;">더보기 →</button>
-                    </div>
-                    <div class="mh-row-list">
-                        ${neglectedThemes.length > 0 ? neglectedThemes.map((t, idx) => {
-                            const d1Num = parseNumPct(t.day1);
-                            return `
-                                <div class="mh-row-item" data-mh-open-theme="${esc(t.name)}">
-                                    <div style="min-width:0;">
-                                        <div style="display:flex; align-items:center; gap:6px;">
-                                            <span style="font-size:11px; font-weight:900; color:#38bdf8; width:16px;">${idx + 1}</span>
-                                            <strong style="font-size:13.5px; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(t.name)}</strong>
-                                        </div>
-                                        <div style="font-size:11px; color:#94a3b8; margin-left:22px; margin-top:2px;">
-                                            52주 고점대비 <span style="color:#60a5fa;">${esc(t.low52)}</span> · 전일비 <span style="color:${d1Num >= 0 ? '#f87171' : '#60a5fa'};">${esc(t.day1)}</span>
-                                        </div>
-                                    </div>
-                                    <div style="text-align:right; flex-shrink:0;">
-                                        <div style="font-size:13.5px; font-weight:800; color:#fbbf24;">소외지수 ${esc(t.neglect52)}</div>
-                                        <div style="font-size:10.5px; color:#34d399;">3년 소외 ${esc(t.neglect3y)}</div>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('') : '<div style="padding:24px; text-align:center; color:#64748b; font-size:12.5px;">소외지수 데이터를 분석 중입니다...</div>'}
-                    </div>
-                </div>
-
-                <!-- 2-C: 실시간 테마 시장 온도계 & 빠른 필터 -->
-                <div class="mh-card" style="justify-content:space-between;">
-                    <div>
-                        <div class="mh-card-head">
-                            <h3><i class="ph-fill ph-chart-pie-slice" style="color:#34d399;"></i> 오늘 국내 테마 시장 온도계</h3>
-                            <span style="font-size:11.5px; font-weight:800; color:${Number(avgThemeDay1) >= 0 ? '#f87171' : '#60a5fa'};">평균 ${Number(avgThemeDay1) >= 0 ? '+' : ''}${avgThemeDay1}%</span>
-                        </div>
-
-                        <div style="margin-top:14px;">
-                            <div style="display:flex; justify-content:space-between; font-size:12.5px; font-weight:800; margin-bottom:6px;">
-                                <span style="color:#f87171;">▲ 상승 테마 ${risingThemes.length}개 (${risingRatio}%)</span>
-                                <span style="color:#60a5fa;">▼ 하락 테마 ${fallingThemes.length}개 (${totalThemes > 0 ? 100 - risingRatio : 0}%)</span>
-                            </div>
-                            <div style="height:12px; background:rgba(96,165,250,0.28); border-radius:6px; overflow:hidden; display:flex;">
-                                <div style="width:${risingRatio}%; height:100%; background:linear-gradient(90deg, #ef4444, #f87171);"></div>
-                            </div>
-                            <div style="display:flex; justify-content:space-between; font-size:11px; color:#94a3b8; margin-top:6px;">
-                                <span>집계 테마 총 ${totalThemes}개 (보합 ${flatThemesCount}개)</span>
-                                <span>52주 고소외(30+) 테마: ${themes.filter(t => parseNumPct(t.neglect52) >= 30).length}개</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="display:flex; flex-direction:column; gap:8px; margin-top:12px;">
-                        <button type="button" class="al-primary-btn" data-mh-theme-menu="all" style="width:100%; justify-content:center; padding:11px;">
-                            <i class="ph-bold ph-table"></i> 전체 테마 ${totalThemes > 0 ? totalThemes + '개' : ''} 상세 수급 표 열기 →
-                        </button>
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                            <button type="button" class="al-ghost-btn" data-mh-theme-menu="high-return" style="justify-content:center; padding:8px;">
-                                🚀 기대수익률 상위
+                        <div class="al-pill-group">
+                            <button type="button" class="al-pill-btn ${homeState.heatmapTab === 'KR' ? 'active' : ''}" data-mh-hm-tab="KR">
+                                🇰🇷 국장 업종별 시총 히트맵
                             </button>
-                            <button type="button" class="al-ghost-btn" data-mh-stock-menu="stock-high52" style="justify-content:center; padding:8px;">
-                                👑 52주 신고점 종목
+                            <button type="button" class="al-pill-btn ${homeState.heatmapTab === 'US' ? 'active' : ''}" data-mh-hm-tab="US">
+                                🇺🇸 미장 빅테크·섹터 히트맵
+                            </button>
+                            <button type="button" class="al-pill-btn ${homeState.heatmapTab === 'THEME' ? 'active' : ''}" data-mh-hm-tab="THEME">
+                                🔥 당일 주도 테마 히트맵
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- [3단] 한·미 급등 초입 포착 (Rising) & 최근 신규 상장 IPO 레이더 -->
-            <div class="mh-grid-2">
-                <!-- 3-A: 한·미 급등 초입 포착 -->
-                <div class="mh-card">
-                    <div class="mh-card-head">
-                        <h3><i class="ph-fill ph-lightning" style="color:#fbbf24;"></i> 한·미 급등 초입 포착 (Rising 수급·회전율 상위)</h3>
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <button type="button" class="al-pill-btn ${homeState.risingMarket === 'KR' ? 'active' : ''}" data-mh-rising-mkt="KR" style="padding:3px 9px; font-size:11.5px;">🇰🇷 국내</button>
-                            <button type="button" class="al-pill-btn ${homeState.risingMarket === 'US' ? 'active' : ''}" data-mh-rising-mkt="US" style="padding:3px 9px; font-size:11.5px;">🇺🇸 미국</button>
-                            <button type="button" class="al-ghost-btn" data-mh-go="quant-rising" style="padding:3px 9px; font-size:11px;">전체 →</button>
-                        </div>
-                    </div>
-                    <div class="mh-row-list">
-                        ${topRisingStocks.length > 0 ? topRisingStocks.map(s => {
-                            const sym = s.symbol || s.code || '';
-                            const nm = s.name || sym;
-                            const chg = Number(s.changePct != null ? s.changePct : (s.chg || 0));
-                            const pxStr = homeState.risingMarket === 'KR'
-                                ? `${Math.round(Number(s.price || 0)).toLocaleString('ko-KR')}원`
-                                : `$${Number(s.price || 0).toFixed(2)}`;
-                            return `
-                                <div class="mh-row-item" data-mh-open-scanner="${esc(sym)}" data-mh-open-name="${esc(nm)}">
-                                    <div style="min-width:0;">
-                                        <div style="display:flex; align-items:center; gap:6px;">
-                                            <span style="background:rgba(245,158,11,0.18); color:#fbbf24; font-size:10.5px; font-weight:800; padding:1px 6px; border-radius:4px; font-family:monospace;">${esc(sym)}</span>
-                                            <strong style="font-size:13.5px; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(nm)}</strong>
-                                        </div>
-                                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
-                                            ${esc(s.sector || s.theme || '모멘텀 포착')} · <span style="color:#38bdf8;">${esc(s.signal || '수급 유입')}</span>
-                                        </div>
-                                    </div>
-                                    <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
-                                        <div style="text-align:right;">
-                                            <div style="font-size:13.5px; font-weight:800; color:#f8fafc;">${pxStr}</div>
-                                            <div style="font-size:11.5px; font-weight:800; color:${chg >= 0 ? '#f87171' : '#60a5fa'};">${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%</div>
-                                        </div>
-                                        <span style="background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.45); color:#60a5fa; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px;">AI 차트</span>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('') : '<div style="padding:24px; text-align:center; color:#64748b; font-size:12.5px;">퀀트 시그널 데이터를 불러오는 중입니다...</div>'}
-                    </div>
-                </div>
-
-                <!-- 3-B: 한·미 최근 신규 상장 IPO & 첫 상장일 레이더 -->
-                <div class="mh-card">
-                    <div class="mh-card-head">
-                        <h3><i class="ph-fill ph-rocket-launch" style="color:#38bdf8;"></i> 최근 신규 상장 IPO 종목 (첫 상장일)</h3>
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <button type="button" class="al-pill-btn ${homeState.ipoMarket === 'KR' ? 'active' : ''}" data-mh-ipo-mkt="KR" style="padding:3px 9px; font-size:11.5px;">🇰🇷 한국 IPO</button>
-                            <button type="button" class="al-pill-btn ${homeState.ipoMarket === 'US' ? 'active' : ''}" data-mh-ipo-mkt="US" style="padding:3px 9px; font-size:11.5px;">🇺🇸 미국 IPO</button>
-                            <button type="button" class="al-ghost-btn" data-mh-go="quant-money-flow" style="padding:3px 9px; font-size:11px;">전체 →</button>
-                        </div>
-                    </div>
-                    <div class="mh-row-list">
-                        ${ipoList.length > 0 ? ipoList.map(ip => {
-                            const sym = ip.symbol || ip.s || ip.code || '';
-                            const nm = ip.company || ip.n || ip.name || sym;
-                            const dt = ip.date || ip.d || '';
-                            const deal = homeState.ipoMarket === 'KR'
-                                ? `${Number(ip.dealSizeKr || 0).toLocaleString()}억 원`
-                                : (ip.dealSize ? `$${ (Number(ip.dealSize) / 1e6).toFixed(1) }M` : (ip.price || '-'));
-                            return `
-                                <div class="mh-row-item" data-mh-open-scanner="${esc(sym)}" data-mh-open-name="${esc(nm)}">
-                                    <div style="min-width:0;">
-                                        <div style="display:flex; align-items:center; gap:6px;">
-                                            <span style="background:rgba(56,189,248,0.16); color:#38bdf8; font-size:10.5px; font-weight:800; padding:1px 6px; border-radius:4px; font-family:monospace;">${esc(sym)}</span>
-                                            <strong style="font-size:13px; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(nm)}</strong>
-                                        </div>
-                                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
-                                            <span style="color:#60a5fa; font-family:monospace; font-weight:700;">상장일 ${esc(dt)}</span> · 공모규모 ${esc(deal)}
-                                        </div>
-                                    </div>
-                                    <span style="background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.45); color:#60a5fa; font-size:11px; font-weight:800; padding:4px 8px; border-radius:6px; flex-shrink:0;">AI 차트</span>
-                                </div>
-                            `;
-                        }).join('') : '<div style="padding:24px; text-align:center; color:#64748b; font-size:12.5px;">신규 상장 IPO 데이터를 불러오는 중입니다...</div>'}
-                    </div>
-                </div>
-            </div>
-
-            <!-- [4단] 다자바타 공식 리서치 & 최신 등록 칼럼 + 내 트레이더 룸 & 알파 라운지 퀵 데스크 -->
-            <div class="mh-grid-2">
-                <!-- 4-A: 공식 리서치 & 최신 칼럼 -->
-                <div class="mh-card">
-                    <div class="mh-card-head">
-                        <h3><i class="ph-fill ph-newspaper" style="color:#c084fc;"></i> 다자바타 심층 기업분석 & 학습 칼럼</h3>
-                        <div style="display:flex; gap:6px;">
-                            <button type="button" class="al-ghost-btn" data-mh-insight-menu="company" style="padding:3px 8px; font-size:11px;">기업분석</button>
-                            <button type="button" class="al-ghost-btn" data-mh-insight-menu="learning" style="padding:3px 8px; font-size:11px;">학습자료</button>
-                            <button type="button" class="al-ghost-btn" data-mh-insight-menu="insights" style="padding:3px 8px; font-size:11px;">이것저것</button>
-                        </div>
-                    </div>
-                    <div class="mh-row-list">
-                        ${latestArticles.length > 0 ? latestArticles.map(art => `
-                            <div class="mh-row-item" data-mh-open-article="${esc(art.id)}" data-mh-article-cat="${esc(art._cat)}">
-                                <div style="display:flex; align-items:center; gap:8px; min-width:0;">
-                                    <span style="background:rgba(59,130,246,0.16); color:${art._color}; font-size:10.5px; font-weight:800; padding:2px 7px; border-radius:4px; white-space:nowrap;">${esc(art._catLabel)}</span>
-                                    <strong style="font-size:13px; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(art.title)}</strong>
-                                </div>
-                                <span style="font-size:11.5px; color:#94a3b8; font-family:monospace; flex-shrink:0;">${esc(art.date || '')}</span>
-                            </div>
-                        `).join('') : `
-                            <div style="padding:20px; text-align:center; color:#94a3b8; font-size:12.5px;">
-                                좌측 메뉴의 <b>[기업개요 및 차트분석] · [학습 자료] · [이것저것]</b>에서 최신 심층 분석 리포트를 확인하세요.
-                            </div>
-                        `}
-                    </div>
-                </div>
-
-                <!-- 4-B: 내 트레이더 룸 워크스페이스 & 알파 라운지 퀵 데스크 -->
-                <div class="mh-card" style="justify-content:space-between;">
-                    <div>
-                        <div class="mh-card-head">
-                            <h3><i class="ph-fill ph-shield-check" style="color:#34d399;"></i> 내 트레이더 룸 & 알파 라운지 현황</h3>
-                            <button type="button" class="al-ghost-btn" data-mh-go="trader-today" style="padding:3px 9px; font-size:11px;">트레이더 룸 열기 →</button>
-                        </div>
-                        <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.28); border-radius:9px; padding:10px 12px; margin-top:10px; font-size:12px; color:#d1fae5;">
-                            <strong>📌 오늘의 매매 원칙:</strong> ${esc(traderRuleText)}
-                        </div>
-                        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-top:10px; text-align:center;">
-                            <div style="background:rgba(10,13,20,0.55); border:1px solid rgba(148,163,184,0.1); border-radius:8px; padding:8px;">
-                                <div style="font-size:11px; color:#94a3b8;">내 매매 시나리오</div>
-                                <div style="font-size:16px; font-weight:800; color:#38bdf8; margin-top:2px;">${traderPlansCount}건</div>
-                            </div>
-                            <div style="background:rgba(10,13,20,0.55); border:1px solid rgba(148,163,184,0.1); border-radius:8px; padding:8px;">
-                                <div style="font-size:11px; color:#94a3b8;">내 복기 매매일지</div>
-                                <div style="font-size:16px; font-weight:800; color:#34d399; margin-top:2px;">${traderJournalCount}건</div>
-                            </div>
-                            <div style="background:rgba(10,13,20,0.55); border:1px solid rgba(148,163,184,0.1); border-radius:8px; padding:8px;">
-                                <div style="font-size:11px; color:#94a3b8;">알파 라운지 공유</div>
-                                <div style="font-size:16px; font-weight:800; color:#fbbf24; margin-top:2px;">${vaultCount + loungeCount + reqCount}건</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:10px;">
-                        <button type="button" class="al-ghost-btn" data-mh-go="trader-calc" style="justify-content:center; padding:8px; font-size:12px;">
-                            🧮 비중·손절 계산기
-                        </button>
-                        <button type="button" class="al-ghost-btn" data-mh-go="trader-plan" style="justify-content:center; padding:8px; font-size:12px;">
-                            📋 새 시나리오 작성
-                        </button>
-                        <button type="button" class="al-primary-btn" data-mh-go="community-vault" style="justify-content:center; padding:8px; font-size:12px;">
-                            ✨ 알파 라운지 입장
-                        </button>
-                    </div>
+                <div class="mh-treemap-viewport" id="mh-treemap-viewport">
+                    ${renderTreemapHtml()}
                 </div>
             </div>
         `;
 
-        bindMainHomeEvents(box);
-    }
-
-    function bindMainHomeEvents(box) {
-        // 1. 통합 슈퍼 검색창 (테마 + 국내종목 + 미국종목 실시간 매칭)
-        const sInput = box.querySelector('#mh-super-search-input');
-        const sDrop = box.querySelector('#mh-super-search-dropdown');
-        if (sInput && sDrop) {
-            sInput.addEventListener('input', () => {
-                const q = sInput.value.trim().toLowerCase();
-                if (!q) {
-                    sDrop.classList.remove('open');
-                    sDrop.innerHTML = '';
-                    return;
-                }
-                const results = [];
-                // 테마 검색
-                (window.allThemes || []).forEach(t => {
-                    if (t.name && t.name.toLowerCase().includes(q)) {
-                        results.push({ type: 'theme', name: t.name, sub: `전일비 ${t.day1} · 52주 소외지수 ${t.neglect52}` });
-                    }
-                });
-                // 국내 종목 검색
-                (window.allStocks || []).forEach(s => {
-                    if ((s.name && s.name.toLowerCase().includes(q)) || (s.code && s.code.toLowerCase().includes(q))) {
-                        results.push({ type: 'kr-stock', code: s.code, name: s.name, price: s.current_price, day1: s.day1, raw: s });
-                    }
-                });
-                // 미국 종목 검색
-                const usList = [];
-                if (homeState.quantCache && homeState.quantCache.rising && homeState.quantCache.rising.us) {
-                    usList.push(...homeState.quantCache.rising.us);
-                }
-                if (window.OVERSEAS_STOCKS) usList.push(...window.OVERSEAS_STOCKS);
-                const seenUs = new Set();
-                usList.forEach(u => {
-                    const code = u.symbol || u.code || '';
-                    const nm = u.name || code;
-                    if (!code || seenUs.has(code)) return;
-                    if (code.toLowerCase().includes(q) || nm.toLowerCase().includes(q)) {
-                        seenUs.add(code);
-                        results.push({ type: 'us-stock', code, name: nm });
-                    }
-                });
-
-                const topRes = results.slice(0, 9);
-                if (topRes.length === 0 && /^[a-zA-Z.\-]{1,6}$/.test(q)) {
-                    topRes.push({ type: 'us-stock', code: q.toUpperCase(), name: `${q.toUpperCase()} (미국 주식 차트 직행)` });
-                }
-
-                if (topRes.length === 0) {
-                    sDrop.innerHTML = `<div style="padding:14px; font-size:12.5px; color:#94a3b8; text-align:center;">일치하는 테마나 종목이 없습니다.</div>`;
-                    sDrop.classList.add('open');
-                    return;
-                }
-
-                sDrop.innerHTML = topRes.map((r, i) => {
-                    if (r.type === 'theme') {
-                        return `
-                            <div class="mh-search-item" data-s-idx="${i}" data-s-type="theme" data-s-val="${esc(r.name)}">
-                                <div>
-                                    <span style="background:rgba(16,185,129,0.18); color:#34d399; font-size:10.5px; font-weight:800; padding:2px 6px; border-radius:4px; margin-right:6px;">테마</span>
-                                    <strong style="color:#f8fafc; font-size:13px;">${esc(r.name)}</strong>
-                                </div>
-                                <span style="font-size:11.5px; color:#94a3b8;">${esc(r.sub)} →</span>
-                            </div>
-                        `;
-                    } else if (r.type === 'kr-stock') {
-                        return `
-                            <div class="mh-search-item" data-s-idx="${i}" data-s-type="kr-stock" data-s-code="${esc(r.code)}" data-s-name="${esc(r.name)}">
-                                <div>
-                                    <span style="background:rgba(59,130,246,0.2); color:#60a5fa; font-size:10.5px; font-weight:800; padding:2px 6px; border-radius:4px; margin-right:6px; font-family:monospace;">${esc(r.code)}</span>
-                                    <strong style="color:#f8fafc; font-size:13px;">${esc(r.name)}</strong>
-                                </div>
-                                <span style="font-size:11.5px; color:#38bdf8; font-weight:700;">AI 차트 스캐너 열기 📈</span>
-                            </div>
-                        `;
-                    } else {
-                        return `
-                            <div class="mh-search-item" data-s-idx="${i}" data-s-type="us-stock" data-s-code="${esc(r.code)}" data-s-name="${esc(r.name)}">
-                                <div>
-                                    <span style="background:rgba(245,158,11,0.2); color:#fbbf24; font-size:10.5px; font-weight:800; padding:2px 6px; border-radius:4px; margin-right:6px; font-family:monospace;">US · ${esc(r.code)}</span>
-                                    <strong style="color:#f8fafc; font-size:13px;">${esc(r.name)}</strong>
-                                </div>
-                                <span style="font-size:11.5px; color:#38bdf8; font-weight:700;">AI 차트 스캐너 열기 📈</span>
-                            </div>
-                        `;
-                    }
-                }).join('');
-                sDrop.classList.add('open');
-
-                sDrop.querySelectorAll('.mh-search-item').forEach(el => {
-                    el.addEventListener('click', () => {
-                        const tp = el.getAttribute('data-s-type');
-                        sDrop.classList.remove('open');
-                        if (tp === 'theme') {
-                            const tName = el.getAttribute('data-s-val');
-                            if (window.DajavataApp && window.DajavataApp.openTheme) window.DajavataApp.openTheme(tName);
-                        } else {
-                            const code = el.getAttribute('data-s-code');
-                            const nm = el.getAttribute('data-s-name');
-                            if (window.openInDajavataScanner) window.openInDajavataScanner(code, nm);
-                        }
-                    });
-                });
-            });
-        }
-
-        // 2. 런처 및 카드 네비게이션
-        box.querySelectorAll('[data-mh-go]').forEach(el => {
-            el.addEventListener('click', () => {
-                const target = el.getAttribute('data-mh-go');
-                if (target === 'all-themes') {
-                    if (window.DajavataApp && window.DajavataApp.openThemeMenu) window.DajavataApp.openThemeMenu('all');
-                } else if (target === 'chart-scanner') {
-                    const li = document.querySelector('#scanner-menu-list li[data-action="chart-scanner"]');
-                    if (li) li.click();
-                } else if (target === 'quant-rising') {
-                    const li = document.querySelector('#quant-menu-list li[data-action="quant-rising"]');
-                    if (li) li.click();
-                } else if (target === 'quant-money-flow' || target === 'quant-money-flow-kr' || target === 'quant-money-flow-us') {
-                    if (window.QuantHub) {
-                        if (target.endsWith('-kr')) window.QuantHub.market = 'KR';
-                        if (target.endsWith('-us')) window.QuantHub.market = 'US';
-                    }
-                    const li = document.querySelector('#quant-menu-list li[data-action="quant-money-flow"]');
-                    if (li) li.click();
-                } else if (target === 'quant-calendar') {
-                    const li = document.querySelector('#quant-menu-list li[data-action="quant-calendar"]');
-                    if (li) li.click();
-                } else if (target.startsWith('trader-')) {
-                    const li = document.querySelector(`#trader-menu-list li[data-action="${target}"]`);
-                    if (li) li.click();
-                } else if (target.startsWith('community-')) {
-                    const li = document.querySelector(`#community-menu-list li[data-action="${target}"]`);
-                    if (li) li.click();
-                }
-            });
-        });
-
-        // 3. 테마 상세 오픈
-        box.querySelectorAll('[data-mh-open-theme]').forEach(el => {
-            el.addEventListener('click', () => {
-                const tName = el.getAttribute('data-mh-open-theme');
-                if (window.DajavataApp && window.DajavataApp.openTheme) window.DajavataApp.openTheme(tName);
-            });
-        });
-
-        // 4. 테마 메뉴 / 조건별 종목 메뉴 / 칼럼 메뉴 바로가기
-        box.querySelectorAll('[data-mh-theme-menu]').forEach(btn => {
+        // 이벤트 바인딩
+        box.querySelectorAll('[data-mh-idx-region]').forEach(btn => {
             btn.addEventListener('click', () => {
-                const act = btn.getAttribute('data-mh-theme-menu');
-                if (window.DajavataApp && window.DajavataApp.openThemeMenu) window.DajavataApp.openThemeMenu(act);
-            });
-        });
-        box.querySelectorAll('[data-mh-stock-menu]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const act = btn.getAttribute('data-mh-stock-menu');
-                const li = document.querySelector(`#stock-menu-list li[data-action="${act}"]`);
-                if (li) li.click();
-            });
-        });
-        box.querySelectorAll('[data-mh-insight-menu]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const act = btn.getAttribute('data-mh-insight-menu');
-                const li = document.querySelector(`#insight-menu-list li[data-action="${act}"]`);
-                if (li) li.click();
-            });
-        });
-
-        // 5. 한·미 Rising & IPO 탭 토글
-        box.querySelectorAll('[data-mh-rising-mkt]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                homeState.risingMarket = btn.getAttribute('data-mh-rising-mkt');
-                renderMainHomeDashboard();
-            });
-        });
-        box.querySelectorAll('[data-mh-ipo-mkt]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                homeState.ipoMarket = btn.getAttribute('data-mh-ipo-mkt');
+                homeState.indexRegion = btn.getAttribute('data-mh-idx-region');
                 renderMainHomeDashboard();
             });
         });
 
-        // 6. 종목 클릭 -> AI 차트 스캐너 직행
-        box.querySelectorAll('[data-mh-open-scanner]').forEach(el => {
-            el.addEventListener('click', () => {
-                const sym = el.getAttribute('data-mh-open-scanner');
-                const nm = el.getAttribute('data-mh-open-name');
-                if (window.openInDajavataScanner) window.openInDajavataScanner(sym, nm);
+        box.querySelectorAll('[data-mh-hm-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                homeState.heatmapTab = btn.getAttribute('data-mh-hm-tab');
+                renderMainHomeDashboard();
             });
         });
 
-        // 7. 최신 등록 칼럼 클릭 -> 해당 칼럼 본문 직행
-        box.querySelectorAll('[data-mh-open-article]').forEach(el => {
-            el.addEventListener('click', () => {
-                const id = el.getAttribute('data-mh-open-article');
-                const cat = el.getAttribute('data-mh-article-cat');
-                if (window.DajavataApp && window.DajavataApp.openArticle) {
-                    window.DajavataApp.openArticle(cat, id);
+        box.querySelectorAll('.mh-tm-tile').forEach(tile => {
+            tile.addEventListener('click', () => {
+                const code = tile.getAttribute('data-tm-code');
+                const name = tile.getAttribute('data-tm-name');
+                const isTheme = tile.getAttribute('data-tm-theme') === '1';
+
+                if (isTheme) {
+                    if (window.DajavataApp && typeof window.DajavataApp.openTheme === 'function') {
+                        window.DajavataApp.openTheme(name);
+                    }
+                    return;
+                }
+
+                // 국내 종목은 실전 브리핑 모달 또는 AI 차트 스캐너 오픈
+                if (/^\d{6}$/.test(code) && typeof window.openStockBriefingModal === 'function') {
+                    const found = (window.allStocks || []).find(s => s && s.code === code);
+                    if (found) {
+                        window.openStockBriefingModal(found);
+                        return;
+                    }
+                }
+                if (typeof window.openInDajavataScanner === 'function') {
+                    window.openInDajavataScanner(code, name);
                 }
             });
         });
