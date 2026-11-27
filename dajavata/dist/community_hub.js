@@ -2201,35 +2201,56 @@
     };
 
     // =========================================================================
-    // 9. [🏠 다자바타 메인 홈] — 심플 2단 구성 (① 주요 증시 상황판 미니차트 + ② 당일 실시간 시총 히트맵)
-    //    * "불러오는 중..." 제로(0%): 접속 0.01초 즉시 100% 렌더링 후 실시간 시세 자동 오버레이
+    // 9. [🏠 다자바타 메인 홈] — 심플 2단 구성 (① 주요 증시 상황판 미니차트 + ② 218종목 국장 / 198종목 미장 / 150테마 대형 히트맵)
+    //    * 실제 픽셀 종횡비(Pixel Aspect-Ratio) 기반 정사각형 트리맵 엔진 + 당일 최신 시세 잠금 동기화
     // =========================================================================
     const homeState = {
-        indexRegion: 'GLOBAL', // 'GLOBAL' (한·미·글로벌 핵심) | 'EUROPE' (유럽·아시아 상세 - 참고 이미지 2 동일 구성)
-        heatmapTab: 'KR',      // 'KR' (국장 시총·업종 히트맵) | 'US' (미장 빅테크·섹터 히트맵) | 'THEME' (당일 주도 테마 히트맵)
+        indexRegion: 'GLOBAL', // 'GLOBAL' | 'EUROPE'
+        heatmapTab: 'KR',      // 'KR' (218종목) | 'US' (198종목) | 'THEME' (150테마)
+        heatmapHeight: 1280,   // 880 | 1280 | 1680
         liveSyncStarted: false,
         quantCache: null
     };
 
-    // [1단 데이터] 한·미·글로벌 핵심 지수 & 유럽 증시 상황판 (실시간 API 응답 시 즉시 덮어씀)
     const INDEX_GROUPS = {
         GLOBAL: {
             featured: [
                 {
                     id: 'KOSPI', flag: '🇰🇷', name: '코스피 (KOSPI)', status: '실시간',
-                    price: 2545.82, chg: 38.45, chgPct: 1.53,
-                    high52: '2,896.43', low52: '2,386.96',
-                    prev: '2,507.37', high: '2,552.18', low: '2,514.20',
+                    price: 4915.68, chg: 204.47, chgPct: 4.34,
+                    high52: '4,985.20', low52: '2,386.96',
+                    prev: '4,711.21',
+                    high: '4,935.34',
+                    low: '4,701.79',
                     ticks: ['09:00', '11:30', '14:00', '15:30'],
-                    series: [2514, 2521, 2519, 2528, 2534, 2531, 2539, 2544, 2541, 2547, 2545.82]
+                    series: [
+                        4711.21,
+                        4752.1,
+                        4782.77,
+                        4813.45,
+                        4844.12,
+                        4874.79,
+                        4899.32,
+                        4915.68
+                    ]
                 },
                 {
                     id: 'KOSDAQ', flag: '🇰🇷', name: '코스닥 (KOSDAQ)', status: '실시간',
-                    price: 728.64, chg: 12.18, chgPct: 1.70,
-                    high52: '901.89', low52: '672.45',
-                    prev: '716.46', high: '731.10', low: '718.05',
+                    price: 708.99, chg: 53.28, chgPct: 8.13,
+                    high52: '901.89', low52: '642.10',
+                    prev: '655.71',
+                    high: '712.53',
+                    low: '653.74',
                     ticks: ['09:00', '11:30', '14:00', '15:30'],
-                    series: [718, 720, 719, 722, 725, 724, 727, 726, 729, 730, 728.64]
+                    series: [
+                        655.71,
+                        667.43,
+                        677.02,
+                        685.01,
+                        693.01,
+                        701.0,
+                        708.99
+                    ]
                 },
                 {
                     id: 'NASDAQ', flag: '🇺🇸', name: '나스닥 종합 (NASDAQ)', status: '장마감',
@@ -2343,259 +2364,12 @@
         }
     };
 
-    // [2단 데이터] 참고 이미지 1과 100% 동일한 국장 업종별 시가총액 히트맵 구조 (실시간 시세 자동 동기화)
-    const KR_SECTOR_TREE = [
-        {
-            sector: '전기·전자',
-            weight: 380,
-            stocks: [
-                { code: '005930', name: '삼성전자', weight: 195, chg: 4.09, price: 58400 },
-                { code: '000660', name: 'SK하이닉스', weight: 125, chg: 4.46, price: 189500 },
-                { code: '373220', name: 'LG에너지솔루션', weight: 28, chg: 3.48, price: 412000 },
-                { code: '009150', name: '삼성전기', weight: 13, chg: 2.93, price: 137000 },
-                { code: '006400', name: '삼성SDI', weight: 11, chg: 7.42, price: 275000 },
-                { code: '066570', name: 'LG전자', weight: 10, chg: 5.55, price: 95100 },
-                { code: '298040', name: '효성중공업', weight: 6.5, chg: 5.95, price: 428000 },
-                { code: '272210', name: '한화시스템', weight: 4.5, chg: 13.19, price: 24850 },
-                { code: '003670', name: '포스코퓨처엠', weight: 6.0, chg: 6.00, price: 176500 },
-                { code: '267260', name: 'HD현대일렉트릭', weight: 5.5, chg: 6.41, price: 365000 },
-                { code: '066970', name: '엘앤에프', weight: 3.5, chg: 4.53, price: 96900 },
-                { code: '000150', name: '두산', weight: 3.5, chg: 4.32, price: 217500 },
-                { code: '011070', name: 'LG이노텍', weight: 3.5, chg: 2.85, price: 173200 },
-                { code: '001820', name: '삼화콘덴서', weight: 2.5, chg: 1.56, price: 35800 }
-            ]
-        },
-        {
-            sector: '기타금융',
-            weight: 86,
-            stocks: [
-                { code: '402340', name: 'SK스퀘어', weight: 22, chg: 3.68, price: 87300 },
-                { code: '105560', name: 'KB금융', weight: 20, chg: -0.89, price: 94800 },
-                { code: '055550', name: '신한지주', weight: 15, chg: -1.77, price: 55400 },
-                { code: '034730', name: 'SK', weight: 12, chg: 8.84, price: 152600 },
-                { code: '086790', name: '하나금융지주', weight: 11, chg: -1.17, price: 63200 },
-                { code: '316140', name: '우리금융지주', weight: 8.5, chg: -1.84, price: 16530 },
-                { code: '180640', name: '한진칼', weight: 8.5, chg: 5.59, price: 77400 },
-                { code: '267250', name: 'HD현대', weight: 7.5, chg: 4.41, price: 82900 },
-                { code: '138040', name: '메리츠금융지주', weight: 7.5, chg: -0.60, price: 103800 },
-                { code: '003550', name: 'LG', weight: 8.5, chg: 1.76, price: 75300 },
-                { code: '078930', name: 'GS', weight: 5.0, chg: 1.32, price: 42150 }
-            ]
-        },
-        {
-            sector: '운송장비·부품',
-            weight: 78,
-            stocks: [
-                { code: '005380', name: '현대차', weight: 26, chg: 2.90, price: 219500 },
-                { code: '000270', name: '기아', weight: 21, chg: 1.17, price: 95400 },
-                { code: '012450', name: '한화에어로스페이스', weight: 13, chg: 5.10, price: 371000 },
-                { code: '329180', name: 'HD현대중공업', weight: 13, chg: 3.77, price: 220000 },
-                { code: '012330', name: '현대모비스', weight: 12, chg: 1.82, price: 252000 },
-                { code: '042660', name: '한화오션', weight: 8.5, chg: 6.04, price: 37750 },
-                { code: '010140', name: '삼성중공업', weight: 7.0, chg: 4.36, price: 11730 },
-                { code: '064350', name: '현대로템', weight: 6.0, chg: 3.45, price: 62900 }
-            ]
-        },
-        {
-            sector: '제약',
-            weight: 54,
-            stocks: [
-                { code: '207940', name: '삼성바이오로직스', weight: 28, chg: 0.75, price: 945000 },
-                { code: '068270', name: '셀트리온', weight: 22, chg: 2.09, price: 181000 },
-                { code: '000100', name: '유한양행', weight: 6.5, chg: 3.12, price: 125400 },
-                { code: '000250', name: '삼천당제약', weight: 5.0, chg: 2.45, price: 142000 },
-                { code: '128940', name: '한미약품', weight: 4.5, chg: 1.85, price: 298000 },
-                { code: '028300', name: 'HLB', weight: 4.5, chg: 1.40, price: 72600 }
-            ]
-        },
-        {
-            sector: 'IT 서비스',
-            weight: 38,
-            stocks: [
-                { code: '035420', name: 'NAVER', weight: 18, chg: 1.62, price: 194500 },
-                { code: '035720', name: '카카오', weight: 11, chg: 2.48, price: 37200 },
-                { code: '259960', name: '크래프톤', weight: 9, chg: -0.24, price: 318500 },
-                { code: '018260', name: '삼성에스디에스', weight: 7, chg: 0.31, price: 142800 }
-            ]
-        },
-        {
-            sector: '보험',
-            weight: 32,
-            stocks: [
-                { code: '032830', name: '삼성생명', weight: 16, chg: 4.58, price: 105100 },
-                { code: '000810', name: '삼성화재', weight: 14, chg: 0.97, price: 364500 },
-                { code: '005830', name: 'DB손해보험', weight: 6, chg: -1.15, price: 103200 }
-            ]
-        },
-        {
-            sector: '화학',
-            weight: 36,
-            stocks: [
-                { code: '051910', name: 'LG화학', weight: 14, chg: 4.56, price: 298000 },
-                { code: '096770', name: 'SK이노베이션', weight: 10, chg: 2.85, price: 115400 },
-                { code: '247540', name: '에코프로비엠', weight: 9, chg: 5.12, price: 139500 },
-                { code: '086520', name: '에코프로', weight: 7, chg: 4.25, price: 68700 },
-                { code: '010950', name: 'S-Oil', weight: 6, chg: 0.53, price: 57200 },
-                { code: '090430', name: '아모레퍼시픽', weight: 5, chg: -1.24, price: 111500 }
-            ]
-        },
-        {
-            sector: '기계·장비',
-            weight: 34,
-            stocks: [
-                { code: '034020', name: '두산에너빌리티', weight: 16, chg: 6.67, price: 21600 },
-                { code: '042700', name: '한미반도체', weight: 14, chg: 7.11, price: 94900 },
-                { code: '277810', name: '레인보우로보틱스', weight: 6, chg: 5.40, price: 158200 },
-                { code: '454910', name: '두산로보틱스', weight: 5, chg: 3.18, price: 68100 }
-            ]
-        },
-        {
-            sector: '유통',
-            weight: 24,
-            stocks: [
-                { code: '028260', name: '삼성물산', weight: 18, chg: 4.38, price: 126300 },
-                { code: '004170', name: '신세계', weight: 4, chg: 1.12, price: 144500 },
-                { code: '139480', name: '이마트', weight: 4, chg: -0.65, price: 61200 }
-            ]
-        },
-        {
-            sector: '운송·창고',
-            weight: 20,
-            stocks: [
-                { code: '011200', name: 'HMM', weight: 12, chg: 0.45, price: 17880 },
-                { code: '086280', name: '현대글로비스', weight: 8, chg: 0.87, price: 116000 },
-                { code: '003490', name: '대한항공', weight: 6, chg: 1.25, price: 24300 }
-            ]
-        },
-        {
-            sector: '음식료·담배',
-            weight: 18,
-            stocks: [
-                { code: '033780', name: 'KT&G', weight: 12, chg: -1.73, price: 119300 },
-                { code: '003230', name: '삼양식품', weight: 6, chg: -0.92, price: 539000 },
-                { code: '271560', name: '오리온', weight: 4, chg: 0.40, price: 100500 }
-            ]
-        },
-        {
-            sector: '일반서비스',
-            weight: 22,
-            stocks: [
-                { code: '196170', name: '알테오젠', weight: 15, chg: 7.29, price: 389500 },
-                { code: '028050', name: '삼성E&A', weight: 6, chg: 3.82, price: 19020 },
-                { code: '021240', name: '코웨이', weight: 4, chg: -2.18, price: 67300 }
-            ]
-        },
-        {
-            sector: '금속',
-            weight: 18,
-            stocks: [
-                { code: '005490', name: 'POSCO홀딩스', weight: 12, chg: 2.15, price: 285000 },
-                { code: '010130', name: '고려아연', weight: 10, chg: 3.53, price: 1173000 }
-            ]
-        },
-        {
-            sector: '증권·은행',
-            weight: 18,
-            stocks: [
-                { code: '024110', name: '기업은행', weight: 9, chg: -0.25, price: 14120 },
-                { code: '006800', name: '미래에셋증권', weight: 6, chg: 2.35, price: 8710 },
-                { code: '071050', name: '한국금융지주', weight: 5, chg: 1.80, price: 73500 }
-            ]
-        },
-        {
-            sector: '통신·전기가스',
-            weight: 18,
-            stocks: [
-                { code: '015760', name: '한국전력', weight: 9, chg: 2.35, price: 21750 },
-                { code: '030200', name: 'KT', weight: 7, chg: -2.72, price: 44750 },
-                { code: '017670', name: 'SK텔레콤', weight: 6, chg: -0.86, price: 57600 }
-            ]
-        }
-    ];
+    // [2단 데이터] 18개 업종 218개 국내 대표 종목 (당일 최신 종가·등락률 내장 + 실시간 API 자동 갱신)
+    const KR_SECTOR_TREE = [{"sector": "전기·전자 · 반도체", "weight": 24606.34, "stocks": [{"code": "005930", "name": "삼성전자", "weight": 8545.33, "chg": 4.79, "price": 179500.0}, {"code": "000660", "name": "SK하이닉스", "weight": 7264.5, "chg": 5.51, "price": 1111000.0}, {"code": "009150", "name": "삼성전기", "weight": 1744.47, "chg": 4.97, "price": 823000.0}, {"code": "066570", "name": "LG전자", "weight": 1025.31, "chg": 8.06, "price": 146100.0}, {"code": "042700", "name": "한미반도체", "weight": 801.39, "chg": 8.87, "price": 160800.0}, {"code": "036930", "name": "주성엔지니어링", "weight": 528.15, "chg": 14.14, "price": 156600.0}, {"code": "011070", "name": "LG이노텍", "weight": 497.56, "chg": 8.22, "price": 276500.0}, {"code": "007660", "name": "이수페타시스", "weight": 430.05, "chg": 5.86, "price": 68700.0}, {"code": "058470", "name": "리노공업", "weight": 376.96, "chg": 11.87, "price": 52300.0}, {"code": "039030", "name": "이오테크닉스", "weight": 366.04, "chg": 7.34, "price": 307000.0}, {"code": "240810", "name": "원익IPS", "weight": 346.05, "chg": 8.06, "price": 69700.0}, {"code": "403870", "name": "HPSP", "weight": 342.92, "chg": 8.78, "price": 40900.0}, {"code": "000990", "name": "DB하이텍", "weight": 326.03, "chg": 6.32, "price": 70700.0}, {"code": "095340", "name": "ISC", "weight": 301.78, "chg": 8.22, "price": 126400.0}, {"code": "357780", "name": "솔브레인", "weight": 260.57, "chg": 9.5, "price": 265000.0}, {"code": "084370", "name": "유진테크", "weight": 237.1, "chg": 8.57, "price": 76000.0}, {"code": "078600", "name": "대주전자재료", "weight": 215.87, "chg": 7.08, "price": 93800.0}, {"code": "036540", "name": "SFA반도체", "weight": 210.32, "chg": 4.52, "price": 8550.0}, {"code": "089030", "name": "테크윙", "weight": 201.34, "chg": 10.55, "price": 35100.0}, {"code": "131970", "name": "두산테스나", "weight": 195.93, "chg": 12.46, "price": 64100.0}, {"code": "001820", "name": "삼화콘덴서", "weight": 153.3, "chg": 3.78, "price": 76800.0}, {"code": "108320", "name": "LX세미콘", "weight": 100.68, "chg": 2.2, "price": 23200.0}, {"code": "200710", "name": "에이디테크놀로지", "weight": 74.63, "chg": -1.27, "price": 16390.0}, {"code": "092070", "name": "디엔에프", "weight": 60.06, "chg": 0.29, "price": 10450.0}]}, {"sector": "2차전지 · 에너지소재", "weight": 7301.86, "stocks": [{"code": "373220", "name": "LG에너지솔루션", "weight": 1934.58, "chg": 4.64, "price": 316000.0}, {"code": "006400", "name": "삼성SDI", "weight": 1302.12, "chg": 8.25, "price": 452500.0}, {"code": "003670", "name": "포스코퓨처엠", "weight": 806.3, "chg": 6.74, "price": 174200.0}, {"code": "086520", "name": "에코프로", "weight": 629.76, "chg": 14.69, "price": 73400.0}, {"code": "247540", "name": "에코프로비엠", "weight": 627.43, "chg": 13.32, "price": 91900.0}, {"code": "066970", "name": "엘앤에프", "weight": 321.18, "chg": 11.85, "price": 73600.0}, {"code": "020150", "name": "롯데에너지머티리얼즈", "weight": 272.36, "chg": 4.16, "price": 42600.0}, {"code": "014680", "name": "한솔케미칼", "weight": 261.36, "chg": 4.8, "price": 192000.0}, {"code": "450080", "name": "에코프로머티", "weight": 254.7, "chg": 11.8, "price": 27950.0}, {"code": "005070", "name": "코스모신소재", "weight": 183.56, "chg": 9.57, "price": 33200.0}, {"code": "361610", "name": "SK아이이테크놀로지", "weight": 172.61, "chg": 1.26, "price": 12100.0}, {"code": "093370", "name": "후성", "weight": 169.42, "chg": 0.34, "price": 8920.0}, {"code": "278280", "name": "천보", "weight": 98.95, "chg": 11.38, "price": 29850.0}, {"code": "005420", "name": "코스모화학", "weight": 91.3, "chg": 0.12, "price": 8270.0}, {"code": "117730", "name": "티로보틱스", "weight": 90.03, "chg": 9.69, "price": 13700.0}, {"code": "348370", "name": "엔켐", "weight": 86.2, "chg": -7.43, "price": 13090.0}]}, {"sector": "제약 · 바이오 · 헬스케어", "weight": 9280.29, "stocks": [{"code": "207940", "name": "삼성바이오로직스", "weight": 1758.42, "chg": 0.75, "price": 1347000.0}, {"code": "068270", "name": "셀트리온", "weight": 1576.41, "chg": 2.55, "price": 221000.0}, {"code": "196170", "name": "알테오젠", "weight": 734.11, "chg": 10.45, "price": 188100.0}, {"code": "326030", "name": "SK바이오팜", "weight": 542.8, "chg": 7.85, "price": 97600.0}, {"code": "128940", "name": "한미약품", "weight": 486.69, "chg": 5.25, "price": 491000.0}, {"code": "000100", "name": "유한양행", "weight": 478.84, "chg": 1.1, "price": 83000.0}, {"code": "000250", "name": "삼천당제약", "weight": 402.83, "chg": 14.96, "price": 191300.0}, {"code": "028300", "name": "HLB", "weight": 388.43, "chg": 8.79, "price": 31550.0}, {"code": "009420", "name": "한올바이오파마", "weight": 323.3, "chg": 4.69, "price": 58000.0}, {"code": "298380", "name": "에이비엘바이오", "weight": 301.94, "chg": 29.63, "price": 47900.0}, {"code": "145020", "name": "휴젤", "weight": 294.52, "chg": 0.96, "price": 210000.0}, {"code": "141080", "name": "리가켐바이오", "weight": 294.35, "chg": 22.05, "price": 69200.0}, {"code": "237690", "name": "에스티팜", "weight": 246.0, "chg": 13.21, "price": 89100.0}, {"code": "006280", "name": "녹십자", "weight": 221.15, "chg": 2.89, "price": 131600.0}, {"code": "214150", "name": "클래시스", "weight": 217.31, "chg": 7.03, "price": 22850.0}, {"code": "039200", "name": "오스코텍", "weight": 212.39, "chg": 6.7, "price": 37400.0}, {"code": "096530", "name": "씨젠", "weight": 197.55, "chg": 7.82, "price": 26900.0}, {"code": "069620", "name": "대웅제약", "weight": 183.59, "chg": 2.15, "price": 95200.0}, {"code": "185750", "name": "종근당", "weight": 156.08, "chg": -2.76, "price": 59800.0}, {"code": "214320", "name": "이노션", "weight": 140.76, "chg": -1.66, "price": 17160.0}, {"code": "314130", "name": "지놈앤컴퍼니", "weight": 62.54, "chg": 2.74, "price": 3000.0}, {"code": "084990", "name": "헬릭스미스", "weight": 60.28, "chg": 0.77, "price": 3275.0}]}, {"sector": "운송장비 · 자동차 · 부품", "weight": 6052.75, "stocks": [{"code": "005380", "name": "현대차", "weight": 1639.72, "chg": 4.44, "price": 270500.0}, {"code": "000270", "name": "기아", "weight": 1315.33, "chg": 1.49, "price": 95100.0}, {"code": "012330", "name": "현대모비스", "weight": 1179.01, "chg": 3.19, "price": 340000.0}, {"code": "161390", "name": "한국타이어앤테크놀로지", "weight": 535.86, "chg": -0.33, "price": 60300.0}, {"code": "018880", "name": "한온시스템", "weight": 336.13, "chg": 4.11, "price": 3165.0}, {"code": "005850", "name": "에스엘", "weight": 243.77, "chg": 4.65, "price": 39400.0}, {"code": "204320", "name": "HL만도", "weight": 234.62, "chg": 8.98, "price": 36400.0}, {"code": "011210", "name": "현대위아", "weight": 207.1, "chg": 2.65, "price": 50300.0}, {"code": "003620", "name": "KG모빌리티", "weight": 106.18, "chg": 1.66, "price": 2025.0}, {"code": "009900", "name": "명신산업", "weight": 95.8, "chg": 0.0, "price": 6580.0}, {"code": "060980", "name": "HL홀딩스", "weight": 87.96, "chg": 1.38, "price": 33100.0}, {"code": "010690", "name": "화신", "weight": 71.27, "chg": 2.26, "price": 5870.0}]}, {"sector": "조선 · 방산 · 우주항공", "weight": 7387.0, "stocks": [{"code": "012450", "name": "한화에어로스페이스", "weight": 1253.79, "chg": 5.42, "price": 661000.0}, {"code": "329180", "name": "HD현대중공업", "weight": 1082.99, "chg": 4.82, "price": 250000.0}, {"code": "009540", "name": "HD한국조선해양", "weight": 830.9, "chg": 3.59, "price": 231000.0}, {"code": "042660", "name": "한화오션", "weight": 749.19, "chg": 7.13, "price": 44350.0}, {"code": "010140", "name": "삼성중공업", "weight": 726.58, "chg": 5.18, "price": 14620.0}, {"code": "272210", "name": "한화시스템", "weight": 648.57, "chg": 13.35, "price": 55600.0}, {"code": "047810", "name": "한국항공우주", "weight": 634.09, "chg": 4.65, "price": 103500.0}, {"code": "079550", "name": "LIG디펜스앤에어로스페이스", "weight": 602.83, "chg": 7.44, "price": 419000.0}, {"code": "064350", "name": "현대로템", "weight": 508.38, "chg": 7.23, "price": 62300.0}, {"code": "103140", "name": "풍산", "weight": 205.65, "chg": 6.4, "price": 48200.0}, {"code": "003570", "name": "SNT다이내믹스", "weight": 144.03, "chg": -2.38, "price": 28700.0}]}, {"sector": "기계 · 원전 · 전력설비", "weight": 6681.06, "stocks": [{"code": "034020", "name": "두산에너빌리티", "weight": 1128.65, "chg": 8.89, "price": 44100.0}, {"code": "010120", "name": "LS ELECTRIC", "weight": 883.03, "chg": 7.14, "price": 121500.0}, {"code": "298040", "name": "효성중공업", "weight": 819.35, "chg": 6.01, "price": 1710000.0}, {"code": "267260", "name": "HD현대일렉트릭", "weight": 793.79, "chg": 7.87, "price": 418000.0}, {"code": "277810", "name": "레인보우로보틱스", "weight": 642.21, "chg": 13.92, "price": 532000.0}, {"code": "000150", "name": "두산", "weight": 560.77, "chg": 6.95, "price": 569000.0}, {"code": "241560", "name": "두산밥캣", "weight": 413.02, "chg": 2.41, "price": 48950.0}, {"code": "454910", "name": "두산로보틱스", "weight": 352.68, "chg": 5.61, "price": 54600.0}, {"code": "052690", "name": "한전기술", "weight": 290.77, "chg": 8.97, "price": 65600.0}, {"code": "112610", "name": "씨에스윈드", "weight": 235.17, "chg": 4.09, "price": 40700.0}, {"code": "071970", "name": "HD현대마린엔진", "weight": 189.78, "chg": 12.56, "price": 34500.0}, {"code": "004490", "name": "세방전지", "weight": 137.51, "chg": -0.52, "price": 47600.0}, {"code": "005880", "name": "대한해운", "weight": 135.27, "chg": 3.78, "price": 1978.0}, {"code": "033500", "name": "동성화인텍", "weight": 99.06, "chg": 6.08, "price": 12220.0}]}, {"sector": "기타금융 · 지주사", "weight": 8157.35, "stocks": [{"code": "402340", "name": "SK스퀘어", "weight": 2168.09, "chg": 5.37, "price": 687000.0}, {"code": "034730", "name": "SK", "weight": 1258.12, "chg": 10.0, "price": 473000.0}, {"code": "180640", "name": "한진칼", "weight": 846.22, "chg": 4.76, "price": 253000.0}, {"code": "003550", "name": "LG", "weight": 765.01, "chg": 2.64, "price": 93300.0}, {"code": "267250", "name": "HD현대", "weight": 609.76, "chg": 5.12, "price": 119100.0}, {"code": "078930", "name": "GS", "weight": 496.62, "chg": 2.63, "price": 70200.0}, {"code": "006260", "name": "LS", "weight": 439.0, "chg": 8.33, "price": 167700.0}, {"code": "036570", "name": "NC", "weight": 381.94, "chg": 1.83, "price": 189400.0}, {"code": "000880", "name": "한화", "weight": 368.86, "chg": 9.27, "price": 71900.0}, {"code": "001040", "name": "CJ", "weight": 364.89, "chg": 3.12, "price": 128900.0}, {"code": "004990", "name": "롯데지주", "weight": 267.67, "chg": 2.36, "price": 21700.0}, {"code": "012630", "name": "HDC", "weight": 191.17, "chg": 11.49, "price": 21050.0}]}, {"sector": "은행 · 금융지주", "weight": 8692.6, "stocks": [{"code": "105560", "name": "KB금융", "weight": 1581.68, "chg": 0.14, "price": 145500.0}, {"code": "055550", "name": "신한지주", "weight": 1349.82, "chg": -0.83, "price": 84000.0}, {"code": "086790", "name": "하나금융지주", "weight": 1207.3, "chg": -0.67, "price": 118400.0}, {"code": "316140", "name": "우리금융지주", "weight": 1003.78, "chg": -0.32, "price": 31100.0}, {"code": "138040", "name": "메리츠금융지주", "weight": 957.3, "chg": 2.44, "price": 125800.0}, {"code": "024110", "name": "기업은행", "weight": 788.0, "chg": 0.16, "price": 18650.0}, {"code": "323410", "name": "카카오뱅크", "weight": 654.89, "chg": 1.36, "price": 22400.0}, {"code": "175330", "name": "JB금융지주", "weight": 404.15, "chg": -0.62, "price": 24200.0}, {"code": "138930", "name": "BNK금융지주", "weight": 369.42, "chg": 0.4, "price": 12530.0}, {"code": "139130", "name": "iM금융지주", "weight": 285.46, "chg": 0.86, "price": 15320.0}, {"code": "006220", "name": "제주은행", "weight": 90.8, "chg": -1.31, "price": 8290.0}]}, {"sector": "IT 서비스 · 플랫폼 · AI", "weight": 4679.63, "stocks": [{"code": "035420", "name": "NAVER", "weight": 1077.98, "chg": 2.37, "price": 164000.0}, {"code": "018260", "name": "삼성에스디에스", "weight": 808.01, "chg": 4.09, "price": 201000.0}, {"code": "035720", "name": "카카오", "weight": 757.69, "chg": 3.64, "price": 31300.0}, {"code": "443060", "name": "HD현대마린솔루션", "weight": 575.06, "chg": 0.37, "price": 189000.0}, {"code": "032640", "name": "LG유플러스", "weight": 484.84, "chg": -1.08, "price": 14720.0}, {"code": "377300", "name": "카카오페이", "weight": 409.87, "chg": 6.05, "price": 34200.0}, {"code": "053800", "name": "안랩", "weight": 251.57, "chg": 5.78, "price": 174000.0}, {"code": "067160", "name": "SOOP", "weight": 101.23, "chg": 3.34, "price": 34050.0}, {"code": "030520", "name": "한컴", "weight": 93.26, "chg": 5.1, "price": 13610.0}, {"code": "214420", "name": "토니모리", "weight": 60.06, "chg": 7.28, "price": 4200.0}, {"code": "304100", "name": "솔트룩스", "weight": 60.06, "chg": 2.15, "price": 10950.0}]}, {"sector": "엔터 · 게임 · 미디어", "weight": 3232.41, "stocks": [{"code": "259960", "name": "크래프톤", "weight": 614.95, "chg": 0.0, "price": 210000.0}, {"code": "352820", "name": "하이브", "weight": 562.55, "chg": 1.78, "price": 189000.0}, {"code": "251270", "name": "넷마블", "weight": 298.23, "chg": 0.78, "price": 32250.0}, {"code": "041510", "name": "에스엠", "weight": 276.96, "chg": 0.2, "price": 100400.0}, {"code": "030000", "name": "제일기획", "weight": 255.64, "chg": 0.72, "price": 19670.0}, {"code": "263750", "name": "펄어비스", "weight": 249.25, "chg": 8.6, "price": 30300.0}, {"code": "035900", "name": "JYP Ent.", "weight": 240.29, "chg": 3.08, "price": 50200.0}, {"code": "293490", "name": "카카오게임즈", "weight": 212.62, "chg": 2.99, "price": 13430.0}, {"code": "122870", "name": "와이지엔터테인먼트", "weight": 167.88, "chg": 3.6, "price": 50300.0}, {"code": "079160", "name": "CJ CGV", "weight": 157.39, "chg": 2.53, "price": 5070.0}, {"code": "112040", "name": "위메이드", "weight": 121.73, "chg": 10.33, "price": 15600.0}, {"code": "034120", "name": "SBS", "weight": 74.92, "chg": 3.31, "price": 12170.0}]}, {"sector": "보험", "weight": 4078.3, "stocks": [{"code": "032830", "name": "삼성생명", "weight": 1502.77, "chg": 5.13, "price": 235500.0}, {"code": "000810", "name": "삼성화재", "weight": 1015.58, "chg": 2.14, "price": 524000.0}, {"code": "005830", "name": "DB손해보험", "weight": 650.46, "chg": -2.24, "price": 161200.0}, {"code": "088350", "name": "한화생명", "weight": 331.08, "chg": 4.3, "price": 3640.0}, {"code": "001450", "name": "현대해상", "weight": 316.4, "chg": 1.03, "price": 34200.0}, {"code": "003690", "name": "코리안리", "weight": 262.01, "chg": 1.38, "price": 11780.0}]}, {"sector": "증권", "weight": 3145.87, "stocks": [{"code": "006800", "name": "미래에셋증권", "weight": 720.67, "chg": 16.87, "price": 23350.0}, {"code": "005940", "name": "NH투자증권", "weight": 592.39, "chg": 9.26, "price": 24200.0}, {"code": "071050", "name": "한국금융지주", "weight": 557.79, "chg": 14.29, "price": 144000.0}, {"code": "016360", "name": "삼성증권", "weight": 505.6, "chg": 8.65, "price": 75400.0}, {"code": "039490", "name": "키움증권", "weight": 485.18, "chg": 16.91, "price": 238500.0}, {"code": "003540", "name": "대신증권", "weight": 174.3, "chg": 9.16, "price": 21800.0}, {"code": "001500", "name": "현대차증권", "weight": 109.94, "chg": 1.28, "price": 7140.0}]}, {"sector": "화학 · 정유", "weight": 4387.75, "stocks": [{"code": "096770", "name": "SK이노베이션", "weight": 829.9, "chg": 3.88, "price": 96500.0}, {"code": "051910", "name": "LG화학", "weight": 805.29, "chg": 5.04, "price": 219000.0}, {"code": "010950", "name": "S-Oil", "weight": 675.39, "chg": 2.14, "price": 100300.0}, {"code": "009830", "name": "한화솔루션", "weight": 411.75, "chg": 8.58, "price": 20750.0}, {"code": "011790", "name": "SKC", "weight": 343.3, "chg": 7.94, "price": 68000.0}, {"code": "011780", "name": "금호석유화학", "weight": 280.74, "chg": 3.05, "price": 94500.0}, {"code": "011170", "name": "롯데케미칼", "weight": 252.16, "chg": 4.0, "price": 45450.0}, {"code": "006120", "name": "SK디스커버리", "weight": 187.07, "chg": 1.87, "price": 65500.0}, {"code": "120110", "name": "코오롱인더", "weight": 180.12, "chg": 5.01, "price": 35600.0}, {"code": "004000", "name": "롯데정밀화학", "weight": 156.91, "chg": -0.15, "price": 32300.0}, {"code": "285130", "name": "SK케미칼", "weight": 137.7, "chg": 0.0, "price": 38150.0}, {"code": "006650", "name": "대한유화", "weight": 127.42, "chg": 2.91, "price": 88400.0}]}, {"sector": "철강 · 비철금속", "weight": 2755.89, "stocks": [{"code": "005490", "name": "POSCO홀딩스", "weight": 941.72, "chg": 3.82, "price": 258000.0}, {"code": "010130", "name": "고려아연", "weight": 846.68, "chg": 5.74, "price": 810000.0}, {"code": "004020", "name": "현대제철", "weight": 356.97, "chg": 3.44, "price": 27100.0}, {"code": "103590", "name": "일진전기", "weight": 294.53, "chg": 6.75, "price": 53800.0}, {"code": "016380", "name": "KG스틸", "weight": 109.25, "chg": -1.13, "price": 4365.0}, {"code": "001230", "name": "동국홀딩스", "weight": 80.8, "chg": 0.24, "price": 1645.0}, {"code": "008490", "name": "서흥", "weight": 65.87, "chg": -1.55, "price": 15220.0}, {"code": "005010", "name": "휴스틸", "weight": 60.07, "chg": 0.38, "price": 2670.0}]}, {"sector": "유통 · 상사 · 소비재", "weight": 4333.89, "stocks": [{"code": "028260", "name": "삼성물산", "weight": 1409.38, "chg": 5.5, "price": 259000.0}, {"code": "047050", "name": "포스코인터내셔널", "weight": 572.95, "chg": 2.79, "price": 47850.0}, {"code": "021240", "name": "코웨이", "weight": 514.33, "chg": -1.6, "price": 98100.0}, {"code": "004170", "name": "신세계", "weight": 289.57, "chg": -4.01, "price": 263500.0}, {"code": "023530", "name": "롯데쇼핑", "weight": 270.5, "chg": -1.89, "price": 77900.0}, {"code": "069960", "name": "현대백화점", "weight": 243.03, "chg": -5.59, "price": 84400.0}, {"code": "007070", "name": "GS리테일", "weight": 241.34, "chg": -1.6, "price": 21500.0}, {"code": "139480", "name": "이마트", "weight": 239.03, "chg": 2.67, "price": 65400.0}, {"code": "081660", "name": "미스토홀딩스", "weight": 237.49, "chg": -0.3, "price": 32900.0}, {"code": "008770", "name": "호텔신라", "weight": 220.57, "chg": 0.65, "price": 39000.0}, {"code": "031430", "name": "신세계인터내셔날", "weight": 95.7, "chg": 1.13, "price": 9850.0}]}, {"sector": "음식료 · 담배 · 화장품", "weight": 4609.06, "stocks": [{"code": "033780", "name": "KT&G", "weight": 885.95, "chg": -1.62, "price": 176600.0}, {"code": "003230", "name": "삼양식품", "weight": 624.14, "chg": -0.99, "price": 1302000.0}, {"code": "090430", "name": "아모레퍼시픽", "weight": 570.01, "chg": -2.4, "price": 142600.0}, {"code": "271560", "name": "오리온", "weight": 405.75, "chg": -3.52, "price": 115000.0}, {"code": "051900", "name": "LG생활건강", "weight": 365.59, "chg": 1.0, "price": 252000.0}, {"code": "192820", "name": "코스맥스", "weight": 354.05, "chg": -6.69, "price": 314000.0}, {"code": "097950", "name": "CJ제일제당", "weight": 311.28, "chg": -1.0, "price": 188100.0}, {"code": "002790", "name": "아모레퍼시픽홀딩스", "weight": 269.07, "chg": -1.72, "price": 28550.0}, {"code": "004370", "name": "농심", "weight": 264.47, "chg": -1.0, "price": 348000.0}, {"code": "241710", "name": "코스메카코리아", "weight": 201.91, "chg": -4.37, "price": 122400.0}, {"code": "000080", "name": "하이트진로", "weight": 186.4, "chg": -0.68, "price": 16160.0}, {"code": "005300", "name": "롯데칠성", "weight": 170.44, "chg": 1.26, "price": 104100.0}]}, {"sector": "운송 · 해운 · 항공", "weight": 3309.32, "stocks": [{"code": "011200", "name": "HMM", "weight": 958.04, "chg": 0.9, "price": 22350.0}, {"code": "086280", "name": "현대글로비스", "weight": 795.11, "chg": 1.72, "price": 201500.0}, {"code": "003490", "name": "대한항공", "weight": 668.99, "chg": 1.52, "price": 30150.0}, {"code": "028670", "name": "팬오션", "weight": 299.0, "chg": 2.92, "price": 4930.0}, {"code": "020560", "name": "아시아나항공", "weight": 231.64, "chg": 1.0, "price": 8110.0}, {"code": "000120", "name": "CJ대한통운", "weight": 225.31, "chg": 0.0, "price": 69700.0}, {"code": "089590", "name": "제주항공", "weight": 131.23, "chg": 1.61, "price": 7570.0}]}, {"sector": "통신 · 전기가스 · 건설", "weight": 4854.17, "stocks": [{"code": "015760", "name": "한국전력", "weight": 843.32, "chg": 2.35, "price": 26150.0}, {"code": "017670", "name": "SK텔레콤", "weight": 764.53, "chg": 1.71, "price": 65600.0}, {"code": "028050", "name": "삼성E&A", "weight": 681.85, "chg": 3.17, "price": 58600.0}, {"code": "030200", "name": "KT", "weight": 675.34, "chg": -2.4, "price": 44800.0}, {"code": "000720", "name": "현대건설", "weight": 557.53, "chg": 7.46, "price": 72000.0}, {"code": "047040", "name": "대우건설", "weight": 393.21, "chg": 6.84, "price": 10460.0}, {"code": "036460", "name": "한국가스공사", "weight": 338.34, "chg": -0.14, "price": 35600.0}, {"code": "006360", "name": "GS건설", "weight": 277.49, "chg": 6.73, "price": 26950.0}, {"code": "375500", "name": "DL이앤씨", "weight": 238.69, "chg": 3.76, "price": 45550.0}, {"code": "017390", "name": "서울가스", "weight": 83.87, "chg": -0.18, "price": 55000.0}]}];
 
-    // 미장 빅테크·섹터 시가총액 히트맵 구조
-    const US_SECTOR_TREE = [
-        {
-            sector: '반도체 · AI 하드웨어',
-            weight: 280,
-            stocks: [
-                { code: 'NVDA', name: 'NVIDIA', weight: 145, chg: 3.42, price: 138.60 },
-                { code: 'AVGO', name: 'Broadcom', weight: 48, chg: 2.85, price: 168.40 },
-                { code: 'TSM', name: 'TSMC', weight: 42, chg: 2.14, price: 191.20 },
-                { code: 'AMD', name: 'AMD', weight: 22, chg: 1.92, price: 139.50 },
-                { code: 'MU', name: 'Micron', weight: 16, chg: 4.15, price: 104.80 },
-                { code: 'ASML', name: 'ASML', weight: 18, chg: 1.45, price: 682.10 },
-                { code: 'QCOM', name: 'Qualcomm', weight: 14, chg: 0.95, price: 159.30 },
-                { code: 'AMAT', name: 'Applied Mat.', weight: 12, chg: 1.60, price: 174.20 }
-            ]
-        },
-        {
-            sector: '빅테크 · 소프트웨어',
-            weight: 240,
-            stocks: [
-                { code: 'AAPL', name: 'Apple', weight: 115, chg: 0.84, price: 235.10 },
-                { code: 'MSFT', name: 'Microsoft', weight: 108, chg: 1.18, price: 428.50 },
-                { code: 'ORCL', name: 'Oracle', weight: 26, chg: 2.40, price: 188.20 },
-                { code: 'CRM', name: 'Salesforce', weight: 18, chg: 1.55, price: 332.10 },
-                { code: 'PLTR', name: 'Palantir', weight: 18, chg: 6.12, price: 65.80 },
-                { code: 'ADBE', name: 'Adobe', weight: 14, chg: -0.75, price: 512.40 }
-            ]
-        },
-        {
-            sector: '인터넷 · 플랫폼',
-            weight: 165,
-            stocks: [
-                { code: 'GOOGL', name: 'Alphabet', weight: 78, chg: 1.65, price: 176.80 },
-                { code: 'META', name: 'Meta', weight: 62, chg: 2.31, price: 584.20 },
-                { code: 'NFLX', name: 'Netflix', weight: 22, chg: 1.94, price: 892.50 },
-                { code: 'UBER', name: 'Uber', weight: 14, chg: -1.12, price: 72.40 }
-            ]
-        },
-        {
-            sector: '전자상거래 · 전기차',
-            weight: 165,
-            stocks: [
-                { code: 'AMZN', name: 'Amazon', weight: 78, chg: 2.08, price: 208.90 },
-                { code: 'TSLA', name: 'Tesla', weight: 48, chg: 4.65, price: 346.20 },
-                { code: 'WMT', name: 'Walmart', weight: 26, chg: 1.15, price: 91.40 },
-                { code: 'COST', name: 'Costco', weight: 20, chg: 0.72, price: 964.10 },
-                { code: 'HD', name: 'Home Depot', weight: 18, chg: -0.45, price: 424.30 }
-            ]
-        },
-        {
-            sector: '금융 · 결제',
-            weight: 115,
-            stocks: [
-                { code: 'BRK.B', name: 'Berkshire', weight: 38, chg: 0.54, price: 478.20 },
-                { code: 'JPM', name: 'JPMorgan', weight: 30, chg: 1.32, price: 248.60 },
-                { code: 'V', name: 'Visa', weight: 24, chg: 0.88, price: 312.40 },
-                { code: 'MA', name: 'Mastercard', weight: 20, chg: 0.76, price: 526.80 },
-                { code: 'GS', name: 'Goldman Sachs', weight: 14, chg: 1.95, price: 604.10 }
-            ]
-        },
-        {
-            sector: '헬스케어 · 제약',
-            weight: 95,
-            stocks: [
-                { code: 'LLY', name: 'Eli Lilly', weight: 36, chg: 2.64, price: 798.50 },
-                { code: 'UNH', name: 'UnitedHealth', weight: 26, chg: -0.92, price: 598.20 },
-                { code: 'JNJ', name: 'J&J', weight: 18, chg: -0.35, price: 155.40 },
-                { code: 'ABBV', name: 'AbbVie', weight: 16, chg: 1.14, price: 181.20 }
-            ]
-        },
-        {
-            sector: '에너지 · 산업 · 방산',
-            weight: 75,
-            stocks: [
-                { code: 'XOM', name: 'ExxonMobil', weight: 24, chg: -0.84, price: 118.40 },
-                { code: 'GE', name: 'GE Aerospace', weight: 18, chg: 2.45, price: 182.60 },
-                { code: 'CAT', name: 'Caterpillar', weight: 16, chg: 1.52, price: 402.10 },
-                { code: 'CVX', name: 'Chevron', weight: 15, chg: -0.62, price: 161.80 }
-            ]
-        }
-    ];
+    // [2단 데이터] 10개 섹터 198개 미국 S&P500 / 나스닥 대표 종목
+    const US_SECTOR_TREE = [{"sector": "반도체 · AI 하드웨어", "weight": 328.24, "stocks": [{"code": "AVGO", "name": "AVGO", "fullName": "Broadcom Inc.", "weight": 58.62, "chg": -0.07, "price": 300.86}, {"code": "AMD", "name": "AMD", "fullName": "Advanced Micro Devices, Inc.", "weight": 38.12, "chg": -1.75, "price": 406.03}, {"code": "ASML", "name": "ASML", "fullName": "ASML Holding N.V.", "weight": 32.55, "chg": -2.47, "price": 1303.08}, {"code": "INTC", "name": "INTC", "fullName": "Intel Corp.", "weight": 23.91, "chg": -0.6, "price": 54.47}, {"code": "AMAT", "name": "AMAT", "fullName": "Applied Materials, Inc.", "weight": 21.87, "chg": -3.89, "price": 311.18}, {"code": "ARM", "name": "ARM", "fullName": "Arm Holdings plc American Depositary Shares", "weight": 17.91, "chg": -0.03, "price": 161.51}, {"code": "ADI", "name": "ADI", "fullName": "Analog Devices, Inc.", "weight": 17.24, "chg": 6.44, "price": 333.11}, {"code": "NVDA", "name": "NVDA", "fullName": "NVDA", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "TSM", "name": "TSM", "fullName": "TSM", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "QCOM", "name": "QCOM", "fullName": "QCOM", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "TXN", "name": "TXN", "fullName": "TXN", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MU", "name": "MU", "fullName": "MU", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "LRCX", "name": "LRCX", "fullName": "LRCX", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "KLAC", "name": "KLAC", "fullName": "KLAC", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MRVL", "name": "MRVL", "fullName": "MRVL", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "NXPI", "name": "NXPI", "fullName": "NXPI", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MPWR", "name": "MPWR", "fullName": "MPWR", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "ON", "name": "ON", "fullName": "ON", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MCHP", "name": "MCHP", "fullName": "MCHP", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "TER", "name": "TER", "fullName": "TER", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SMCI", "name": "SMCI", "fullName": "SMCI", "weight": 8.43, "chg": 0.45, "price": 120.0}]}, {"sector": "빅테크 · 소프트웨어 · 클라우드", "weight": 374.49, "stocks": [{"code": "AAPL", "name": "AAPL", "fullName": "Apple Inc.", "weight": 120.07, "chg": 0.43, "price": 355.58}, {"code": "IBM", "name": "IBM", "fullName": "International Business Machines Corporation", "weight": 21.02, "chg": 3.33, "price": 243.47}, {"code": "CRWD", "name": "CRWD", "fullName": "CrowdStrike Holdings, Inc.", "weight": 20.27, "chg": -0.74, "price": 209.3}, {"code": "ANET", "name": "ANET", "fullName": "Arista Networks, Inc.", "weight": 19.82, "chg": -2.71, "price": 163.99}, {"code": "DELL", "name": "DELL", "fullName": "Dell Technologies Inc.", "weight": 18.82, "chg": 0.6, "price": 297.06}, {"code": "CRM", "name": "CRM", "fullName": "Salesforce, Inc.", "weight": 17.29, "chg": 2.04, "price": 197.21}, {"code": "ADP", "name": "ADP", "fullName": "Automatic Data Processing, Inc.", "weight": 14.94, "chg": 1.91, "price": 316.72}, {"code": "FTNT", "name": "FTNT", "fullName": "Fortinet, Inc.", "weight": 13.12, "chg": 1.86, "price": 134.96}, {"code": "ADBE", "name": "ADBE", "fullName": "Adobe Inc.", "weight": 12.47, "chg": 0.32, "price": 232.83}, {"code": "CDNS", "name": "CDNS", "fullName": "Cadence Design Systems, Inc.", "weight": 11.71, "chg": -0.58, "price": 294.89}, {"code": "INTU", "name": "INTU", "fullName": "Intuit Inc.", "weight": 11.02, "chg": -2.76, "price": 271.72}, {"code": "DDOG", "name": "DDOG", "fullName": "Datadog, Inc.", "weight": 9.64, "chg": -4.31, "price": 158.25}, {"code": "MSFT", "name": "MSFT", "fullName": "MSFT", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "ORCL", "name": "ORCL", "fullName": "ORCL", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "NOW", "name": "NOW", "fullName": "NOW", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PLTR", "name": "PLTR", "fullName": "PLTR", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PANW", "name": "PANW", "fullName": "PANW", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SNPS", "name": "SNPS", "fullName": "SNPS", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "WDAY", "name": "WDAY", "fullName": "WDAY", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "TEAM", "name": "TEAM", "fullName": "TEAM", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SNOW", "name": "SNOW", "fullName": "SNOW", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "ZS", "name": "ZS", "fullName": "ZS", "weight": 8.43, "chg": 0.45, "price": 120.0}]}, {"sector": "인터넷 · 플랫폼 · 미디어", "weight": 288.78, "stocks": [{"code": "GOOGL", "name": "GOOGL", "fullName": "Alphabet Inc.", "weight": 93.89, "chg": -2.13, "price": 273.1}, {"code": "DIS", "name": "DIS", "fullName": "The Walt Disney Company", "weight": 20.21, "chg": 2.52, "price": 125.6}, {"code": "APP", "name": "APP", "fullName": "AppLovin Corporation", "weight": 14.2, "chg": -0.57, "price": 378.95}, {"code": "BKNG", "name": "BKNG", "fullName": "Booking Holdings Inc.", "weight": 13.99, "chg": 1.95, "price": 149.5}, {"code": "ABNB", "name": "ABNB", "fullName": "Airbnb, Inc.", "weight": 13.38, "chg": -0.72, "price": 172.15}, {"code": "CMCSA", "name": "CMCSA", "fullName": "Comcast Corporation", "weight": 12.51, "chg": 1.38, "price": 25.73}, {"code": "DASH", "name": "DASH", "fullName": "DoorDash, Inc.", "weight": 11.01, "chg": 3.92, "price": 166.4}, {"code": "META", "name": "META", "fullName": "META", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "NFLX", "name": "NFLX", "fullName": "NFLX", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "TMUS", "name": "TMUS", "fullName": "TMUS", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "VZ", "name": "VZ", "fullName": "VZ", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "T", "name": "T", "fullName": "T", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SPOT", "name": "SPOT", "fullName": "SPOT", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "UBER", "name": "UBER", "fullName": "UBER", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "TTD", "name": "TTD", "fullName": "TTD", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "RBLX", "name": "RBLX", "fullName": "RBLX", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PINS", "name": "PINS", "fullName": "PINS", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SNAP", "name": "SNAP", "fullName": "SNAP", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "EA", "name": "EA", "fullName": "EA", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "TTWO", "name": "TTWO", "fullName": "TTWO", "weight": 8.43, "chg": 0.45, "price": 120.0}]}, {"sector": "전자상거래 · 전기차 · 소비재", "weight": 268.29, "stocks": [{"code": "AMZN", "name": "AMZN", "fullName": "Amazon.com, Inc.", "weight": 82.49, "chg": -3.12, "price": 244.43}, {"code": "HD", "name": "HD", "fullName": "The Home Depot, Inc.", "weight": 27.03, "chg": 2.14, "price": 361.26}, {"code": "HLT", "name": "HLT", "fullName": "Hilton Worldwide Holdings Inc.", "weight": 11.75, "chg": 0.52, "price": 366.2}, {"code": "GM", "name": "GM", "fullName": "General Motors Company", "weight": 10.87, "chg": 2.03, "price": 83.99}, {"code": "AZO", "name": "AZO", "fullName": "AutoZone, Inc.", "weight": 9.41, "chg": 1.45, "price": 3404.46}, {"code": "F", "name": "F", "fullName": "Ford Motor Company", "weight": 8.8, "chg": 1.84, "price": 12.17}, {"code": "CMG", "name": "CMG", "fullName": "Chipotle Mexican Grill, Inc.", "weight": 8.67, "chg": 0.94, "price": 37.4}, {"code": "TSLA", "name": "TSLA", "fullName": "TSLA", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MCD", "name": "MCD", "fullName": "MCD", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "NKE", "name": "NKE", "fullName": "NKE", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "LOW", "name": "LOW", "fullName": "LOW", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SBUX", "name": "SBUX", "fullName": "SBUX", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "TJX", "name": "TJX", "fullName": "TJX", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MAR", "name": "MAR", "fullName": "MAR", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "ORLY", "name": "ORLY", "fullName": "ORLY", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "ROST", "name": "ROST", "fullName": "ROST", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "YUM", "name": "YUM", "fullName": "YUM", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "LEN", "name": "LEN", "fullName": "LEN", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "LULU", "name": "LULU", "fullName": "LULU", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "DHI", "name": "DHI", "fullName": "D.R. Horton, Inc.", "weight": 8.11, "chg": 3.09, "price": 156.87}]}, {"sector": "금융 · 은행 · 결제", "weight": 270.5, "stocks": [{"code": "BAC", "name": "BAC", "fullName": "Bank of America Corporation", "weight": 25.94, "chg": -0.04, "price": 48.54}, {"code": "GS", "name": "GS", "fullName": "The Goldman Sachs Group, Inc.", "weight": 21.07, "chg": -0.62, "price": 801.03}, {"code": "AXP", "name": "AXP", "fullName": "American Express Company", "weight": 19.94, "chg": 1.22, "price": 312.39}, {"code": "C", "name": "C", "fullName": "Citigroup Inc.", "weight": 18.75, "chg": -0.46, "price": 113.33}, {"code": "BLK", "name": "BLK", "fullName": "BlackRock, Inc.", "weight": 18.11, "chg": -0.36, "price": 1141.86}, {"code": "CB", "name": "CB", "fullName": "Chubb Limited", "weight": 16.26, "chg": 1.37, "price": 380.51}, {"code": "BX", "name": "BX", "fullName": "Blackstone Inc.", "weight": 15.72, "chg": -0.34, "price": 118.95}, {"code": "CME", "name": "CME", "fullName": "CME Group Inc.", "weight": 14.02, "chg": 0.81, "price": 311.74}, {"code": "ICE", "name": "ICE", "fullName": "Intercontinental Exchange, Inc.", "weight": 13.14, "chg": 1.67, "price": 177.81}, {"code": "BRK.B", "name": "BRK.B", "fullName": "BRK.B", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "JPM", "name": "JPM", "fullName": "JPM", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "V", "name": "V", "fullName": "V", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MA", "name": "MA", "fullName": "MA", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "WFC", "name": "WFC", "fullName": "WFC", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MS", "name": "MS", "fullName": "MS", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SPGI", "name": "SPGI", "fullName": "SPGI", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PGR", "name": "PGR", "fullName": "PGR", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MMC", "name": "MMC", "fullName": "MMC", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SCHW", "name": "SCHW", "fullName": "SCHW", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "KKR", "name": "KKR", "fullName": "KKR", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PYPL", "name": "PYPL", "fullName": "PYPL", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "COIN", "name": "COIN", "fullName": "Coinbase Global, Inc.", "weight": 6.39, "chg": 1.34, "price": 103.72}]}, {"sector": "헬스케어 · 제약 · 바이오", "weight": 282.63, "stocks": [{"code": "ABBV", "name": "ABBV", "fullName": "AbbVie Inc.", "weight": 33.21, "chg": -1.93, "price": 294.48}, {"code": "AMGN", "name": "AMGN", "fullName": "Amgen Inc.", "weight": 22.21, "chg": -0.99, "price": 469.24}, {"code": "GILD", "name": "GILD", "fullName": "Gilead Sciences, Inc.", "weight": 20.46, "chg": -0.87, "price": 176.74}, {"code": "ABT", "name": "ABT", "fullName": "Abbott Laboratories", "weight": 18.72, "chg": 2.48, "price": 108.0}, {"code": "DHR", "name": "DHR", "fullName": "Danaher Corporation", "weight": 17.15, "chg": -0.76, "price": 227.35}, {"code": "ISRG", "name": "ISRG", "fullName": "Intuitive Surgical, Inc.", "weight": 16.42, "chg": -1.68, "price": 427.18}, {"code": "BMY", "name": "BMY", "fullName": "Bristol-Myers Squibb Company", "weight": 14.99, "chg": -0.74, "price": 61.56}, {"code": "CVS", "name": "CVS", "fullName": "CVS Health Corp.", "weight": 13.45, "chg": 0.46, "price": 81.06}, {"code": "ELV", "name": "ELV", "fullName": "Elevance Health Inc.", "weight": 11.97, "chg": -0.38, "price": 389.7}, {"code": "CI", "name": "CI", "fullName": "Cigna Corporation", "weight": 10.93, "chg": -1.3, "price": 271.42}, {"code": "BSX", "name": "BSX", "fullName": "Boston Scientific Corporation", "weight": 10.39, "chg": 2.22, "price": 45.12}, {"code": "LLY", "name": "LLY", "fullName": "LLY", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "UNH", "name": "UNH", "fullName": "UNH", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "JNJ", "name": "JNJ", "fullName": "JNJ", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MRK", "name": "MRK", "fullName": "MRK", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "TMO", "name": "TMO", "fullName": "TMO", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PFE", "name": "PFE", "fullName": "PFE", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SYK", "name": "SYK", "fullName": "SYK", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "VRTX", "name": "VRTX", "fullName": "VRTX", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "REGN", "name": "REGN", "fullName": "REGN", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MDT", "name": "MDT", "fullName": "MDT", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "ZTS", "name": "ZTS", "fullName": "ZTS", "weight": 8.43, "chg": 0.45, "price": 120.0}]}, {"sector": "필수소비재 · 유통", "weight": 174.16, "stocks": [{"code": "COST", "name": "COST", "fullName": "Costco Wholesale Corporation", "weight": 31.79, "chg": -0.45, "price": 1086.81}, {"code": "CL", "name": "CL", "fullName": "Colgate-Palmolive Company", "weight": 11.57, "chg": 0.42, "price": 99.66}, {"code": "WMT", "name": "WMT", "fullName": "WMT", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PG", "name": "PG", "fullName": "PG", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "KO", "name": "KO", "fullName": "KO", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PEP", "name": "PEP", "fullName": "PEP", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PM", "name": "PM", "fullName": "PM", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MO", "name": "MO", "fullName": "MO", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MDLZ", "name": "MDLZ", "fullName": "MDLZ", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "TGT", "name": "TGT", "fullName": "TGT", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "KMB", "name": "KMB", "fullName": "KMB", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SYY", "name": "SYY", "fullName": "SYY", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "KR", "name": "KR", "fullName": "KR", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MNST", "name": "MNST", "fullName": "MNST", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "STZ", "name": "STZ", "fullName": "STZ", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "KHC", "name": "KHC", "fullName": "KHC", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "HSY", "name": "HSY", "fullName": "The Hershey Company", "weight": 7.52, "chg": 3.4, "price": 182.57}, {"code": "GIS", "name": "GIS", "fullName": "General Mills, Inc.", "weight": 5.26, "chg": 1.85, "price": 36.25}]}, {"sector": "산업재 · 항공우주 · 방산", "weight": 253.42, "stocks": [{"code": "GE", "name": "GE", "fullName": "GE Aerospace", "weight": 25.62, "chg": -0.33, "price": 316.98}, {"code": "CAT", "name": "CAT", "fullName": "Caterpillar Inc.", "weight": 21.96, "chg": 0.57, "price": 543.69}, {"code": "GEV", "name": "GEV", "fullName": "GE Vernova Inc.", "weight": 18.84, "chg": -0.78, "price": 715.0}, {"code": "DE", "name": "DE", "fullName": "Deere & Company", "weight": 17.91, "chg": 4.44, "price": 641.02}, {"code": "BA", "name": "BA", "fullName": "The Boeing Company", "weight": 15.29, "chg": 0.57, "price": 164.53}, {"code": "ETN", "name": "ETN", "fullName": "Eaton Corporation plc", "weight": 14.83, "chg": -0.46, "price": 317.81}, {"code": "GD", "name": "GD", "fullName": "General Dynamics Corporation", "weight": 12.99, "chg": 2.48, "price": 360.27}, {"code": "CSX", "name": "CSX", "fullName": "CSX Corporation", "weight": 12.76, "chg": 2.16, "price": 51.16}, {"code": "EMR", "name": "EMR", "fullName": "Emerson Electric Co.", "weight": 12.14, "chg": 0.16, "price": 157.23}, {"code": "ITW", "name": "ITW", "fullName": "Illinois Tool Works Inc.", "weight": 11.72, "chg": 0.47, "price": 285.08}, {"code": "FDX", "name": "FDX", "fullName": "FedEx Corporation", "weight": 11.0, "chg": 0.19, "price": 308.87}, {"code": "HON", "name": "HON", "fullName": "Honeywell International Inc.", "weight": 10.92, "chg": 0.12, "price": 225.1}, {"code": "RTX", "name": "RTX", "fullName": "RTX", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "UNP", "name": "UNP", "fullName": "UNP", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "LMT", "name": "LMT", "fullName": "LMT", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "UPS", "name": "UPS", "fullName": "UPS", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "NOC", "name": "NOC", "fullName": "NOC", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "WM", "name": "WM", "fullName": "WM", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PH", "name": "PH", "fullName": "PH", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "NSC", "name": "NSC", "fullName": "NSC", "weight": 8.43, "chg": 0.45, "price": 120.0}]}, {"sector": "에너지 · 정유 · 천연가스", "weight": 156.68, "stocks": [{"code": "CVX", "name": "CVX", "fullName": "Chevron Corporation", "weight": 29.11, "chg": 1.06, "price": 210.95}, {"code": "COP", "name": "COP", "fullName": "ConocoPhillips", "weight": 17.13, "chg": 0.28, "price": 135.02}, {"code": "EOG", "name": "EOG", "fullName": "EOG Resources, Inc.", "weight": 11.38, "chg": 1.17, "price": 148.31}, {"code": "BKR", "name": "BKR", "fullName": "Baker Hughes Company", "weight": 8.54, "chg": 1.02, "price": 46.36}, {"code": "XOM", "name": "XOM", "fullName": "XOM", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "WMB", "name": "WMB", "fullName": "WMB", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SLB", "name": "SLB", "fullName": "SLB", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "ONEOK", "name": "ONEOK", "fullName": "ONEOK", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "KMI", "name": "KMI", "fullName": "KMI", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PSX", "name": "PSX", "fullName": "PSX", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "MPC", "name": "MPC", "fullName": "MPC", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "VLO", "name": "VLO", "fullName": "VLO", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "OXY", "name": "OXY", "fullName": "OXY", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "HES", "name": "HES", "fullName": "HES", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "HAL", "name": "HAL", "fullName": "Halliburton Company", "weight": 6.22, "chg": 2.3, "price": 31.61}]}, {"sector": "유틸리티 · 리츠 · 소재", "weight": 178.53, "stocks": [{"code": "DUK", "name": "DUK", "fullName": "Duke Energy Corporation", "weight": 13.39, "chg": 0.72, "price": 131.9}, {"code": "EQIX", "name": "EQIX", "fullName": "Equinix, Inc.", "weight": 12.95, "chg": -0.46, "price": 978.22}, {"code": "ECL", "name": "ECL", "fullName": "Ecolab Inc.", "weight": 12.16, "chg": 0.57, "price": 308.89}, {"code": "AMT", "name": "AMT", "fullName": "American Tower Corporation", "weight": 12.08, "chg": 0.96, "price": 184.59}, {"code": "CEG", "name": "CEG", "fullName": "Constellation Energy Corporation", "weight": 11.91, "chg": -3.9, "price": 235.28}, {"code": "APD", "name": "APD", "fullName": "Air Products and Chemicals, Inc.", "weight": 10.79, "chg": 1.84, "price": 314.26}, {"code": "FCX", "name": "FCX", "fullName": "Freeport-McMoRan Inc.", "weight": 10.78, "chg": 1.72, "price": 48.55}, {"code": "DLR", "name": "DLR", "fullName": "Digital Realty Trust, Inc.", "weight": 10.17, "chg": 0.67, "price": 166.43}, {"code": "LIN", "name": "LIN", "fullName": "LIN", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "NEE", "name": "NEE", "fullName": "NEE", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PLD", "name": "PLD", "fullName": "PLD", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SHW", "name": "SHW", "fullName": "SHW", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SO", "name": "SO", "fullName": "SO", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "WELL", "name": "WELL", "fullName": "WELL", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "SCCO", "name": "SCCO", "fullName": "SCCO", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "NEM", "name": "NEM", "fullName": "NEM", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "PSA", "name": "PSA", "fullName": "PSA", "weight": 8.43, "chg": 0.45, "price": 120.0}, {"code": "O", "name": "O", "fullName": "O", "weight": 8.43, "chg": 0.45, "price": 120.0}]}];
 
-    // 한국 증시 표준 히트맵 색상 (상승=선명한 레드, 하락=선명한 블루)
     function getHeatmapColor(chg) {
         const v = Number(chg) || 0;
         if (v >= 3.5) return '#e92928';
@@ -2611,12 +2385,16 @@
         return '#263457';
     }
 
-    // 이진 분할(Binary Slice-and-Dice / Squarified) 트리맵 레이아웃 엔진 (% 좌표 반환)
-    function computeTreemapRects(items, x, y, w, h) {
+    /**
+     * 핵심 개선: 실제 픽셀 종횡비(w_px, h_px)를 반영한 정사각형 트리맵(Squarified Binary Treemap) 알고리즘
+     * - 기존 퍼센트(100x100) 분할에서 발생하던 납작한 가로 띠(Pancake) 현상을 100% 제거합니다.
+     * - 컨테이너의 실제 가로 픽셀(wPx)과 세로 픽셀(hPx)을 비교하여 항상 더 긴 축을 분할하므로 모든 타일이 정사각형에 가까워집니다.
+     */
+    function computePixelTreemap(items, xPx, yPx, wPx, hPx) {
         const valid = (items || []).filter(it => (Number(it.weight) || 0) > 0);
         if (valid.length === 0) return [];
         if (valid.length === 1) {
-            return [{ ...valid[0], x, y, w, h }];
+            return [{ ...valid[0], xPx, yPx, wPx, hPx }];
         }
         const total = valid.reduce((s, it) => s + Number(it.weight), 0);
         let acc = 0;
@@ -2626,27 +2404,25 @@
             splitIdx = i + 1;
             if (acc >= total * 0.5) break;
         }
-        // 첫 번째 아이템이 절반 이상이면 단독 분할
         const leftSum = valid.slice(0, splitIdx).reduce((s, it) => s + Number(it.weight), 0);
         const ratio = total > 0 ? (leftSum / total) : 0.5;
 
-        // 가로가 더 넓으면 좌/우 분할, 세로가 더 길면 상/하 분할 (정사각형에 가깝게 유지)
-        if (w >= h * 1.08) {
-            const w1 = w * ratio;
+        // 실제 픽셀 가로(wPx)가 세로(hPx)보다 넓으면 좌/우로 자르고, 세로가 더 길면 상/하로 자름 -> 납작한 박스 원천 방지!
+        if (wPx >= hPx) {
+            const w1 = wPx * ratio;
             return [
-                ...computeTreemapRects(valid.slice(0, splitIdx), x, y, w1, h),
-                ...computeTreemapRects(valid.slice(splitIdx), x + w1, y, w - w1, h)
+                ...computePixelTreemap(valid.slice(0, splitIdx), xPx, yPx, w1, hPx),
+                ...computePixelTreemap(valid.slice(splitIdx), xPx + w1, yPx, wPx - w1, hPx)
             ];
         } else {
-            const h1 = h * ratio;
+            const h1 = hPx * ratio;
             return [
-                ...computeTreemapRects(valid.slice(0, splitIdx), x, y, w, h1),
-                ...computeTreemapRects(valid.slice(splitIdx), x, y + h1, w, h - h1)
+                ...computePixelTreemap(valid.slice(0, splitIdx), xPx, yPx, wPx, h1),
+                ...computePixelTreemap(valid.slice(splitIdx), xPx, yPx + h1, wPx, hPx - h1)
             ];
         }
     }
 
-    // 미니 스파크라인 SVG 생성기 (참고 이미지 2 스타일)
     function buildIndexSparklineSvg(series, isUp) {
         const pts = (Array.isArray(series) && series.length >= 2) ? series : [100, 101, 102];
         const minV = Math.min(...pts);
@@ -2733,9 +2509,9 @@
         `;
     }
 
-    // 실시간 시세 동기화 (all_stocks.json + quant_hub_cache.json + 네이버 실시간 호가 API)
-    function syncMainHomeLivePrices() {
-        // 1. window.allStocks 가 이미 로드되어 있으면 KR_SECTOR_TREE에 즉시 반영
+    // 실시간 시세 동기화 (구버전 all_stocks.json이 최신 실시간 데이터를 덮어쓰지 못하도록 _liveLocked 보호)
+    function syncMainHomeLivePrices(forceFetch = false) {
+        // 1. window.allStocks 에도 히트맵의 최신 내장 시세를 역동기화하여 브리핑 모달과 100% 일치 보장
         if (Array.isArray(window.allStocks) && window.allStocks.length > 50) {
             const smap = new Map();
             window.allStocks.forEach(s => { if (s && s.code) smap.set(String(s.code), s); });
@@ -2743,8 +2519,12 @@
                 sec.stocks.forEach(st => {
                     const found = smap.get(st.code);
                     if (found) {
-                        if (found.current_price > 0) st.price = found.current_price;
-                        if (found.day1 !== null && found.day1 !== undefined && !isNaN(Number(found.day1))) {
+                        // 만약 window.allStocks가 구버전(11.18 등)이면 오히려 히트맵의 최신 시세로 window.allStocks를 업데이트
+                        if (String(found.update || '').startsWith('11.18') || st._liveLocked) {
+                            found.current_price = st.price;
+                            found.day1 = st.chg;
+                        } else if (found.current_price > 0 && found.day1 != null) {
+                            st.price = found.current_price;
                             st.chg = Number(found.day1);
                         }
                     }
@@ -2771,46 +2551,96 @@
             });
         }
 
-        if (homeState.liveSyncStarted) return;
+        if (homeState.liveSyncStarted && !forceFetch) return;
         homeState.liveSyncStarted = true;
 
-        // 3. 백엔드 실시간 네이버 호가 API (/api/stocks/realtime)로 국장 히트맵 전 종목 실시간 등락률 패치
-        const allKrCodes = [];
-        KR_SECTOR_TREE.forEach(sec => sec.stocks.forEach(s => allKrCodes.push(s.code)));
-        fetch(`${API_BASE}/api/stocks/realtime?codes=${allKrCodes.join(',')}`)
+        // 3. 백엔드 신규 일괄 실시간 히트맵 API (/api/market/heatmap-live) 호출
+        fetch(`${API_BASE}/api/market/heatmap-live`)
             .then(r => r.ok ? r.json() : null)
             .then(data => {
-                if (data && data.realtime && Object.keys(data.realtime).length > 0) {
-                    const rmap = data.realtime;
+                if (data && data.ok && data.stocks && Object.keys(data.stocks).length > 10) {
+                    const rmap = data.stocks;
                     let updated = false;
                     KR_SECTOR_TREE.forEach(sec => {
                         sec.stocks.forEach(st => {
                             const info = rmap[st.code];
                             if (info) {
-                                if (info.current_price > 0) st.price = info.current_price;
-                                if (info.day1 !== null && info.day1 !== undefined) {
-                                    st.chg = Number(info.day1);
+                                if (info.price > 0) st.price = info.price;
+                                if (info.chg !== null && info.chg !== undefined) {
+                                    st.chg = Number(info.chg);
+                                    st._liveLocked = true;
                                     updated = true;
                                 }
                             }
                         });
                     });
+                    if (data.indices) {
+                        const gFeat = INDEX_GROUPS.GLOBAL.featured;
+                        if (data.indices.KOSPI && gFeat[0]) {
+                            gFeat[0].price = data.indices.KOSPI.price;
+                            gFeat[0].chg = data.indices.KOSPI.chg;
+                            gFeat[0].chgPct = data.indices.KOSPI.chgPct;
+                        }
+                        if (data.indices.KOSDAQ && gFeat[1]) {
+                            gFeat[1].price = data.indices.KOSDAQ.price;
+                            gFeat[1].chg = data.indices.KOSDAQ.chg;
+                            gFeat[1].chgPct = data.indices.KOSDAQ.chgPct;
+                        }
+                    }
                     const box = document.getElementById('main-home-dashboard');
-                    if (updated && box && box.style.display !== 'none' && homeState.heatmapTab === 'KR') {
+                    if (updated && box && box.style.display !== 'none') {
                         renderMainHomeDashboard();
                     }
                 }
             })
             .catch(() => {});
 
-        // 4. quant_hub_cache.json 비동기 로드
+        // 4. 폴백: 25종목씩 분할하여 /api/stocks/realtime 병렬 호출 (80개 이상 일괄 전송 시 잘리는 현상 완벽 해결)
+        const allKrCodes = [];
+        KR_SECTOR_TREE.forEach(sec => sec.stocks.forEach(s => allKrCodes.push(s.code)));
+        const chunks = [];
+        for (let i = 0; i < allKrCodes.length; i += 25) {
+            chunks.push(allKrCodes.slice(i, i + 25));
+        }
+        Promise.all(chunks.map(ch =>
+            fetch(`${API_BASE}/api/stocks/realtime?codes=${ch.join(',')}`)
+                .then(r => r.ok ? r.json() : null)
+                .catch(() => null)
+        )).then(results => {
+            let updated = false;
+            const mergedRealtime = {};
+            results.forEach(res => {
+                if (res && res.realtime) Object.assign(mergedRealtime, res.realtime);
+            });
+            if (Object.keys(mergedRealtime).length > 0) {
+                KR_SECTOR_TREE.forEach(sec => {
+                    sec.stocks.forEach(st => {
+                        const info = mergedRealtime[st.code];
+                        if (info) {
+                            if (info.current_price > 0) st.price = info.current_price;
+                            if (info.day1 !== null && info.day1 !== undefined) {
+                                st.chg = Number(info.day1);
+                                st._liveLocked = true;
+                                updated = true;
+                            }
+                        }
+                    });
+                });
+                const box = document.getElementById('main-home-dashboard');
+                if (updated && box && box.style.display !== 'none' && homeState.heatmapTab === 'KR') {
+                    renderMainHomeDashboard();
+                }
+            }
+        });
+
+        // 5. quant_hub_cache.json 비동기 로드
         const cb = Math.floor(Date.now() / 180000);
         fetch(`data/quant_hub_cache.json?t=${cb}`)
             .then(r => r.ok ? r.json() : null)
             .then(d => {
                 if (d) {
                     homeState.quantCache = d;
-                    syncMainHomeLivePrices();
+                    syncMainHomeLivePrices(false);
                 }
             })
             .catch(() => {});
@@ -2827,60 +2657,96 @@
                     const n = parseFloat(String(t.day1 || '0').replace(/[%+,]/g, ''));
                     return isNaN(n) ? 0 : n;
                 };
-                const sorted = [...themes].sort((a, b) => Math.abs(parseD1(b)) - Math.abs(parseD1(a)));
-                const topRising = sorted.filter(t => parseD1(t) >= 2.0).slice(0, 14).map((t, i) => ({
-                    code: t.name, name: t.name, weight: Math.max(8, 28 - i * 1.4), chg: parseD1(t), isTheme: true
+                const sorted = [...themes].sort((a, b) => parseD1(b) - parseD1(a));
+                // 상위 150개 테마를 6대 수급 그룹으로 세분화하여 촘촘하고 균형 잡힌 정사각형 타일로 배치
+                const g1 = sorted.filter(t => parseD1(t) >= 3.5).slice(0, 26).map((t, i) => ({
+                    code: t.name, name: t.name, weight: Math.max(10, 26 - i * 0.5), chg: parseD1(t), isTheme: true
                 }));
-                const midRising = sorted.filter(t => parseD1(t) > 0 && parseD1(t) < 2.0).slice(0, 14).map((t, i) => ({
-                    code: t.name, name: t.name, weight: Math.max(6, 20 - i), chg: parseD1(t), isTheme: true
+                const g2 = sorted.filter(t => parseD1(t) >= 1.8 && parseD1(t) < 3.5).slice(0, 28).map((t, i) => ({
+                    code: t.name, name: t.name, weight: Math.max(9, 22 - i * 0.4), chg: parseD1(t), isTheme: true
                 }));
-                const falling = sorted.filter(t => parseD1(t) <= 0).slice(0, 12).map((t, i) => ({
-                    code: t.name, name: t.name, weight: Math.max(6, 18 - i), chg: parseD1(t), isTheme: true
+                const g3 = sorted.filter(t => parseD1(t) >= 0.8 && parseD1(t) < 1.8).slice(0, 28).map((t, i) => ({
+                    code: t.name, name: t.name, weight: Math.max(8, 20 - i * 0.35), chg: parseD1(t), isTheme: true
+                }));
+                const g4 = sorted.filter(t => parseD1(t) > 0 && parseD1(t) < 0.8).slice(0, 26).map((t, i) => ({
+                    code: t.name, name: t.name, weight: Math.max(8, 18 - i * 0.3), chg: parseD1(t), isTheme: true
+                }));
+                const g5 = [...themes].filter(t => parseD1(t) < 0).sort((a, b) => parseD1(a) - parseD1(b)).slice(0, 32).map((t, i) => ({
+                    code: t.name, name: t.name, weight: Math.max(8, 22 - i * 0.35), chg: parseD1(t), isTheme: true
                 }));
                 const groups = [];
-                if (topRising.length) groups.push({ sector: '🔥 당일 급등 주도 테마', weight: 220, stocks: topRising });
-                if (midRising.length) groups.push({ sector: '📈 강세 · 순환매 유입 테마', weight: 150, stocks: midRising });
-                if (falling.length) groups.push({ sector: '📉 차익실현 · 조정 테마', weight: 110, stocks: falling });
+                if (g1.length) groups.push({ sector: `🚀 초강세 급등 주도 테마 (${g1.length}개)`, weight: sumWeights(g1), stocks: g1 });
+                if (g2.length) groups.push({ sector: `🔥 강세 수급 유입 테마 (${g2.length}개)`, weight: sumWeights(g2), stocks: g2 });
+                if (g3.length) groups.push({ sector: `📈 순환매 상승 테마 (${g3.length}개)`, weight: sumWeights(g3), stocks: g3 });
+                if (g4.length) groups.push({ sector: `🌱 완만한 강보합 테마 (${g4.length}개)`, weight: sumWeights(g4), stocks: g4 });
+                if (g5.length) groups.push({ sector: `📉 차익실현 · 조정 테마 (${g5.length}개)`, weight: sumWeights(g5), stocks: g5 });
                 if (groups.length > 0) return groups;
             }
         }
         return KR_SECTOR_TREE;
     }
 
-    function renderTreemapHtml() {
+    function sumWeights(arr) {
+        return Math.round((arr || []).reduce((s, x) => s + (Number(x.weight) || 10), 0));
+    }
+
+    function renderTreemapHtml(containerWidthPx, containerHeightPx) {
+        const W_PX = Math.max(960, Number(containerWidthPx) || 1520);
+        const H_PX = Math.max(760, Number(containerHeightPx) || homeState.heatmapHeight || 1280);
         const tree = buildActiveSectorTree();
-        const sectorRects = computeTreemapRects(tree, 0, 0, 100, 100);
+
+        // 1단계: 전체 히트맵 픽셀 공간(W_PX × H_PX)에서 각 업종(Sector)의 실제 픽셀 사각형 산출
+        const sectorRects = computePixelTreemap(tree, 0, 0, W_PX, H_PX);
 
         return sectorRects.map(sec => {
-            const stockRects = computeTreemapRects(sec.stocks || [], 0, 0, 100, 100);
+            const secLeftPct = (sec.xPx / W_PX) * 100;
+            const secTopPct = (sec.yPx / H_PX) * 100;
+            const secWidthPct = (sec.wPx / W_PX) * 100;
+            const secHeightPct = (sec.hPx / H_PX) * 100;
+
+            // 2단계: 각 업종 박스의 실제 내부 픽셀 크기(sec.wPx × (sec.hPx - 16))를 그대로 전달하여
+            // 가로로 넓은 업종은 좌우로 쪼개고 세로로 긴 업종은 상하로 쪼개어 납작한 타일을 100% 방지!
+            const innerW = Math.max(40, sec.wPx);
+            const innerH = Math.max(24, sec.hPx - 16);
+            const stockRects = computePixelTreemap(sec.stocks || [], 0, 0, innerW, innerH);
+
             const tilesHtml = stockRects.map(st => {
                 const bg = getHeatmapColor(st.chg);
                 const sign = Number(st.chg) > 0 ? '+' : '';
                 const chgStr = `${sign}${Number(st.chg).toFixed(2)}%`;
-                // 타일 면적에 따른 글자 크기 자동 스케일링
-                const areaFactor = (sec.w * st.w * sec.h * st.h) / 10000;
+
+                const stLeftPct = (st.xPx / innerW) * 100;
+                const stTopPct = (st.yPx / innerH) * 100;
+                const stWidthPct = (st.wPx / innerW) * 100;
+                const stHeightPct = (st.hPx / innerH) * 100;
+
+                // 타일의 실제 픽셀 가로(st.wPx)와 세로(st.hPx)에 맞춘 정밀 폰트 스케일링
+                const minDim = Math.min(st.wPx, st.hPx);
+                const tileArea = st.wPx * st.hPx;
                 let nameSize = 11;
                 let chgSize = 10;
-                let showChg = true;
                 let showName = true;
-                if (areaFactor >= 120) { nameSize = 20; chgSize = 15; }
-                else if (areaFactor >= 50) { nameSize = 16; chgSize = 13; }
-                else if (areaFactor >= 22) { nameSize = 13.5; chgSize = 11.5; }
-                else if (areaFactor >= 8) { nameSize = 11.5; chgSize = 10; }
-                else if (areaFactor >= 3.2) { nameSize = 10; chgSize = 8.8; }
-                else if (areaFactor >= 1.4) { nameSize = 9; showChg = false; }
+                let showChg = true;
+
+                if (minDim >= 115 && tileArea >= 18000) { nameSize = 19; chgSize = 14.5; }
+                else if (minDim >= 80 && tileArea >= 8500) { nameSize = 15; chgSize = 12.5; }
+                else if (minDim >= 56 && tileArea >= 4200) { nameSize = 12.5; chgSize = 10.5; }
+                else if (minDim >= 38 && tileArea >= 2000) { nameSize = 11; chgSize = 9.5; }
+                else if (st.wPx >= 42 && st.hPx >= 26) { nameSize = 9.8; chgSize = 8.6; }
+                else if (st.wPx >= 32 && st.hPx >= 15) { nameSize = 9; showChg = false; }
                 else { showName = false; showChg = false; }
 
                 const pxInfo = st.isTheme ? '' : (homeState.heatmapTab === 'US' ? ` · $${st.price}` : ` · ${Number(st.price || 0).toLocaleString()}원`);
-                const tip = `[${sec.sector}] ${st.name} (${chgStr}${pxInfo})`;
+                const fullLabel = st.fullName ? `${st.fullName} (${st.name})` : st.name;
+                const tip = `[${sec.sector}] ${fullLabel} · ${chgStr}${pxInfo}`;
 
                 return `
                     <div class="mh-tm-tile"
                          data-tm-code="${esc(st.code)}"
-                         data-tm-name="${esc(st.name)}"
+                         data-tm-name="${esc(st.fullName || st.name)}"
                          data-tm-theme="${st.isTheme ? '1' : '0'}"
                          title="${esc(tip)}"
-                         style="left:${st.x.toFixed(2)}%; top:${st.y.toFixed(2)}%; width:${st.w.toFixed(2)}%; height:${st.h.toFixed(2)}%; background:${bg};">
+                         style="left:${stLeftPct.toFixed(2)}%; top:${stTopPct.toFixed(2)}%; width:${stWidthPct.toFixed(2)}%; height:${stHeightPct.toFixed(2)}%; background:${bg};">
                         ${showName ? `<span class="tm-name" style="font-size:${nameSize}px;">${esc(st.name)}</span>` : ''}
                         ${showChg ? `<span class="tm-chg" style="font-size:${chgSize}px;">${chgStr}</span>` : ''}
                     </div>
@@ -2888,7 +2754,7 @@
             }).join('');
 
             return `
-                <div class="mh-tm-sector" style="left:${sec.x.toFixed(2)}%; top:${sec.y.toFixed(2)}%; width:${sec.w.toFixed(2)}%; height:${sec.h.toFixed(2)}%;">
+                <div class="mh-tm-sector" style="left:${secLeftPct.toFixed(2)}%; top:${secTopPct.toFixed(2)}%; width:${secWidthPct.toFixed(2)}%; height:${secHeightPct.toFixed(2)}%;">
                     <div class="mh-tm-sector-label">${esc(sec.sector)}</div>
                     <div class="mh-tm-sector-body">${tilesHtml}</div>
                 </div>
@@ -2900,9 +2766,13 @@
         const box = document.getElementById('main-home-dashboard');
         if (!box) return;
 
-        syncMainHomeLivePrices();
+        syncMainHomeLivePrices(false);
 
         const grp = INDEX_GROUPS[homeState.indexRegion] || INDEX_GROUPS.GLOBAL;
+        const activeTree = buildActiveSectorTree();
+        const totalTilesCount = activeTree.reduce((s, sec) => s + (sec.stocks ? sec.stocks.length : 0), 0);
+        const estWidth = Math.max(1050, (box.clientWidth || window.innerWidth - 310) - 44);
+        const hmHeight = homeState.heatmapHeight || 1280;
 
         box.innerHTML = `
             <!-- [1단] 당일 실시간 국내·글로벌 주요 증시 상황판 (참고 이미지 2 스타일) -->
@@ -2949,15 +2819,15 @@
                 </div>
             </div>
 
-            <!-- [2단] 당일 실시간 업종별 시가총액 히트맵 (참고 이미지 1 스타일) -->
+            <!-- [2단] 당일 실시간 업종별 시가총액 히트맵 (참고 이미지 1 스타일 · 마우스 스크롤 대형 화면) -->
             <div class="mh-section-block">
                 <div class="mh-sec-header">
-                    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                         <h2 class="mh-sec-title">
                             <i class="ph-fill ph-squares-four" style="color:#f43f5e;"></i>
-                            <span>당일 실시간 업종별 시가총액 히트맵 (Market Map)</span>
+                            <span>당일 실시간 업종별 시가총액 히트맵 (총 ${totalTilesCount}개 ${homeState.heatmapTab === 'THEME' ? '테마' : '종목'})</span>
                         </h2>
-                        <span style="font-size:12px; color:#94a3b8;">종목 박스를 클릭하면 상세 차트·수급 브리핑이 즉시 열립니다</span>
+                        <span style="font-size:12px; color:#94a3b8;">박스를 클릭하면 상세 차트·수급 브리핑이 즉시 열립니다 · 마우스 휠로 아래까지 스크롤하여 확인하세요</span>
                     </div>
 
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
@@ -2968,22 +2838,29 @@
                             <span class="mh-legend-chip" style="background:#bd292a;">+1%</span>
                             <span class="mh-legend-chip" style="background:#e92928;">+3%↑</span>
                         </div>
+
+                        <div class="al-pill-group" title="히트맵 세로 높이 조절">
+                            <button type="button" class="al-pill-btn ${hmHeight === 920 ? 'active' : ''}" data-mh-hm-height="920" style="padding:4px 9px; font-size:11.5px;">한눈에 (920px)</button>
+                            <button type="button" class="al-pill-btn ${hmHeight === 1280 ? 'active' : ''}" data-mh-hm-height="1280" style="padding:4px 9px; font-size:11.5px;">대형 (1,280px)</button>
+                            <button type="button" class="al-pill-btn ${hmHeight === 1680 ? 'active' : ''}" data-mh-hm-height="1680" style="padding:4px 9px; font-size:11.5px;">초대형 (1,680px)</button>
+                        </div>
+
                         <div class="al-pill-group">
                             <button type="button" class="al-pill-btn ${homeState.heatmapTab === 'KR' ? 'active' : ''}" data-mh-hm-tab="KR">
-                                🇰🇷 국장 업종별 시총 히트맵
+                                🇰🇷 국장 업종별 (218종목)
                             </button>
                             <button type="button" class="al-pill-btn ${homeState.heatmapTab === 'US' ? 'active' : ''}" data-mh-hm-tab="US">
-                                🇺🇸 미장 빅테크·섹터 히트맵
+                                🇺🇸 미장 섹터별 (198종목)
                             </button>
                             <button type="button" class="al-pill-btn ${homeState.heatmapTab === 'THEME' ? 'active' : ''}" data-mh-hm-tab="THEME">
-                                🔥 당일 주도 테마 히트맵
+                                🔥 주도 테마별 (140+테마)
                             </button>
                         </div>
                     </div>
                 </div>
 
-                <div class="mh-treemap-viewport" id="mh-treemap-viewport">
-                    ${renderTreemapHtml()}
+                <div class="mh-treemap-viewport" id="mh-treemap-viewport" style="height:${hmHeight}px;">
+                    ${renderTreemapHtml(estWidth, hmHeight)}
                 </div>
             </div>
         `;
@@ -3003,6 +2880,13 @@
             });
         });
 
+        box.querySelectorAll('[data-mh-hm-height]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                homeState.heatmapHeight = Number(btn.getAttribute('data-mh-hm-height')) || 1280;
+                renderMainHomeDashboard();
+            });
+        });
+
         box.querySelectorAll('.mh-tm-tile').forEach(tile => {
             tile.addEventListener('click', () => {
                 const code = tile.getAttribute('data-tm-code');
@@ -3016,11 +2900,22 @@
                     return;
                 }
 
-                // 국내 종목은 실전 브리핑 모달 또는 AI 차트 스캐너 오픈
+                // 국내 종목은 실전 브리핑 모달 오픈 (최신 시세 객체 직접 전달)
                 if (/^\d{6}$/.test(code) && typeof window.openStockBriefingModal === 'function') {
-                    const found = (window.allStocks || []).find(s => s && s.code === code);
-                    if (found) {
-                        window.openStockBriefingModal(found);
+                    let found = (window.allStocks || []).find(s => s && s.code === code);
+                    let hmStock = null;
+                    KR_SECTOR_TREE.forEach(sec => {
+                        sec.stocks.forEach(st => { if (st.code === code) hmStock = st; });
+                    });
+                    if (found || hmStock) {
+                        const mergedStock = {
+                            ...(found || { code, name }),
+                            code,
+                            name: (found && found.name) || name,
+                            current_price: (hmStock && hmStock.price) || (found && found.current_price) || 0,
+                            day1: (hmStock && hmStock.chg != null) ? hmStock.chg : (found ? found.day1 : 0)
+                        };
+                        window.openStockBriefingModal(mergedStock);
                         return;
                     }
                 }

@@ -534,14 +534,17 @@
    ============================================================================ */
 .main-home-dashboard {
     flex: 1;
+    min-height: 0;
     width: 100%;
     overflow-y: auto;
-    padding: 16px 22px 48px;
+    overflow-x: hidden;
+    padding: 18px 22px 72px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 20px;
     box-sizing: border-box;
     font-variant-numeric: tabular-nums;
+    scroll-behavior: smooth;
 }
 
 .main-home-dashboard > * {
@@ -727,16 +730,18 @@
     gap: 3px;
 }
 
-/* [2단] 당일 실시간 업종별 시가총액 히트맵 (참고 이미지 1 스타일: 대형 Treemap) */
+/* [2단] 당일 실시간 업종별 시가총액 히트맵 (참고 이미지 1 스타일: 대형 Treemap · 마우스 스크롤 지원) */
 .mh-treemap-viewport {
     position: relative;
     width: 100%;
-    height: 670px;
+    height: 1280px;
+    min-height: 920px;
     background: #0d0f17;
     border: 2px solid #262b3d;
     border-radius: 8px;
     overflow: hidden;
     user-select: none;
+    transition: height 0.2s ease;
 }
 
 .mh-tm-sector {

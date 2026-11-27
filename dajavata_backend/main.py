@@ -1426,47 +1426,140 @@ def get_stocks_fundamentals():
 @app.get("/api/stocks/realtime")
 def get_stocks_realtime(codes: str):
     """
-    네이버 실시간 폴링 API 프록시: 종목코드 목록(쉼표 구분)을 받아 현재가 및 당일 등락률을 실시간 반환
+    네이버 실시간 폴링 API 프록시: 종목코드 목록(쉼표 구분)을 받아 현재가 및 당일 등락률을 실시간 반환 (20개 단위 자동 분할 처리)
     """
-    clean_codes = ",".join([c.strip().upper() for c in codes.split(",") if c.strip()])
-    if not clean_codes:
+    code_list = [c.strip().upper() for c in codes.split(",") if c.strip()]
+    if not code_list:
         return {"realtime": {}}
-    
-    url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{clean_codes}"
+
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Referer': 'https://finance.naver.com'
     }
-    try:
-        r = requests.get(url, headers=headers, timeout=5)
-        if r.status_code == 200:
-            data = r.json()
-            realtime_map = {}
-            for item in data.get("datas", []):
-                code = item.get("itemCode")
-                if code:
-                    close_raw = item.get("closePriceRaw") or item.get("closePrice")
-                    try:
-                        price = float(str(close_raw).replace(",", ""))
-                    except Exception:
-                        price = None
-                    ratio_raw = item.get("fluctuationsRatioRaw") or item.get("fluctuationsRatio")
-                    try:
-                        ratio = float(str(ratio_raw).replace("%", ""))
-                    except Exception:
-                        ratio = None
-                    realtime_map[code] = {
-                        "code": code,
-                        "name": item.get("stockName"),
-                        "current_price": price,
-                        "day1": ratio,
-                        "market_status": item.get("marketStatus"),
-                        "traded_at": item.get("localTradedAt")
-                    }
-            return {"realtime": realtime_map}
-    except Exception as e:
-        print(f"[Realtime API Error]: {e}")
-    return {"realtime": {}}
+    realtime_map = {}
+    for idx_start in range(0, len(code_list), 20):
+        chunk = ",".join(code_list[idx_start:idx_start + 20])
+        url = f"https://polling.finance.naver.com/api/realtime/domestic/stock/{chunk}"
+        try:
+            r = requests.get(url, headers=headers, timeout=4)
+            if r.status_code == 200:
+                data = r.json()
+                for item in data.get("datas", []):
+                    code = item.get("itemCode")
+                    if code:
+                        close_raw = item.get("closePriceRaw") or item.get("closePrice")
+                        try:
+                            price = float(str(close_raw).replace(",", ""))
+                        except Exception:
+                            price = None
+                        ratio_raw = item.get("fluctuationsRatioRaw") or item.get("fluctuationsRatio")
+                        try:
+                            ratio = float(str(ratio_raw).replace("%", "").replace(",", ""))
+                            cmp_code = str((item.get("compareToPreviousPrice") or {}).get("code") or item.get("rf") or "")
+                            if cmp_code in ("4", "5") and ratio > 0:
+                                ratio = -ratio
+                        except Exception:
+                            ratio = None
+                        realtime_map[code] = {
+                            "code": code,
+                            "name": item.get("stockName"),
+                            "current_price": price,
+                            "day1": ratio,
+                            "market_status": item.get("marketStatus"),
+                            "traded_at": item.get("localTradedAt")
+                        }
+        except Exception as e:
+            print(f"[Realtime API Error]: {e}")
+    return {"realtime": realtime_map}
+
+
+_heatmap_live_cache = {"ts": 0, "data": None}
+
+@app.get("/api/market/heatmap-live")
+def get_market_heatmap_live():
+    """
+    메인 홈 히트맵 및 지수 상황판용 실시간 동기화 API:
+    네이버 증권 KOSPI/KOSDAQ 시가총액 상위 600개 종목의 당일 실시간 종가·등락률·시총과 KOSPI/KOSDAQ 실시간 지수를 일괄 반환
+    """
+    now_ts = time.time()
+    if _heatmap_live_cache["data"] and (now_ts - _heatmap_live_cache["ts"] < 45):
+        return _heatmap_live_cache["data"]
+
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Referer": "https://m.stock.naver.com/"
+    }
+    stocks_out = {}
+    indices_out = {}
+
+    def _pnum(v, default=0.0):
+        if v is None:
+            return default
+        try:
+            return float(str(v).replace(",", "").replace("%", "").strip())
+        except Exception:
+            return default
+
+    # 1. KOSPI / KOSDAQ 실시간 지수
+    for idx_code in ("KOSPI", "KOSDAQ"):
+        try:
+            ri = requests.get(f"https://m.stock.naver.com/api/index/{idx_code}/basic", headers=headers, timeout=4)
+            if ri.status_code == 200:
+                d = ri.json()
+                price = _pnum(d.get("closePrice"))
+                chg = _pnum(d.get("compareToPreviousClosePrice"))
+                pct = _pnum(d.get("fluctuationsRatio"))
+                cdir = str((d.get("compareToPreviousPrice") or {}).get("code") or "")
+                if cdir in ("4", "5"):
+                    chg = -abs(chg)
+                    pct = -abs(pct)
+                indices_out[idx_code] = {
+                    "price": price,
+                    "chg": round(chg, 2),
+                    "chgPct": round(pct, 2),
+                    "status": d.get("marketStatus") or "실시간"
+                }
+        except Exception:
+            pass
+
+    # 2. KOSPI / KOSDAQ 시총 상위 600종목 실시간 등락률
+    for mkt in ("KOSPI", "KOSDAQ"):
+        for page in (1, 2, 3):
+            try:
+                rs = requests.get(
+                    f"https://m.stock.naver.com/api/stocks/marketValue/{mkt}?page={page}&pageSize=100",
+                    headers=headers,
+                    timeout=4
+                )
+                if rs.status_code == 200:
+                    for it in rs.json().get("stocks", []):
+                        code = it.get("itemCode")
+                        if not code:
+                            continue
+                        px = _pnum(it.get("closePrice"))
+                        pct = _pnum(it.get("fluctuationsRatio"))
+                        cdir = str((it.get("compareToPreviousPrice") or {}).get("code") or "")
+                        if cdir in ("4", "5") and pct > 0:
+                            pct = -pct
+                        mc_eok = _pnum(it.get("marketValue"))
+                        stocks_out[code] = {
+                            "price": px,
+                            "chg": round(pct, 2),
+                            "marcap_eok": mc_eok
+                        }
+            except Exception:
+                pass
+
+    res_payload = {
+        "ok": True,
+        "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "indices": indices_out,
+        "stocks": stocks_out
+    }
+    if len(stocks_out) > 20:
+        _heatmap_live_cache["ts"] = now_ts
+        _heatmap_live_cache["data"] = res_payload
+    return res_payload
 
 _stock_briefing_cache = {}
 
