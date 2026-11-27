@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="trader_room.css?v=7">
     <link rel="stylesheet" href="chart_scanner.css?v=9">
     <link rel="stylesheet" href="quant_hub.css?v=3">
-    <link rel="stylesheet" href="community_hub.css?v=1">
+    <link rel="stylesheet" href="community_hub.css?v=2">
     <!-- TradingView Lightweight Charts -->
     <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
 </head>
@@ -101,9 +101,20 @@
 
             <nav class="menu-group">
                 <div class="menu-section">
+                    <h3>메인 대시보드</h3>
+                    <ul id="home-menu-list">
+                        <li class="active" data-action="main-home">
+                            <a href="#"><i class="ph-fill ph-house-line" style="color: #38bdf8;"></i> 메인 홈 · 마켓 브리핑
+                                <span
+                                    style="background: linear-gradient(135deg, #10b981, #059669); color: white; font-size: 9.5px; font-weight: 800; padding: 1px 5px; border-radius: 4px; margin-left: 4px;">HOME</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="menu-section">
                     <h3>테마 보기</h3>
                     <ul id="theme-menu-list">
-                        <li class="active" data-action="all"><a href="#"><i class="ph ph-squares-four"></i> 전체 테마</a>
+                        <li data-action="all"><a href="#"><i class="ph ph-squares-four"></i> 전체 테마</a>
                         </li>
                         <li data-action="rising"><a href="#"><i class="ph ph-trend-up"></i> 상승중인 테마</a></li>
                         <li data-action="falling"><a href="#"><i class="ph ph-trend-down"></i> 하락중인 테마</a></li>
@@ -213,8 +224,8 @@
                 style="display: flex; flex-direction: column; height: 100%; width: 100%; min-width: 0;">
                 <header class="content-header">
                     <div class="header-title">
-                        <span class="theme-badge">전체</span>
-                        <h1>테마 리스트</h1>
+                        <span class="theme-badge">MAIN HOME</span>
+                        <h1>다자바타 마켓 커맨드 센터</h1>
                     </div>
                     <div class="header-meta-group">
                         <!-- 관리자 전용 새 칼럼 작성 버튼 (관리자 로그인 시 노출) -->
@@ -240,7 +251,10 @@
                     </div>
                 </header>
 
-                <section class="table-container">
+                <!-- 신규: 다자바타 메인 홈 (마켓 커맨드 센터) 대시보드 -->
+                <section id="main-home-dashboard" class="main-home-dashboard" style="display: flex;"></section>
+
+                <section class="table-container" id="default-table-section" style="display: none;">
                     <table id="theme-table">
                         <thead>
                             <tr>
@@ -690,8 +704,8 @@
     <script src="chart_scanner.js?v=20"></script>
     <script src="trader_room.js?v=9"></script>
     <script src="quant_hub.js?v=11"></script>
-    <script src="community_hub.js?v=4"></script>
-    <script src="app.js?v=36"></script>
+    <script src="community_hub.js?v=5"></script>
+    <script src="app.js?v=37"></script>
 
     <!-- Hidden Google Translate Element -->
     <div id="google_translate_element" style="display:none;" class="notranslate"></div>

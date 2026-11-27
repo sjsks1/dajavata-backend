@@ -682,6 +682,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 setPageSeo("글로벌 퀀트 & 마켓 허브", "다자바타 국내주식(KRX) 및 미국주식(US) 8대 퀀트 스크리너");
                 return true;
             }
+            if (view === 'community' && window.CommunityHub) {
+                if (window.ChartScanner) window.ChartScanner.hide();
+                window.CommunityHub.navigate(tab || 'community-vault');
+                setPageSeo("다자바타 알파 라운지", "다자바타 알파 차트·시나리오 볼트 및 투자자 집단지성 커뮤니티");
+                return true;
+            }
+            // 테마 필터 딥링크 (?action=all|rising|falling|high-return|neglected 또는 ?view=themes)
+            if (view === 'themes' || action) {
+                const targetLi = document.querySelector(`#theme-menu-list li[data-action="${action || 'all'}"]`);
+                if (targetLi) {
+                    targetLi.click();
+                    return true;
+                }
+            }
         } catch (e) {
             console.warn('dispatchRouteFromUrl error:', e);
         }
@@ -796,6 +810,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const dispatched = await dispatchRouteFromUrl(true);
                 if (!dispatched) {
                     renderTable(window.allThemes, 'themes');
+                    showMainHomeView(false);
+                }
+            } else if (currentMode === 'home') {
+                if (window.MainHome && typeof window.MainHome.render === 'function') {
+                    window.MainHome.render();
                 }
             } else if (currentMode === 'themes' && !isThemeDetail) {
                 currentDataList = window.allThemes;
@@ -816,6 +835,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 검색창 이벤트
     if (searchInput) {
         searchInput.addEventListener('input', async () => {
+            showDefaultView(false);
             currentPage = 1;
 
             // 아직 전체 종목 데이터가 없으면, 로딩 중임을 표시하고 완료될 때까지 기다렸다가 검색
@@ -2082,18 +2102,98 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function showDefaultView() {
+    function showDefaultView(isHome = false) {
         const defaultView = document.getElementById('default-view-container');
+        const mainHomeBox = document.getElementById('main-home-dashboard');
+        const tableSection = document.getElementById('default-table-section');
         const workspace = document.getElementById('trader-workspace-container');
         const scanner = document.getElementById('chart-scanner-container');
         const quantHub = document.getElementById('quant-hub-container');
         const communityHub = document.getElementById('community-hub-container');
         if (defaultView) defaultView.style.display = 'flex';
+        if (mainHomeBox) mainHomeBox.style.display = isHome ? 'flex' : 'none';
+        if (tableSection) tableSection.style.display = isHome ? 'none' : 'block';
         if (workspace) workspace.style.display = 'none';
         if (scanner) scanner.style.display = 'none';
         if (quantHub) quantHub.style.display = 'none';
         if (communityHub) communityHub.style.display = 'none';
     }
+
+    function showMainHomeView(pushHistory = true) {
+        currentMode = 'home';
+        showDefaultView(true);
+        document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
+        const homeLi = document.querySelector('#home-menu-list li[data-action="main-home"]');
+        if (homeLi) homeLi.classList.add('active');
+        if (headerTitle) headerTitle.textContent = "다자바타 마켓 커맨드 센터";
+        if (themeBadge) themeBadge.textContent = "MAIN HOME";
+        if (pushHistory) {
+            updateUrlState({ view: null, id: null, name: null, tab: null, action: null });
+        }
+        setPageSeo();
+        if (window.updateAdminUI) window.updateAdminUI();
+        if (window.MainHome && typeof window.MainHome.render === 'function') {
+            window.MainHome.render();
+        }
+    }
+
+    // 메인 홈 메뉴 및 좌측 상단 브랜드 로고 클릭 이벤트
+    const homeMenus = document.querySelectorAll('#home-menu-list li');
+    homeMenus.forEach(menu => {
+        menu.addEventListener('click', (e) => {
+            e.preventDefault();
+            showMainHomeView(true);
+        });
+    });
+    const brandLogoEl = document.getElementById('dajavata-brand-logo');
+    if (brandLogoEl && brandLogoEl.parentElement) {
+        brandLogoEl.parentElement.addEventListener('click', (e) => {
+            e.preventDefault();
+            showMainHomeView(true);
+        });
+    }
+
+    // MainHome에서 기존 테마/칼럼 기능과 100% 호환 연동하기 위한 브리지
+    window.DajavataApp = {
+        openTheme(themeName) {
+            showDefaultView(false);
+            document.querySelectorAll('.menu-section li').forEach(li => li.classList.remove('active'));
+            const allLi = document.querySelector('#theme-menu-list li[data-action="all"]');
+            if (allLi) allLi.classList.add('active');
+            loadThemeDetails(themeName);
+        },
+        openThemeMenu(action) {
+            const li = document.querySelector(`#theme-menu-list li[data-action="${action || 'all'}"]`);
+            if (li) li.click();
+        },
+        async getAllPosts() {
+            const [company, learning, insights] = await Promise.all([
+                loadCompanyPosts(),
+                loadLearningPosts(),
+                loadInsights()
+            ]);
+            return { company, learning, insights };
+        },
+        async openArticle(cat, id) {
+            showDefaultView(false);
+            if (cat === 'company') {
+                currentMode = 'company';
+                const posts = await loadCompanyPosts();
+                const post = (posts || []).find(p => String(p.id) === String(id));
+                if (post) renderSingleCompany(post);
+            } else if (cat === 'learning') {
+                currentMode = 'learning';
+                const posts = await loadLearningPosts();
+                const post = (posts || []).find(p => String(p.id) === String(id));
+                if (post) renderSingleLearning(post);
+            } else {
+                currentMode = 'insights';
+                const posts = await loadInsights();
+                const post = (posts || []).find(p => String(p.id) === String(id));
+                if (post) renderSingleInsight(post);
+            }
+        }
+    };
 
     // 테마 메뉴 클릭 이벤트
     const themeMenus = document.querySelectorAll('#theme-menu-list li');
