@@ -19,9 +19,9 @@
         : 'https://dajavata-backend.onrender.com';
 
     const USER_STORAGE_KEY = 'dajavata_alpha_user_v1';
-    const COMMUNITY_CACHE_KEY = 'dajavata_alpha_community_db_v1';
+    const COMMUNITY_CACHE_KEY = 'dajavata_alpha_community_db_clean_v2';
     const UNLOCKED_VAULT_KEY = 'dajavata_unlocked_vault_ids_v1';
-    const LOCAL_ANALYTICS_KEY = 'dajavata_admin_analytics_v1';
+    const LOCAL_ANALYTICS_KEY = 'dajavata_admin_analytics_real_v2';
 
     // 5단계 다자바타 알파 티어 정의 (전용 커스텀 벡터 엠블럼)
     const TIER_META = {
@@ -150,6 +150,7 @@
     async function ensureCommunityDataLoaded() {
         let localOverride = null;
         try {
+            localStorage.removeItem('dajavata_alpha_community_db_v1');
             const saved = localStorage.getItem(COMMUNITY_CACHE_KEY);
             if (saved) localOverride = JSON.parse(saved);
         } catch (e) {}
@@ -521,52 +522,33 @@
 
     function getOrInitLocalAnalytics() {
         try {
+            localStorage.removeItem('dajavata_admin_analytics_v1');
             const raw = localStorage.getItem(LOCAL_ANALYTICS_KEY);
             if (raw) return JSON.parse(raw);
         } catch (e) {}
 
-        // 최초 초기화 시 최근 14일 기준선 및 실시간 누적 구조 생성
+        // 100% 실제 수치만 집계: 모든 초기값을 0으로 시작 (가짜 시드 데이터 0건)
         const now = new Date();
         const daily = {};
-        for (let i = 13; i >= 1; i--) {
+        for (let i = 13; i >= 0; i--) {
             const d = new Date(now);
             d.setDate(now.getDate() - i);
             const k = d.toISOString().slice(0, 10);
-            const baseUv = 140 + ((i * 19) % 85);
-            daily[k] = { uv: baseUv, pv: Math.round(baseUv * 3.4) };
+            daily[k] = { uv: 0, pv: 0 };
         }
         const initObj = {
             daily,
-            hourly: {
-                '08': 48, '09': 165, '10': 142, '11': 98, '12': 74, '13': 112, '14': 138, '15': 156,
-                '16': 89, '17': 64, '18': 72, '19': 94, '20': 134, '21': 148, '22': 115, '23': 82
-            },
-            sources: {
-                '네이버 검색 (Naver)': 428,
-                '구글 검색 (Google)': 312,
-                '카카오톡 · 다음 (Kakao)': 264,
-                '직접 접속 / 북마크 (Direct)': 219,
-                '네이버 카페 · 블로그': 146,
-                '주식·투자 커뮤니티': 118,
-                '유튜브 (YouTube)': 84
-            },
-            views: {
-                '전체 테마': 620,
-                '글로벌 퀀트 허브': 485,
-                'AI 차트 스캐너': 410,
-                '조건별 종목': 315,
-                '알파 라운지 (커뮤니티)': 240,
-                '트레이더 룸': 195,
-                '기업개요 및 차트분석': 170
-            },
-            devices: { 'PC Desktop': 1480, 'Mobile / Tablet': 955 },
+            hourly: {},
+            sources: {},
+            views: {},
+            devices: { 'PC Desktop': 0, 'Mobile / Tablet': 0 },
             recentVisits: []
         };
         try { localStorage.setItem(LOCAL_ANALYTICS_KEY, JSON.stringify(initObj)); } catch (e) {}
         return initObj;
     }
 
-    function trackVisitorActivity(viewLabel) {
+    function trackVisitorActivity(viewLabel, isInitialLanding = false) {
         try {
             const now = new Date();
             const dateStr = now.toISOString().slice(0, 10);
@@ -574,10 +556,21 @@
             const timeStr = now.toTimeString().slice(0, 8);
             const params = new URLSearchParams(window.location.search);
             const utm = params.get('utm_source') || params.get('ref') || '';
-            const ref = document.referrer || '';
+
+            // SPA 내부 탭 클릭 시 document.referrer가 최초 외부 주소로 고정되는 현상 방지:
+            // 세션 최초 진입(isInitialLanding)일 때만 외부 document.referrer를 유입 경로로 인정하고,
+            // 이후 사이트 내부 메뉴 클릭은 '내부 메뉴 이동'으로 정확히 기록
+            const entryAlreadyTracked = sessionStorage.getItem('dajavata_entry_tracked') === '1';
+            const isFirstEntry = isInitialLanding && !entryAlreadyTracked;
+            if (isInitialLanding && !entryAlreadyTracked) {
+                sessionStorage.setItem('dajavata_entry_tracked', '1');
+            }
+
+            const rawDocRef = document.referrer || '';
+            const effectiveRef = isFirstEntry ? rawDocRef : `${window.location.origin}${window.location.pathname}`;
             const isMobile = /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent);
             const device = isMobile ? 'Mobile / Tablet' : 'PC Desktop';
-            const srcCat = classifyLocalReferrer(ref, utm);
+            const srcCat = isFirstEntry ? classifyLocalReferrer(rawDocRef, utm) : '내부 메뉴 이동';
 
             let vid = sessionStorage.getItem('dajavata_vid');
             let isNewDailyUv = false;
@@ -588,38 +581,45 @@
             }
 
             const adb = getOrInitLocalAnalytics();
-            if (!adb.daily[dateStr]) adb.daily[dateStr] = { uv: 185, pv: 610 };
+            if (!adb.daily[dateStr]) adb.daily[dateStr] = { uv: 0, pv: 0 };
             adb.daily[dateStr].pv += 1;
             if (isNewDailyUv) adb.daily[dateStr].uv += 1;
 
             adb.hourly[hrStr] = (Number(adb.hourly[hrStr]) || 0) + 1;
-            if (srcCat !== '내부 메뉴 이동') {
+            if (isFirstEntry && srcCat !== '내부 메뉴 이동') {
                 adb.sources[srcCat] = (Number(adb.sources[srcCat]) || 0) + 1;
             }
             const vName = viewLabel || '전체 테마';
             adb.views[vName] = (Number(adb.views[vName]) || 0) + 1;
-            adb.devices[device] = (Number(adb.devices[device]) || 0) + 1;
+            if (isFirstEntry || isNewDailyUv) {
+                adb.devices[device] = (Number(adb.devices[device]) || 0) + 1;
+            }
+
+            const displayRef = isFirstEntry
+                ? (rawDocRef || (utm ? `utm_source=${utm}` : '(직접 주소 입력 / 북마크)'))
+                : `${window.location.origin}${window.location.pathname}${window.location.search}`;
 
             adb.recentVisits.unshift({
                 time: `${dateStr} ${timeStr}`,
                 visitorId: vid,
                 source: srcCat,
-                referrer: ref || (utm ? `utm_source=${utm}` : '(직접 주소 입력 / 북마크)'),
+                referrer: displayRef,
                 view: vName,
                 device: device
             });
             adb.recentVisits = adb.recentVisits.slice(0, 60);
             localStorage.setItem(LOCAL_ANALYTICS_KEY, JSON.stringify(adb));
 
-            // 백엔드 서버에도 비동기 전송 (실패 시 무시하여 기존 기능에 영향 0%)
+            // 백엔드 서버에도 비동기 전송 (실제 방문 데이터만 기록)
             fetch(`${API_BASE}/api/analytics/track`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     visitorId: vid,
-                    referrer: ref,
-                    utmSource: utm,
-                    view: vName
+                    referrer: effectiveRef,
+                    utmSource: isFirstEntry ? utm : '',
+                    view: vName,
+                    isEntry: isFirstEntry
                 })
             }).catch(() => {});
         } catch (e) {}
@@ -643,7 +643,7 @@
             });
             if (r.ok) {
                 const srv = await r.json();
-                if (srv && srv.ok && srv.today && srv.today.pv > 10) data = srv;
+                if (srv && srv.ok) data = srv;
             }
         } catch (e) {}
 
@@ -652,33 +652,40 @@
         const todayKey = dailyKeys[dailyKeys.length - 1] || new Date().toISOString().slice(0, 10);
         const yestKey = dailyKeys[dailyKeys.length - 2] || todayKey;
 
-        const todayObj = data ? data.today : (localAdb.daily[todayKey] || { uv: 186, pv: 612 });
-        const yestObj = data ? data.yesterday : (localAdb.daily[yestKey] || { uv: 174, pv: 580 });
-        const dailySeries = data ? data.dailySeries : dailyKeys.map(k => ({ date: k, uv: localAdb.daily[k].uv, pv: localAdb.daily[k].pv }));
+        const todayObj = data ? data.today : (localAdb.daily[todayKey] || { uv: 0, pv: 0 });
+        const yestObj = data ? data.yesterday : (localAdb.daily[yestKey] || { uv: 0, pv: 0 });
+        const dailySeries = data ? data.dailySeries : dailyKeys.map(k => ({ date: k, uv: (localAdb.daily[k] && localAdb.daily[k].uv) || 0, pv: (localAdb.daily[k] && localAdb.daily[k].pv) || 0 }));
         const sum7dUv = dailySeries.slice(-7).reduce((s, x) => s + x.uv, 0);
         const sum7dPv = dailySeries.slice(-7).reduce((s, x) => s + x.pv, 0);
         const sum14dUv = dailySeries.reduce((s, x) => s + x.uv, 0);
         const sum14dPv = dailySeries.reduce((s, x) => s + x.pv, 0);
 
-        const sourcesMap = (data && Object.keys(data.sources || {}).length > 2) ? data.sources : localAdb.sources;
-        const sourceEntries = Object.entries(sourcesMap).sort((a, b) => b[1] - a[1]);
+        // 가짜 시드 폴백 완전 제거: 백엔드 실제 집계값(data.sources, data.views, data.devices)을 그대로 사용
+        const sourcesMap = data ? (data.sources || {}) : (localAdb.sources || {});
+        const sourceEntries = Object.entries(sourcesMap).filter(([, cnt]) => cnt > 0).sort((a, b) => b[1] - a[1]);
         const totalSrcHits = Math.max(1, sourceEntries.reduce((s, x) => s + x[1], 0));
 
-        const viewsMap = (data && Object.keys(data.views || {}).length > 2) ? data.views : localAdb.views;
-        const viewEntries = Object.entries(viewsMap).sort((a, b) => b[1] - a[1]);
+        const viewsMap = data ? (data.views || {}) : (localAdb.views || {});
+        const viewEntries = Object.entries(viewsMap).filter(([, cnt]) => cnt > 0).sort((a, b) => b[1] - a[1]);
         const totalViewHits = Math.max(1, viewEntries.reduce((s, x) => s + x[1], 0));
 
-        const devicesMap = localAdb.devices || { 'PC Desktop': 1480, 'Mobile / Tablet': 955 };
-        const totDev = Math.max(1, (devicesMap['PC Desktop'] || 0) + (devicesMap['Mobile / Tablet'] || 0));
-        const pcPct = Math.round(((devicesMap['PC Desktop'] || 0) / totDev) * 100);
+        const devicesMap = data ? (data.devices || {}) : (localAdb.devices || {});
+        const pcCnt = Number(devicesMap['PC Desktop'] || 0);
+        const mobCnt = Number(devicesMap['Mobile / Tablet'] || 0);
+        const totDev = pcCnt + mobCnt;
+        const pcPct = totDev > 0 ? Math.round((pcCnt / totDev) * 100) : 0;
+        const mobPct = totDev > 0 ? (100 - pcPct) : 0;
 
         const maxDailyPv = Math.max(...dailySeries.map(x => x.pv || 1), 1);
-        const recentLogs = (data && data.recentVisits && data.recentVisits.length > 0) ? data.recentVisits : localAdb.recentVisits;
+        const recentLogs = data ? (data.recentVisits || []) : (localAdb.recentVisits || []);
 
-        openModal('🛡️ DAJAVATA 관리자 전용 방문자 & 유입 경로(Referrer) 인텔리전스 센터', `
+        const modal = openModal('🛡️ DAJAVATA 관리자 전용 방문자 & 유입 경로(Referrer) 인텔리전스 센터', `
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.35); padding:10px 14px; border-radius:10px; font-size:12.5px; color:#34d399;">
-                <span><i class="ph-fill ph-shield-check"></i> <strong>관리자 전용 비밀 대시보드 (일반 방문자에게는 이 버튼과 창이 절대 노출되지 않습니다)</strong></span>
-                <span style="font-family:monospace;">실시간 KST 트래킹 가동 중</span>
+                <span><i class="ph-fill ph-shield-check"></i> <strong>100% 실제 유입·방문 데이터만 집계합니다 (가짜 더미 수치 0건 · 일반 방문자 비공개)</strong></span>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-family:monospace;">실시간 KST 트래킹 가동 중</span>
+                    <button type="button" class="al-ghost-btn" id="al-btn-reset-analytics" style="padding:4px 10px; font-size:11.5px; color:#f87171; border-color:rgba(248,113,113,0.4);">🔄 누적 통계 0으로 초기화</button>
+                </div>
             </div>
 
             <!-- 4대 핵심 방문자 KPI -->
@@ -700,8 +707,8 @@
                 </div>
                 <div style="background:#101420; border:1px solid rgba(148,163,184,0.18); border-radius:12px; padding:14px 16px;">
                     <div style="font-size:11.5px; color:#94a3b8; font-weight:700;">접속 기기 비중 (PC vs 모바일)</div>
-                    <div style="font-size:20px; font-weight:800; color:#c084fc; margin-top:4px;">PC ${pcPct}% · 모바일 ${100 - pcPct}%</div>
-                    <div style="font-size:11px; color:#94a3b8; margin-top:3px;"> 최근 14일 누적 ${sum14dPv.toLocaleString()} PV</div>
+                    <div style="font-size:20px; font-weight:800; color:#c084fc; margin-top:4px;">PC ${pcPct}% · 모바일 ${mobPct}%</div>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:3px;">PC ${pcCnt}건 · 모바일 ${mobCnt}건 (누적 ${sum14dPv.toLocaleString()} PV)</div>
                 </div>
             </div>
 
@@ -713,8 +720,8 @@
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(${dailySeries.length}, 1fr); gap:6px; align-items:end; height:145px; padding-top:16px;">
                     ${dailySeries.map(d => {
-                        const hPx = Math.max(12, Math.round((d.pv / maxDailyPv) * 105));
-                        const uvPx = Math.max(6, Math.round((d.uv / maxDailyPv) * 105));
+                        const hPx = d.pv > 0 ? Math.max(14, Math.round((d.pv / maxDailyPv) * 105)) : 6;
+                        const uvPx = d.uv > 0 ? Math.max(8, Math.round((d.uv / maxDailyPv) * 105)) : 0;
                         return `
                             <div style="display:flex; flex-direction:column; align-items:center; gap:4px;" title="${d.date}: 순방문자 ${d.uv}명 / 페이지뷰 ${d.pv}뷰">
                                 <span style="font-size:10px; font-weight:700; color:#38bdf8; font-variant-numeric:tabular-nums;">${d.uv}</span>
@@ -731,9 +738,9 @@
             <!-- 2단 분석: 어디에서 타고 왔는가(유입 경로) + 어떤 메뉴를 가장 많이 봤는가(인기 탭) -->
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:14px;">
                 <div style="background:#101420; border:1px solid rgba(148,163,184,0.16); border-radius:12px; padding:16px;">
-                    <strong style="font-size:14px; color:#f8fafc; display:block; margin-bottom:12px;">🧭 유입 경로 분석 (어디에서 타고 홈페이지로 왔는가)</strong>
+                    <strong style="font-size:14px; color:#f8fafc; display:block; margin-bottom:12px;">🧭 실제 유입 경로 분석 (어디에서 타고 홈페이지로 왔는가)</strong>
                     <div style="display:flex; flex-direction:column; gap:9px;">
-                        ${sourceEntries.map(([srcName, cnt]) => {
+                        ${sourceEntries.length > 0 ? sourceEntries.map(([srcName, cnt]) => {
                             const pct = ((cnt / totalSrcHits) * 100).toFixed(1);
                             return `
                                 <div>
@@ -746,14 +753,14 @@
                                     </div>
                                 </div>
                             `;
-                        }).join('')}
+                        }).join('') : '<div style="font-size:12.5px; color:#64748b; padding:18px 0; text-align:center;">아직 집계된 외부 유입 데이터가 없습니다 (0건 · 방문 발생 시 실시간 반영)</div>'}
                     </div>
                 </div>
 
                 <div style="background:#101420; border:1px solid rgba(148,163,184,0.16); border-radius:12px; padding:16px;">
                     <strong style="font-size:14px; color:#f8fafc; display:block; margin-bottom:12px;">🔥 홈페이지 내 인기 메뉴 · 탭 TOP 순위</strong>
                     <div style="display:flex; flex-direction:column; gap:9px;">
-                        ${viewEntries.slice(0, 7).map(([vName, cnt]) => {
+                        ${viewEntries.length > 0 ? viewEntries.slice(0, 7).map(([vName, cnt]) => {
                             const pct = ((cnt / totalViewHits) * 100).toFixed(1);
                             return `
                                 <div>
@@ -766,7 +773,7 @@
                                     </div>
                                 </div>
                             `;
-                        }).join('')}
+                        }).join('') : '<div style="font-size:12.5px; color:#64748b; padding:18px 0; text-align:center;">아직 집계된 메뉴 조회 기록이 없습니다 (0뷰)</div>'}
                     </div>
                 </div>
             </div>
@@ -800,6 +807,27 @@
                 </div>
             </div>
         `, true);
+
+        const resetBtn = modal.querySelector('#al-btn-reset-analytics');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', async () => {
+                if (!confirm('지금까지 누적된 방문자 및 유입 경로 통계를 모두 0으로 초기화하시겠습니까?')) return;
+                localStorage.removeItem(LOCAL_ANALYTICS_KEY);
+                sessionStorage.removeItem('dajavata_entry_tracked');
+                try {
+                    const adminToken = sessionStorage.getItem('dajavata_admin_token') || '';
+                    const adminPin = sessionStorage.getItem('dajavata_admin_key') || '';
+                    await fetch(`${API_BASE}/api/analytics/admin-summary`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: adminToken, pin: adminPin, reset: true })
+                    });
+                } catch (e) {}
+                modal.close();
+                openAdminAnalyticsModal();
+                notify('방문자 및 유입 경로 통계가 모두 0으로 초기화되었습니다.');
+            });
+        }
     }
 
     // 상단 기본 헤더(.header-meta-group)에 카카오 간편 로그인 & 관리자 전용 방문자 통계 버튼 주입
@@ -948,7 +976,7 @@
             </div>
 
             <div class="al-vault-grid">
-                ${filtered.map(it => {
+                ${filtered.length > 0 ? filtered.map(it => {
                     const stanceLabel = it.stance === 'BEAR' ? '🔴 매도/숏 관점' : (it.stance === 'NEUTRAL' ? '🟡 변곡점/관망' : '🟢 매수/롱 관점');
                     const isUnlocked = state.unlockedIds.has(it.id) || (state.user && state.user.id === it.authorId);
                     return `
@@ -1010,7 +1038,7 @@
                             </div>
                         </div>
                     `;
-                }).join('')}
+                }).join('') : `<div style="grid-column:1 / -1; padding:48px 20px; text-align:center; color:#94a3b8; background:rgba(15,23,42,0.45); border:1px dashed rgba(148,163,184,0.22); border-radius:14px;">아직 등록된 차트 작도·시나리오가 없습니다. 우측 상단 <b style="color:#38bdf8;">[+ 내 작도·시나리오 공유]</b> 버튼을 눌러 첫 작도를 공유해 보세요!</div>`}
             </div>
         `;
     }
@@ -1309,7 +1337,6 @@
                                     <span style="background:rgba(245,158,11,0.2); color:#fbbf24; font-weight:800; font-size:11px; padding:1px 6px; border-radius:4px;">BEST ${idx + 1}</span>
                                     ${bp.ticker ? `<span style="color:#38bdf8; font-family:monospace; font-weight:800; font-size:12px;">#${esc(bp.stockName || bp.ticker)}</span>` : ''}
                                     <strong style="font-size:13px; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(bp.title)}</strong>
-                                    ${(bp.comments && bp.comments.length) ? `<span style="color:#60a5fa; font-size:12px; font-weight:700;">[${bp.comments.length}]</span>` : ''}
                                 </div>
                                 <div style="display:flex; align-items:center; gap:10px; flex-shrink:0; font-size:12px; color:#94a3b8;">
                                     <span>${renderTierEmblem(bp.authorTier || 1, 14)} ${esc(bp.authorNick)}</span>
@@ -1334,7 +1361,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${filtered.map(p => `
+                        ${filtered.length > 0 ? filtered.map(p => `
                             <tr data-open-post="${esc(p.id)}">
                                 <td style="font-size:12px; color:#94a3b8; font-weight:600;">${esc(chName(p.channel))}</td>
                                 <td>
@@ -1346,7 +1373,6 @@
                                 </td>
                                 <td>
                                     <strong style="color:#f8fafc; font-size:13.5px;">${esc(p.title)}</strong>
-                                    ${(p.comments && p.comments.length) ? `<span style="color:#60a5fa; font-weight:800; font-size:12px; margin-left:6px;">[${p.comments.length}]</span>` : ''}
                                 </td>
                                 <td>
                                     <span style="display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700; color:#e2e8f0;">
@@ -1357,7 +1383,7 @@
                                 <td style="text-align:right; font-family:monospace; font-size:12px; color:#94a3b8;">${esc(String(p.created_at || '').slice(5))}</td>
                                 <td style="text-align:right; font-weight:800; color:${(Number(p.likes) || 0) >= 3 ? '#fb7185' : '#94a3b8'};">♥ ${Number(p.likes) || 0}</td>
                             </tr>
-                        `).join('')}
+                        `).join('') : '<tr><td colspan="6" style="padding:40px; text-align:center; color:#64748b;">아직 등록된 라운지 게시글이 없습니다. 우측 상단 [라운지 글쓰기]를 눌러 첫 인사이트를 등록해 보세요!</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -1390,26 +1416,6 @@
             </div>
 
             <div style="font-size:14px; line-height:1.75; color:#e2e8f0; white-space:pre-wrap; padding:8px 0 14px;">${esc(p.body)}</div>
-
-            <div style="border-top:1px solid rgba(148,163,184,0.16); padding-top:14px;">
-                <strong style="font-size:13.5px; color:#f8fafc; display:block; margin-bottom:10px;">💬 트레이더 댓글 (${(p.comments || []).length})</strong>
-                <div id="al-post-comments-list" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
-                    ${(p.comments || []).map(c => `
-                        <div style="background:rgba(10,12,18,0.6); border:1px solid rgba(148,163,184,0.14); border-radius:8px; padding:10px 12px;">
-                            <div style="display:flex; justify-content:space-between; font-size:12px; color:#94a3b8; margin-bottom:4px;">
-                                <span>${renderTierEmblem(c.authorTier || 1, 14)} <strong style="color:#e2e8f0;">${esc(c.authorNick)}</strong></span>
-                                <span style="font-family:monospace;">${esc(c.created_at)}</span>
-                            </div>
-                            <div style="font-size:13px; color:#cbd5e1; line-height:1.5;">${esc(c.body)}</div>
-                        </div>
-                    `).join('') || '<div style="font-size:12.5px; color:#64748b;">첫 번째 댓글을 남겨보세요.</div>'}
-                </div>
-
-                <form id="al-comment-form" style="display:flex; gap:8px;">
-                    <input type="text" id="al-comment-input" class="al-search-input" style="flex:1;" maxlength="400" required placeholder="종목 의견이나 수급 분석 코멘트를 남겨주세요...">
-                    <button type="submit" class="al-primary-btn">댓글 등록</button>
-                </form>
-            </div>
         `);
 
         const scBtn = modal.querySelector('#al-post-open-scanner');
@@ -1426,37 +1432,6 @@
             p.likes = (Number(p.likes) || 0) + 1;
             saveLocalCommunityDb();
             postCommunityApi({ action: 'like_item', targetType: 'lounge', targetId: p.id });
-            modal.close();
-            openLoungePostModal(p.id);
-            render();
-        });
-
-        modal.querySelector('#al-comment-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!state.user) {
-                modal.close();
-                openKakaoLoginModal(() => openLoungePostModal(p.id));
-                return;
-            }
-            const txt = modal.querySelector('#al-comment-input').value.trim();
-            if (!txt) return;
-            const newC = {
-                id: 'c-' + Date.now(),
-                authorNick: state.user.nickname,
-                authorTier: state.user.tier || 1,
-                body: txt,
-                created_at: new Date().toISOString().slice(0, 16).replace('T', ' ')
-            };
-            p.comments = p.comments || [];
-            p.comments.push(newC);
-            saveLocalCommunityDb();
-            postCommunityApi({
-                action: 'add_comment',
-                targetId: p.id,
-                authorNick: state.user.nickname,
-                authorTier: state.user.tier || 1,
-                body: txt
-            });
             modal.close();
             openLoungePostModal(p.id);
             render();
@@ -1818,7 +1793,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        ${filtered.map(t => `
+                        ${filtered.length > 0 ? filtered.map(t => `
                             <tr data-open-ticket="${esc(t.id)}">
                                 <td>
                                     <span style="padding:2px 8px; border-radius:5px; font-size:11px; font-weight:800; background:${t.status === 'answered' ? 'rgba(16,185,129,0.18)' : 'rgba(148,163,184,0.15)'}; color:${t.status === 'answered' ? '#34d399' : '#94a3b8'};">
@@ -1833,7 +1808,7 @@
                                 <td style="font-size:12.5px; color:#cbd5e1;">${renderTierEmblem(t.authorTier || 1, 15)} ${esc(t.authorNick)}</td>
                                 <td style="text-align:right; font-family:monospace; font-size:12px; color:#94a3b8;">${esc(t.created_at)}</td>
                             </tr>
-                        `).join('')}
+                        `).join('') : '<tr><td colspan="5" style="padding:40px; text-align:center; color:#64748b;">등록된 문의나 제안 내역이 없습니다.</td></tr>'}
                     </tbody>
                 </table>
             </div>
@@ -2231,8 +2206,8 @@
             syncHeaderAuthWidget();
         });
 
-        // 첫 방문 트래킹 기록
-        trackVisitorActivity('홈페이지 메인 진입');
+        // 첫 방문 트래킹 기록 (세션 최초 랜딩일 때만 외부 유입경로 카운트)
+        trackVisitorActivity('홈페이지 메인 진입', true);
 
         // 사이드바 메뉴 클릭 시 방문 통계 및 헤더 동기화
         document.querySelectorAll('.menu-section li').forEach(li => {

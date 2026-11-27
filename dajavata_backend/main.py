@@ -2409,15 +2409,18 @@ async def track_visitor_hit(req: Request):
     # 1. 일별 PV & UV(고유 방문자) 집계
     day_obj = adb.setdefault("daily", {}).setdefault(date_str, {"pv": 0, "uv_list": []})
     day_obj["pv"] = int(day_obj.get("pv") or 0) + 1
+    is_new_uv = False
     if vid not in day_obj.setdefault("uv_list", []):
         day_obj["uv_list"].append(vid)
+        is_new_uv = True
 
     # 2. 시간대별 집계
     hr_map = adb.setdefault("hourly", {})
     hr_map[hour_str] = int(hr_map.get(hour_str) or 0) + 1
 
-    # 3. 유입 경로(Source) 집계 (내부 이동 제외)
-    if source_cat != "내부 메뉴 이동":
+    # 3. 유입 경로(Source) 집계 (세션 최초 유입이거나 신규 UV이고 내부 이동이 아닐 때만 1회 집계)
+    is_entry = bool(body.get("isEntry", is_new_uv))
+    if (is_entry or is_new_uv) and source_cat != "내부 메뉴 이동":
         src_map = adb.setdefault("sources", {})
         src_map[source_cat] = int(src_map.get(source_cat) or 0) + 1
 
@@ -2425,9 +2428,10 @@ async def track_visitor_hit(req: Request):
     vw_map = adb.setdefault("views", {})
     vw_map[view_name] = int(vw_map.get(view_name) or 0) + 1
 
-    # 5. 기기별 집계
-    dv_map = adb.setdefault("devices", {"PC Desktop": 0, "Mobile / Tablet": 0})
-    dv_map[device_type] = int(dv_map.get(device_type) or 0) + 1
+    # 5. 기기별 집계 (방문자 세션 진입 기준으로 집계)
+    if is_entry or is_new_uv:
+        dv_map = adb.setdefault("devices", {"PC Desktop": 0, "Mobile / Tablet": 0})
+        dv_map[device_type] = int(dv_map.get(device_type) or 0) + 1
 
     # 6. 최근 실시간 방문 로그 (최신 80건 유지)
     recent = adb.setdefault("recentVisits", [])
@@ -2452,14 +2456,26 @@ async def get_admin_analytics_summary(req: Request):
     if not is_authorized_admin(token=body.get("token"), pin=body.get("pin")):
         raise HTTPException(status_code=403, detail="관리자 전용 통계입니다. (권한 없음)")
 
-    adb = _load_json_first(ANALYTICS_DB_PATHS, lambda: {
-        "daily": {},
-        "hourly": {},
-        "sources": {},
-        "views": {},
-        "devices": {"PC Desktop": 0, "Mobile / Tablet": 0},
-        "recentVisits": [],
-    })
+    if body.get("reset") is True:
+        empty_adb = {
+            "daily": {},
+            "hourly": {f"{h:02d}": 0 for h in range(24)},
+            "sources": {},
+            "views": {},
+            "devices": {"PC Desktop": 0, "Mobile / Tablet": 0},
+            "recentVisits": [],
+        }
+        _save_json_all(ANALYTICS_DB_PATHS, empty_adb)
+        adb = empty_adb
+    else:
+        adb = _load_json_first(ANALYTICS_DB_PATHS, lambda: {
+            "daily": {},
+            "hourly": {},
+            "sources": {},
+            "views": {},
+            "devices": {"PC Desktop": 0, "Mobile / Tablet": 0},
+            "recentVisits": [],
+        })
 
     kst_now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9)))
     today_str = kst_now.strftime("%Y-%m-%d")
