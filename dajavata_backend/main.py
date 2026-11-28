@@ -1475,12 +1475,45 @@ def get_stocks_realtime(codes: str):
 
 _heatmap_live_cache = {"ts": 0, "data": None}
 
+GLOBAL_INDEX_YAHOO_SYMBOLS = {
+    "KOSPI": "^KS11",
+    "KOSDAQ": "^KQ11",
+    "NASDAQ": "^IXIC",
+    "SP500": "^GSPC",
+    "SOX": "^SOX",
+    "DOW": "^DJI",
+    "RUT": "^RUT",
+    "N225": "^N225",
+    "TWII": "^TWII",
+    "STOXX50": "^STOXX50E",
+    "DAX": "^GDAXI",
+    "FTSE100": "^FTSE",
+    "CAC40": "^FCHI",
+    "FTSEMIB": "FTSEMIB.MI",
+    "AEX": "^AEX",
+    "BEL20": "^BFX",
+    "IBEX35": "^IBEX",
+    "PSI20": "PSI20.LS",
+    "ISEQ": "^ISEQ",
+    "OMXC": "^OMXC25",
+    "OMXS": "^OMX",
+    "OMXH": "^OMXH25",
+    "ATG": "GD.AT",
+    "BUX": "^BUX.BD",
+    "USDKRW": "KRW=X",
+    "US10Y": "^TNX",
+    "GOLD": "GC=F",
+    "WTI": "CL=F",
+}
+
 @app.get("/api/market/heatmap-live")
 def get_market_heatmap_live():
     """
     메인 홈 히트맵 및 지수 상황판용 실시간 동기화 API:
-    네이버 증권 KOSPI/KOSDAQ 시가총액 상위 600개 종목의 당일 실시간 종가·등락률·시총과 KOSPI/KOSDAQ 실시간 지수를 일괄 반환
+    1) 한국·미국·유럽·아시아·환율·원자재 28대 글로벌 지수 실시간 시세·고가/저가·52주 최고/최저·당일 스파크라인(Yahoo Finance v8 + 네이버)
+    2) 네이버 증권 KOSPI/KOSDAQ 시가총액 상위 600개 종목의 당일 실시간 종가·등락률·시총 일괄 반환
     """
+    import urllib.parse
     now_ts = time.time()
     if _heatmap_live_cache["data"] and (now_ts - _heatmap_live_cache["ts"] < 45):
         return _heatmap_live_cache["data"]
@@ -1500,10 +1533,63 @@ def get_market_heatmap_live():
         except Exception:
             return default
 
-    # 1. KOSPI / KOSDAQ 실시간 지수
+    def _fetch_yahoo_idx(item_pair):
+        k, sym = item_pair
+        enc = urllib.parse.quote(sym)
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{enc}?interval=15m&range=1d"
+        try:
+            r = requests.get(url, headers={"User-Agent": headers["User-Agent"]}, timeout=4)
+            if r.status_code == 200:
+                res = (r.json().get("chart") or {}).get("result")
+                if res:
+                    m = res[0].get("meta") or {}
+                    q = ((res[0].get("indicators") or {}).get("quote") or [{}])[0]
+                    closes = [round(float(x), 2) for x in (q.get("close") or []) if x is not None]
+                    highs = [float(x) for x in (q.get("high") or []) if x is not None]
+                    lows = [float(x) for x in (q.get("low") or []) if x is not None]
+                    price = float(m.get("regularMarketPrice") or (closes[-1] if closes else 0))
+                    prev = float(m.get("chartPreviousClose") or m.get("previousClose") or (closes[0] if closes else price))
+                    chg = round(price - prev, 2)
+                    chg_pct = round((chg / prev) * 100, 2) if prev else 0.0
+                    day_high = float(m.get("regularMarketDayHigh") or (max(highs) if highs else price))
+                    day_low = float(m.get("regularMarketDayLow") or (min(lows) if lows else price))
+                    h52 = float(m.get("fiftyTwoWeekHigh") or max(price, day_high))
+                    l52 = float(m.get("fiftyTwoWeekLow") or min(price, day_low))
+                    if len(closes) > 12:
+                        step = max(1, len(closes) // 12)
+                        series = closes[::step][:11] + [round(price, 2)]
+                    elif len(closes) >= 2:
+                        series = closes
+                    else:
+                        series = [round(prev, 2), round(price, 2)]
+                    return k, {
+                        "price": round(price, 2),
+                        "prev": round(prev, 2),
+                        "chg": chg,
+                        "chgPct": chg_pct,
+                        "high": round(day_high, 2),
+                        "low": round(day_low, 2),
+                        "high52": round(h52, 2),
+                        "low52": round(l52, 2),
+                        "series": series
+                    }
+        except Exception:
+            pass
+        return k, None
+
+    # 1. 28개 글로벌 지수 병렬 조회
+    try:
+        with ThreadPoolExecutor(max_workers=10) as ex:
+            for k, val in ex.map(_fetch_yahoo_idx, GLOBAL_INDEX_YAHOO_SYMBOLS.items()):
+                if val:
+                    indices_out[k] = val
+    except Exception:
+        pass
+
+    # 1-2. KOSPI / KOSDAQ 네이버 실시간 지수 오버레이
     for idx_code in ("KOSPI", "KOSDAQ"):
         try:
-            ri = requests.get(f"https://m.stock.naver.com/api/index/{idx_code}/basic", headers=headers, timeout=4)
+            ri = requests.get(f"https://m.stock.naver.com/api/index/{idx_code}/basic", headers=headers, timeout=3)
             if ri.status_code == 200:
                 d = ri.json()
                 price = _pnum(d.get("closePrice"))
@@ -1513,12 +1599,16 @@ def get_market_heatmap_live():
                 if cdir in ("4", "5"):
                     chg = -abs(chg)
                     pct = -abs(pct)
-                indices_out[idx_code] = {
-                    "price": price,
-                    "chg": round(chg, 2),
-                    "chgPct": round(pct, 2),
-                    "status": d.get("marketStatus") or "실시간"
-                }
+                if price > 0:
+                    cur_obj = indices_out.get(idx_code) or {}
+                    cur_obj.update({
+                        "price": price,
+                        "prev": round(price - chg, 2),
+                        "chg": round(chg, 2),
+                        "chgPct": round(pct, 2),
+                        "marketStatus": d.get("marketStatus") or ""
+                    })
+                    indices_out[idx_code] = cur_obj
         except Exception:
             pass
 
@@ -1556,7 +1646,7 @@ def get_market_heatmap_live():
         "indices": indices_out,
         "stocks": stocks_out
     }
-    if len(stocks_out) > 20:
+    if len(stocks_out) > 20 or len(indices_out) > 5:
         _heatmap_live_cache["ts"] = now_ts
         _heatmap_live_cache["data"] = res_payload
     return res_payload

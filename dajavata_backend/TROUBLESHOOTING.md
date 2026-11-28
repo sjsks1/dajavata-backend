@@ -355,3 +355,27 @@
 5. **미국 나스닥 최근 12개월 신규 상장 250~280개사 전수 자동 수집 (`ipoLatest`, `ipoLatestAll`) 및 첫 상장일(`상장일 YYYY-MM-DD`) 배지 적용:**
    - 나스닥 공식 IPO 캘린더 API (`https://api.nasdaq.com/api/ipo/calendar?date=YYYY-MM`) 최근 12개월 병렬 수집으로 미국 IPO 리스트를 250~280개사로 확장하고, 한·미 양쪽 리스트에 `상장일 YYYY-MM-DD` 배지를 선명하게 표시.
 
+
+---
+
+## 2026-11-28: 메인 홈 실시간 시총 히트맵(218 국장 / 198 미장 / 140 테마) 당일 시세 불일치·납작한 타일·초기 무한루프 해결 및 도메인 등록처 기록
+
+### 🚨 1. 메인 홈 최초 로딩 시 `RESULT_CODE_HUNG` (무한 재귀 루프) 해결
+- **원인:** `index.html`에서 `community_hub.js`가 `app.js`보다 먼저 로드될 때, `renderMainHomeDashboard()` 내부의 `ensureHomeArticles()`가 아직 정의되지 않은 `window.DajavataApp`을 확인하고 `postsLoaded = false`인 상태로 즉시 Resolve되면서 `.then(() => renderMainHomeDashboard())` 마이크로태스크 무한 루프가 발생.
+- **해결:** `homeState.quantFetchStarted`, `postsFetchStarted`, `dbFetchStarted` 1회 실행 잠금 가드를 도입하고, `window.DajavataApp` 초기화 전에도 정적 JSON을 직접 읽고 `postsLoaded = true`로 확정하도록 수정하여 0.1초 즉시 렌더링 보장.
+
+### 🚨 2. 히트맵 내 일부 종목(예: 알테오젠 `196170`)이 당일 양봉 마감(`+10.45%`)인데 하락(`-1.45%`)으로 표시되던 문제
+- **원인:**
+  1. 구버전 로컬 `all_stocks.json`(`11.18` 스냅샷)이 뒤늦게 로드되면서 실시간 호가 API가 받아온 최신 등락률을 덮어씀.
+  2. 네이버 폴링 API(`polling.finance.naver.com/api/realtime/domestic/stock/...`)에 80개 이상의 종목코드를 한 줄로 요청하면 뒷부분 종목이 잘려서 응답이 오지 않음.
+- **해결:**
+  1. `dajavata_backend/main.py`에 **`GET /api/market/heatmap-live`**를 신설하여 네이버 모바일 시가총액 API(`https://m.stock.naver.com/api/stocks/marketValue/KOSPI` & `KOSDAQ` 1~3페이지 총 600종목)와 실시간 KOSPI/KOSDAQ 지수를 일괄 수집하고, 하락 부호(`compareToPreviousPrice.code in ('4', '5')`)를 정확히 반영.
+  2. `/api/stocks/realtime`을 20종목 단위 자동 청크(Chunk) 분할 조회로 개선하고, 실시간 시세가 반영된 종목은 `st._liveLocked = true`로 잠가 구버전 캐시가 덮어쓰지 못하도록 방어.
+
+### 🚨 3. 히트맵 타일이 가로로 납작하게 눌리고 상단 지수 카드가 잘리던 문제
+- **원인:** 트리맵 분할 함수가 실제 픽셀 크기 대신 퍼센트(`100 × 100`)로 계산하여 가로로 넓은 업종 박스를 세로로 또 쪼개면서 높이 15px짜리 납작한 띠 모양이 생성됨.
+- **해결:** 실제 픽셀 종횡비(`wPx >= hPx`) 기반 `computePixelTreemap()` 알고리즘으로 교체하고, 히트맵 기본 높이를 `1,280px`(`920px` / `1,280px` / `1,680px` 선택 가능)로 확장하며 `#default-view-container` 및 `.main-home-dashboard`에 `flex: 1; min-height: 0;`을 적용.
+
+### 🌐 4. `dajavata.com` 도메인 등록처(Registrar) 확인 결과
+- **등록 대행사:** **`Cloudflare, Inc.` (`https://dash.cloudflare.com/`, IANA ID: `1910`)**
+- **등록일 / 만료일:** `2026-08-26` 등록 ~ `2027-08-26` 만료 (네임서버: `merlin.ns.cloudflare.com`, `oaklyn.ns.cloudflare.com`).
